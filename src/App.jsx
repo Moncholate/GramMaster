@@ -2017,6 +2017,8 @@ const EnglishSentenceBuilder = () => {
       }
     }
     
+    // Única fuente de verdad: buildSentenceText maneja toda la lógica de conjugación
+    sentence = buildSentenceText({ mode: selectedMode, subject, verb, complement, tense: selectedTense, modal: selectedModal, whWord, whExtension, adverb });
     setGeneratedSentence(sentence);
 
     // Generar las 3 variantes de modo
