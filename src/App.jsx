@@ -45,6 +45,7 @@ const EnglishSentenceBuilder = () => {
   const [selectedTense, setSelectedTense] = useState('');
   const [selectedMode, setSelectedMode] = useState('affirmative');
   const [selectedModal, setSelectedModal] = useState('');
+  const [showModalPicker, setShowModalPicker] = useState(false);
   const [whWord, setWhWord] = useState('');
   const [whExtension, setWhExtension] = useState('');
   const [whWarning, setWhWarning] = useState('');
@@ -2885,92 +2886,91 @@ const EnglishSentenceBuilder = () => {
 
           {/* Verbo modal */}
           <div>
-              <div className="flex items-center justify-between mb-3">
-                <label className="block text-sm font-medium text-gray-700">
-                  {t.modalVerb}
-                  <span className="text-gray-400 text-xs ml-2">({language === 'es' ? 'opcional' : 'optional'})</span>
-                </label>
-                {selectedModal && (
+            {/* Estado colapsado: badge si hay selección, botón trigger si no */}
+            {!showModalPicker && (
+              <div className="flex items-center gap-2">
+                {selectedModal ? (() => {
+                  const activeModal = modals.find(m => m.id === selectedModal);
+                  return (
+                    <>
+                      <button
+                        onClick={() => setShowModalPicker(true)}
+                        className="flex items-center gap-2 px-3 py-1.5 bg-purple-50 border border-purple-200 rounded-lg hover:bg-purple-100 transition-all"
+                      >
+                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{t.modalVerb}</span>
+                        <span className="font-bold text-sm text-purple-700">{activeModal?.name}</span>
+                        <span className="text-xs text-purple-500">{language === 'es' ? activeModal?.descEs : activeModal?.descEn}</span>
+                      </button>
+                      <button
+                        onClick={() => { setSelectedModal(''); setShowModalPicker(false); }}
+                        className="p-1 text-gray-400 hover:text-red-500 transition-colors"
+                        title={language === 'es' ? 'Quitar modal' : 'Remove modal'}
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </>
+                  );
+                })() : (
                   <button
-                    onClick={() => setSelectedModal('')}
-                    className="text-xs text-purple-600 hover:text-purple-800 flex items-center gap-1 transition-colors"
+                    onClick={() => setShowModalPicker(true)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-400 border border-dashed border-gray-300 rounded-lg hover:border-purple-300 hover:text-purple-500 transition-all"
                   >
-                    <X className="w-3 h-3" />
-                    {language === 'es' ? 'Quitar modal' : 'Remove modal'}
+                    <span className="text-base leading-none">+</span>
+                    {language === 'es' ? 'Agregar verbo modal' : 'Add modal verb'}
+                    <span className="text-gray-300">({language === 'es' ? 'opcional' : 'optional'})</span>
                   </button>
                 )}
               </div>
+            )}
 
-              {/* Grupos semánticos */}
-              <div className="space-y-3">
-                {[
-                  {
-                    id: 'ability',
-                    labelEs: 'Posibilidad / Habilidad',
-                    labelEn: 'Ability / Possibility',
-                    dotColor: 'bg-blue-400',
-                  },
-                  {
-                    id: 'obligation',
-                    labelEs: 'Obligación / Consejo',
-                    labelEn: 'Obligation / Advice',
-                    dotColor: 'bg-amber-400',
-                  },
-                  {
-                    id: 'future',
-                    labelEs: 'Futuro / Condicional',
-                    labelEn: 'Future / Conditional',
-                    dotColor: 'bg-purple-400',
-                  },
-                ].map(group => {
-                  const groupModals = modals.filter(m =>
-                    m.id !== '' &&
-                    m.category === group.id &&
-                    COURSE_ORDER.indexOf(m.cefr) <= COURSE_ORDER.indexOf(cefrLevel)
-                  );
-                  if (groupModals.length === 0) return null;
-                  return (
-                    <div key={group.id}>
-                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 flex items-center gap-1.5">
-                        <span className={`w-2 h-2 rounded-full inline-block ${group.dotColor}`}></span>
-                        {language === 'es' ? group.labelEs : group.labelEn}
-                      </p>
-                      <div className="flex flex-wrap gap-2">
-                        {groupModals.map(modal => (
-                          <button
-                            key={modal.id}
-                            onClick={() => setSelectedModal(modal.id)}
-                            className={`flex flex-col items-center px-3 py-2 rounded-xl text-xs font-medium transition-all border ${
-                              selectedModal === modal.id
-                                ? 'bg-purple-600 text-white border-purple-600 shadow-md'
-                                : 'bg-white text-gray-700 border-gray-200 hover:border-purple-300 hover:bg-purple-50'
-                            }`}
-                          >
-                            <span className="font-bold text-sm">{modal.name}</span>
-                            <span className={`text-[10px] mt-0.5 leading-tight text-center ${selectedModal === modal.id ? 'text-purple-200' : 'text-gray-400'}`}>
-                              {language === 'es' ? modal.descEs : modal.descEn}
-                            </span>
-                          </button>
-                        ))}
+            {/* Estado expandido: picker completo */}
+            {showModalPicker && (
+              <div className="border border-purple-100 rounded-xl p-3 bg-purple-50/40">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{t.modalVerb}</span>
+                  <button onClick={() => setShowModalPicker(false)} className="text-gray-400 hover:text-gray-600">
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+                <div className="space-y-3">
+                  {[
+                    { id: 'ability',    labelEs: 'Posibilidad / Habilidad', labelEn: 'Ability / Possibility', dotColor: 'bg-blue-400' },
+                    { id: 'obligation', labelEs: 'Obligación / Consejo',    labelEn: 'Obligation / Advice',   dotColor: 'bg-amber-400' },
+                    { id: 'future',     labelEs: 'Futuro / Condicional',    labelEn: 'Future / Conditional',  dotColor: 'bg-purple-400' },
+                  ].map(group => {
+                    const groupModals = modals.filter(m => m.id !== '' && m.category === group.id && COURSE_ORDER.indexOf(m.cefr) <= COURSE_ORDER.indexOf(cefrLevel));
+                    if (groupModals.length === 0) return null;
+                    return (
+                      <div key={group.id}>
+                        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 flex items-center gap-1.5">
+                          <span className={`w-2 h-2 rounded-full inline-block ${group.dotColor}`}></span>
+                          {language === 'es' ? group.labelEs : group.labelEn}
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {groupModals.map(modal => (
+                            <button
+                              key={modal.id}
+                              onClick={() => { setSelectedModal(modal.id); setShowModalPicker(false); }}
+                              className={`flex flex-col items-center px-3 py-2 rounded-xl text-xs font-medium transition-all border ${
+                                selectedModal === modal.id
+                                  ? 'bg-purple-600 text-white border-purple-600 shadow-md'
+                                  : 'bg-white text-gray-700 border-gray-200 hover:border-purple-300 hover:bg-purple-50'
+                              }`}
+                            >
+                              <span className="font-bold text-sm">{modal.name}</span>
+                              <span className={`text-[10px] mt-0.5 leading-tight text-center ${selectedModal === modal.id ? 'text-purple-200' : 'text-gray-400'}`}>
+                                {language === 'es' ? modal.descEs : modal.descEn}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
-
-              {/* Card descriptiva del modal seleccionado */}
-              {selectedModal && (() => {
-                const activeModal = modals.find(m => m.id === selectedModal);
-                return activeModal ? (
-                  <div className="mt-3 p-3 bg-purple-50 border border-purple-200 rounded-xl">
-                    <p className="text-xs font-bold text-purple-800 mb-1">{activeModal.name} — {language === 'es' ? activeModal.descEs : activeModal.descEn}</p>
-                    <p className="text-xs text-purple-700 leading-relaxed">
-                      {language === 'es' ? activeModal.fullDescEs : activeModal.fullDescEn}
-                    </p>
-                  </div>
-                ) : null;
-              })()}
-            </div>
+            )}
+          </div>
 
           {/* Botón Generar */}
           <button
