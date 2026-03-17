@@ -2570,37 +2570,28 @@ const EnglishSentenceBuilder = () => {
         {/* Formulario Principal */}
         <div className="bg-white rounded-2xl shadow-sm border p-4 sm:p-6 space-y-4 sm:space-y-6">
 
-          {/* NIVEL selector */}
-          <div className="flex items-center gap-2 pb-4 border-b border-gray-100">
-            <label className="text-xs font-semibold text-gray-500 tracking-wide uppercase shrink-0">
-              {language === 'es' ? 'Nivel' : 'Level'}
-            </label>
-            <select
-              value={cefrLevel}
-              onChange={(e) => setCefrLevel(e.target.value)}
-              className="flex-1 min-w-0 px-2 py-1.5 border border-gray-200 rounded-lg text-sm font-semibold text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300 cursor-pointer"
-            >
-              <option value="basico1">{language === 'es' ? 'Básico I' : 'Basic I'}</option>
-              <option value="basico2">{language === 'es' ? 'Básico II' : 'Basic II'}</option>
-              <option value="elemental1">{language === 'es' ? 'Elemental I' : 'Elementary I'}</option>
-              <option value="elemental2">{language === 'es' ? 'Elemental II' : 'Elementary II'}</option>
-              <option value="intermedio1">{language === 'es' ? 'Intermedio I' : 'Intermediate I'}</option>
-              <option value="intermedio2">{language === 'es' ? 'Intermedio II' : 'Intermediate II'}</option>
-              <option value="avanzado">{language === 'es' ? 'Avanzado' : 'Upper-Interm.'}</option>
-            </select>
-            <button
-              onClick={resetForm}
-              title={language === 'es' ? 'Limpiar todo' : 'Clear all'}
-              className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 text-xs text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-lg border border-gray-200 hover:border-red-200 transition-all"
-            >
-              <Trash2 className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">{language === 'es' ? 'Limpiar' : 'Clear'}</span>
-            </button>
-          </div>
-
-          {/* Tiempo verbal */}
+          {/* NIVEL + TIEMPO VERBAL en la misma fila */}
           <div className="pb-4 border-b border-gray-100">
             <div className="flex items-center gap-2">
+              <label className="text-xs font-semibold text-gray-500 tracking-wide uppercase shrink-0">
+                {language === 'es' ? 'Nivel' : 'Level'}
+              </label>
+              <select
+                value={cefrLevel}
+                onChange={(e) => setCefrLevel(e.target.value)}
+                className="w-36 sm:w-40 px-2 py-1.5 border border-gray-200 rounded-lg text-sm font-semibold text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300 cursor-pointer shrink-0"
+              >
+                <option value="basico1">{language === 'es' ? 'Básico I' : 'Basic I'}</option>
+                <option value="basico2">{language === 'es' ? 'Básico II' : 'Basic II'}</option>
+                <option value="elemental1">{language === 'es' ? 'Elemental I' : 'Elementary I'}</option>
+                <option value="elemental2">{language === 'es' ? 'Elemental II' : 'Elementary II'}</option>
+                <option value="intermedio1">{language === 'es' ? 'Intermedio I' : 'Intermediate I'}</option>
+                <option value="intermedio2">{language === 'es' ? 'Intermedio II' : 'Intermediate II'}</option>
+                <option value="avanzado">{language === 'es' ? 'Avanzado' : 'Upper-Interm.'}</option>
+              </select>
+
+              <div className="w-px h-5 bg-gray-200 shrink-0" />
+
               <label className="text-xs font-semibold text-gray-500 tracking-wide uppercase shrink-0">
                 {t.tense} {!selectedModal && <span className="text-red-500">*</span>}
               </label>
@@ -2629,6 +2620,13 @@ const EnglishSentenceBuilder = () => {
                   {language === 'es' ? 'no aplica con modal' : 'not used with modal'}
                 </span>
               )}
+              <button
+                onClick={resetForm}
+                title={language === 'es' ? 'Limpiar todo' : 'Clear all'}
+                className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 text-xs text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-lg border border-gray-200 hover:border-red-200 transition-all"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
             </div>
             {selectedTense && !selectedModal && (() => {
               const tenseData = tenses.find(t => t.id === selectedTense);
