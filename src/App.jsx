@@ -2085,7 +2085,7 @@ const EnglishSentenceBuilder = () => {
   const closePanel = () => setActivePanel(null);
 
   return (
-    <div className={`min-h-screen ${themeClasses.bg} py-6 px-4 pb-24 sm:pb-6`}>
+    <div className={`flex flex-col h-screen overflow-hidden ${themeClasses.bg}`}>
       {/* Notificación */}
       {notification && (
         <div className={`fixed top-4 right-4 z-50 px-5 py-3 rounded-lg shadow-lg ${
@@ -2573,10 +2573,8 @@ const EnglishSentenceBuilder = () => {
         </div>
       )}
 
-      <div className="max-w-3xl mx-auto">
-
-        {/* Header */}
-        <header className="flex items-center justify-between mb-4 sm:mb-6">
+      {/* Header full-width */}
+      <header className="flex-shrink-0 bg-white border-b border-gray-200 shadow-sm z-10 px-4 sm:px-8 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img src="/GramMaster/favicon.svg" alt="GramMaster" className="w-9 h-9 sm:w-10 sm:h-10 shrink-0 rounded-[22%]" />
             <div>
@@ -2605,6 +2603,10 @@ const EnglishSentenceBuilder = () => {
             </div>
           </div>
         </header>
+
+        {/* Área principal scrollable */}
+        <main className="flex-1 overflow-y-auto py-4 px-4 sm:px-8 pb-24 sm:pb-6">
+        <div className="max-w-5xl mx-auto space-y-4">
 
         {/* Formulario Principal */}
         <div className="bg-white rounded-2xl shadow-sm border p-4 sm:p-6 space-y-4 sm:space-y-6">
@@ -2768,7 +2770,7 @@ const EnglishSentenceBuilder = () => {
           )}
 
           {/* Campos principales */}
-          <div className={`grid grid-cols-1 gap-4 ${(selectedTense === 'simple-present' || selectedTense === 'simple-past') && !selectedModal ? 'md:grid-cols-4' : 'md:grid-cols-3'}`}>
+          <div className={`grid grid-cols-1 gap-4 ${(selectedTense === 'simple-present' || selectedTense === 'simple-past') && !selectedModal ? 'md:grid-cols-[2fr_1.5fr_2fr_2.5fr]' : 'md:grid-cols-[2fr_2fr_3fr]'}`}>
             {/* Sujeto */}
             <div>
               <label className="flex items-center gap-1.5 mb-1.5">
@@ -3184,7 +3186,8 @@ const EnglishSentenceBuilder = () => {
           </div>
         )}
 
-      </div>
+        </div>
+        </main>
 
       {/* Barra de navegación inferior — solo móvil */}
       <nav className="sm:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-30">
