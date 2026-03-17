@@ -1632,6 +1632,10 @@ const EnglishSentenceBuilder = () => {
     setWhWarning(whValidation);
 
     const subj = subject.toLowerCase();
+    const isBeVerb = verb.toLowerCase() === 'be';
+    const beFormSubj = subj === 'i' ? 'am' : (!subj.includes(' and ') && !subj.includes(',') && isThirdPersonSingular(subject)) ? 'is' : 'are';
+    const wasWereSubj = (subj === 'i' || (!subj.includes(' and ') && !subj.includes(',') && isThirdPersonSingular(subject))) && subj !== 'you' ? 'was' : 'were';
+    const capStr = s => s.charAt(0).toUpperCase() + s.slice(1);
     const comp = complement ? ' ' + complement : '';
     const participle = pastParticiple(verb);
     let sentence = '';
@@ -1655,10 +1659,15 @@ const EnglishSentenceBuilder = () => {
         verbForm = verb;
         sentence = subject.charAt(0).toUpperCase() + subject.slice(1) + ' ' + selectedModal + adverbSpace + verb + comp + '.';
       } else if (selectedTense === 'simple-present') {
-        const conjugated = isThirdPersonSingular(subject) ? conjugate3p(verb) : verb;
-        verbForm = conjugated;
-        // En presente simple sin auxiliar, el adverbio va antes del verbo
-        sentence = subject.charAt(0).toUpperCase() + subject.slice(1) + adverbSpace + conjugated + comp + '.';
+        if (isBeVerb) {
+          auxiliary = beFormSubj; verbForm = beFormSubj;
+          sentence = capStr(subject) + ' ' + beFormSubj + (adverb ? ' ' + adverb : '') + comp + '.';
+        } else {
+          const conjugated = isThirdPersonSingular(subject) ? conjugate3p(verb) : verb;
+          verbForm = conjugated;
+          // En presente simple sin auxiliar, el adverbio va antes del verbo
+          sentence = subject.charAt(0).toUpperCase() + subject.slice(1) + adverbSpace + conjugated + comp + '.';
+        }
       } else if (selectedTense === 'present-continuous') {
         let beForm = 'are';
         if (!subj.includes(' and ') && !subj.includes(',')) {
@@ -1668,9 +1677,14 @@ const EnglishSentenceBuilder = () => {
         verbForm = presentParticiple(verb);
         sentence = subject.charAt(0).toUpperCase() + subject.slice(1) + ' ' + beForm + adverbSpace + verbForm + comp + '.';
       } else if (selectedTense === 'simple-past') {
-        verbForm = simplePast(verb);
-        // En pasado simple sin auxiliar, el adverbio va antes del verbo
-        sentence = subject.charAt(0).toUpperCase() + subject.slice(1) + adverbSpace + verbForm + comp + '.';
+        if (isBeVerb) {
+          auxiliary = wasWereSubj; verbForm = wasWereSubj;
+          sentence = capStr(subject) + ' ' + wasWereSubj + (adverb ? ' ' + adverb : '') + comp + '.';
+        } else {
+          verbForm = simplePast(verb);
+          // En pasado simple sin auxiliar, el adverbio va antes del verbo
+          sentence = subject.charAt(0).toUpperCase() + subject.slice(1) + adverbSpace + verbForm + comp + '.';
+        }
       } else if (selectedTense === 'past-continuous') {
         let wasWere = 'were';
         if (!subj.includes(' and ') && !subj.includes(',')) {
@@ -1741,10 +1755,14 @@ const EnglishSentenceBuilder = () => {
         verbForm = verb;
         sentence = subject.charAt(0).toUpperCase() + subject.slice(1) + ' ' + negModal + adverbSpace + verb + comp + '.';
       } else if (selectedTense === 'simple-present') {
-        const aux = isThirdPersonSingular(subject) ? "doesn't" : "don't";
-        auxiliary = aux;
-        verbForm = verb;
-        sentence = subject.charAt(0).toUpperCase() + subject.slice(1) + ' ' + aux + adverbSpace + verb + comp + '.';
+        if (isBeVerb) {
+          auxiliary = beFormSubj + ' not'; verbForm = beFormSubj;
+          sentence = capStr(subject) + ' ' + beFormSubj + ' not' + comp + '.';
+        } else {
+          const aux = isThirdPersonSingular(subject) ? "doesn't" : "don't";
+          auxiliary = aux; verbForm = verb;
+          sentence = subject.charAt(0).toUpperCase() + subject.slice(1) + ' ' + aux + adverbSpace + verb + comp + '.';
+        }
       } else if (selectedTense === 'present-continuous') {
         let beForm = 'are';
         if (!subj.includes(' and ') && !subj.includes(',')) {
@@ -1754,9 +1772,13 @@ const EnglishSentenceBuilder = () => {
         verbForm = presentParticiple(verb);
         sentence = subject.charAt(0).toUpperCase() + subject.slice(1) + ' ' + beForm + ' not' + adverbSpace + verbForm + comp + '.';
       } else if (selectedTense === 'simple-past') {
-        auxiliary = "didn't";
-        verbForm = verb;
-        sentence = subject.charAt(0).toUpperCase() + subject.slice(1) + " didn't" + adverbSpace + verb + comp + '.';
+        if (isBeVerb) {
+          auxiliary = wasWereSubj + ' not'; verbForm = wasWereSubj;
+          sentence = capStr(subject) + ' ' + wasWereSubj + ' not' + comp + '.';
+        } else {
+          auxiliary = "didn't"; verbForm = verb;
+          sentence = subject.charAt(0).toUpperCase() + subject.slice(1) + " didn't" + adverbSpace + verb + comp + '.';
+        }
       } else if (selectedTense === 'past-continuous') {
         let wasWere = 'were';
         if (!subj.includes(' and ') && !subj.includes(',')) {
@@ -1824,10 +1846,14 @@ const EnglishSentenceBuilder = () => {
           verbForm = verb;
           sentence = whCap + ' ' + selectedModal + ' ' + subject + advAfterSubj + ' ' + verb + comp + '?';
         } else if (selectedTense === 'simple-present') {
-          const aux = isThirdPersonSingular(subject) ? 'does' : 'do';
-          auxiliary = aux;
-          verbForm = verb;
-          sentence = whCap + ' ' + aux + ' ' + subject + advAfterSubj + ' ' + verb + comp + '?';
+          if (isBeVerb) {
+            auxiliary = beFormSubj; verbForm = beFormSubj;
+            sentence = whCap + ' ' + beFormSubj + ' ' + subject + advAfterSubj + comp + '?';
+          } else {
+            const aux = isThirdPersonSingular(subject) ? 'does' : 'do';
+            auxiliary = aux; verbForm = verb;
+            sentence = whCap + ' ' + aux + ' ' + subject + advAfterSubj + ' ' + verb + comp + '?';
+          }
         } else if (selectedTense === 'present-continuous') {
           let beForm = 'are';
           if (!subj.includes(' and ') && !subj.includes(',')) {
@@ -1837,9 +1863,13 @@ const EnglishSentenceBuilder = () => {
           verbForm = presentParticiple(verb);
           sentence = whCap + ' ' + beForm + ' ' + subject + advAfterSubj + ' ' + verbForm + comp + '?';
         } else if (selectedTense === 'simple-past') {
-          auxiliary = 'did';
-          verbForm = verb;
-          sentence = whCap + ' did ' + subject + advAfterSubj + ' ' + verb + comp + '?';
+          if (isBeVerb) {
+            auxiliary = wasWereSubj; verbForm = wasWereSubj;
+            sentence = whCap + ' ' + wasWereSubj + ' ' + subject + advAfterSubj + comp + '?';
+          } else {
+            auxiliary = 'did'; verbForm = verb;
+            sentence = whCap + ' did ' + subject + advAfterSubj + ' ' + verb + comp + '?';
+          }
         } else if (selectedTense === 'past-continuous') {
           let wasWere = 'were';
           if (!subj.includes(' and ') && !subj.includes(',')) {
@@ -1903,10 +1933,14 @@ const EnglishSentenceBuilder = () => {
           verbForm = verb;
           sentence = selectedModal.charAt(0).toUpperCase() + selectedModal.slice(1) + ' ' + subject + advAfterSubj + ' ' + verb + comp + '?';
         } else if (selectedTense === 'simple-present') {
-          const aux = isThirdPersonSingular(subject) ? 'does' : 'do';
-          auxiliary = aux;
-          verbForm = verb;
-          sentence = aux.charAt(0).toUpperCase() + aux.slice(1) + ' ' + subject + advAfterSubj + ' ' + verb + comp + '?';
+          if (isBeVerb) {
+            auxiliary = beFormSubj; verbForm = beFormSubj;
+            sentence = capStr(beFormSubj) + ' ' + subject + advAfterSubj + comp + '?';
+          } else {
+            const aux = isThirdPersonSingular(subject) ? 'does' : 'do';
+            auxiliary = aux; verbForm = verb;
+            sentence = aux.charAt(0).toUpperCase() + aux.slice(1) + ' ' + subject + advAfterSubj + ' ' + verb + comp + '?';
+          }
         } else if (selectedTense === 'present-continuous') {
           let beForm = 'are';
           if (!subj.includes(' and ') && !subj.includes(',')) {
@@ -1916,9 +1950,13 @@ const EnglishSentenceBuilder = () => {
           verbForm = presentParticiple(verb);
           sentence = beForm.charAt(0).toUpperCase() + beForm.slice(1) + ' ' + subject + advAfterSubj + ' ' + verbForm + comp + '?';
         } else if (selectedTense === 'simple-past') {
-          auxiliary = 'did';
-          verbForm = verb;
-          sentence = 'Did ' + subject + advAfterSubj + ' ' + verb + comp + '?';
+          if (isBeVerb) {
+            auxiliary = wasWereSubj; verbForm = wasWereSubj;
+            sentence = capStr(wasWereSubj) + ' ' + subject + advAfterSubj + comp + '?';
+          } else {
+            auxiliary = 'did'; verbForm = verb;
+            sentence = 'Did ' + subject + advAfterSubj + ' ' + verb + comp + '?';
+          }
         } else if (selectedTense === 'past-continuous') {
           let wasWere = 'were';
           if (!subj.includes(' and ') && !subj.includes(',')) {
