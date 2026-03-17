@@ -2611,14 +2611,14 @@ const EnglishSentenceBuilder = () => {
 
           {/* NIVEL + TIEMPO VERBAL en la misma fila */}
           <div className="pb-4 border-b border-gray-100">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <label className="text-xs font-semibold text-gray-500 tracking-wide uppercase shrink-0">
                 {language === 'es' ? 'Nivel' : 'Level'}
               </label>
               <select
                 value={cefrLevel}
                 onChange={(e) => setCefrLevel(e.target.value)}
-                className="w-36 sm:w-40 px-2 py-1.5 border border-gray-200 rounded-lg text-sm font-semibold text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300 cursor-pointer shrink-0"
+                className="w-28 sm:w-40 px-2 py-1.5 border border-gray-200 rounded-lg text-sm font-semibold text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300 cursor-pointer shrink-0"
               >
                 <option value="basico1">{language === 'es' ? 'Básico I' : 'Basic I'}</option>
                 <option value="basico2">{language === 'es' ? 'Básico II' : 'Basic II'}</option>
@@ -2660,35 +2660,37 @@ const EnglishSentenceBuilder = () => {
                 </span>
               )}
 
-              <div className="w-px h-5 bg-gray-200 shrink-0" />
+              <div className="hidden sm:block w-px h-5 bg-gray-200 shrink-0" />
 
-              <div className="flex rounded-lg border border-gray-200 overflow-hidden shrink-0">
-                {modes.map((mode) => (
-                  <button
-                    key={mode.id}
-                    onClick={() => setSelectedMode(mode.id)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-all border-r last:border-r-0 border-gray-200 ${
-                      selectedMode === mode.id ? mode.activeClasses : 'bg-white text-gray-500 hover:bg-gray-50'
-                    }`}
-                  >
-                    {mode.id === 'affirmative' ? <CheckCircle className="w-3.5 h-3.5 shrink-0" /> : mode.id === 'negative' ? <XCircle className="w-3.5 h-3.5 shrink-0" /> : <HelpCircle className="w-3.5 h-3.5 shrink-0" />}
-                    <span className="hidden sm:inline">
-                      {mode.id === 'affirmative' ? t.affirmative : mode.id === 'negative' ? t.negative : t.interrogative}
-                    </span>
-                    <span className="sm:hidden">
-                      {mode.id === 'affirmative' ? (language === 'es' ? 'Afirm.' : 'Affirm.') : mode.id === 'negative' ? (language === 'es' ? 'Neg.' : 'Neg.') : (language === 'es' ? 'Inter.' : 'Inter.')}
-                    </span>
-                  </button>
-                ))}
+              <div className="flex w-full sm:w-auto sm:ml-auto items-center gap-2">
+                <div className="flex flex-1 sm:flex-none rounded-lg border border-gray-200 overflow-hidden shrink-0">
+                  {modes.map((mode) => (
+                    <button
+                      key={mode.id}
+                      onClick={() => setSelectedMode(mode.id)}
+                      className={`flex flex-1 sm:flex-none items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-all border-r last:border-r-0 border-gray-200 ${
+                        selectedMode === mode.id ? mode.activeClasses : 'bg-white text-gray-500 hover:bg-gray-50'
+                      }`}
+                    >
+                      {mode.id === 'affirmative' ? <CheckCircle className="w-3.5 h-3.5 shrink-0" /> : mode.id === 'negative' ? <XCircle className="w-3.5 h-3.5 shrink-0" /> : <HelpCircle className="w-3.5 h-3.5 shrink-0" />}
+                      <span className="hidden sm:inline">
+                        {mode.id === 'affirmative' ? t.affirmative : mode.id === 'negative' ? t.negative : t.interrogative}
+                      </span>
+                      <span className="sm:hidden">
+                        {mode.id === 'affirmative' ? (language === 'es' ? 'Afirm.' : 'Affirm.') : mode.id === 'negative' ? (language === 'es' ? 'Neg.' : 'Neg.') : (language === 'es' ? 'Inter.' : 'Inter.')}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+
+                <button
+                  onClick={resetForm}
+                  title={language === 'es' ? 'Limpiar todo' : 'Clear all'}
+                  className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 text-xs text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-lg border border-gray-200 hover:border-red-200 transition-all"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
               </div>
-
-              <button
-                onClick={resetForm}
-                title={language === 'es' ? 'Limpiar todo' : 'Clear all'}
-                className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 text-xs text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-lg border border-gray-200 hover:border-red-200 transition-all"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
             </div>
             {selectedTense && !selectedModal && (() => {
               const tenseData = tenses.find(t => t.id === selectedTense);
