@@ -2913,11 +2913,16 @@ const EnglishSentenceBuilder = () => {
                 })() : (
                   <button
                     onClick={() => setShowModalPicker(true)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-400 border border-dashed border-gray-300 rounded-lg hover:border-purple-300 hover:text-purple-500 transition-all"
+                    disabled={modals.filter(m => m.id !== '' && COURSE_ORDER.indexOf(m.cefr) <= COURSE_ORDER.indexOf(cefrLevel)).length === 0}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-400 border border-dashed border-gray-300 rounded-lg hover:border-purple-300 hover:text-purple-500 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:border-gray-300 disabled:hover:text-gray-400"
                   >
                     <span className="text-base leading-none">+</span>
                     {language === 'es' ? 'Agregar verbo modal' : 'Add modal verb'}
-                    <span className="text-gray-300">({language === 'es' ? 'opcional' : 'optional'})</span>
+                    <span className="text-gray-300">
+                      {modals.filter(m => m.id !== '' && COURSE_ORDER.indexOf(m.cefr) <= COURSE_ORDER.indexOf(cefrLevel)).length === 0
+                        ? (language === 'es' ? '— disponible desde Básico II' : '— available from Basic II')
+                        : `(${language === 'es' ? 'opcional' : 'optional'})`}
+                    </span>
                   </button>
                 )}
               </div>
