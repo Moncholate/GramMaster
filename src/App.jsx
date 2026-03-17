@@ -1132,6 +1132,10 @@ const EnglishSentenceBuilder = () => {
       changed: false
     } : null;
 
+    // Para "to be" como verbo principal (sin modal), el be form ya es el verbo — no hay verbPart separado
+    const isBeMainVerb = verbText.toLowerCase() === 'be' && !modalId &&
+      (tenseId === 'simple-present' || tenseId === 'simple-past');
+
     // Construir partes según el modo
     if (isInterrogative) {
       // Orden interrogativo: [WH word] + Auxiliar + Sujeto + [Adverbio] + Verbo + Complemento + ?
@@ -1150,7 +1154,7 @@ const EnglishSentenceBuilder = () => {
       auxiliaryParts.forEach(part => parts.push(part));
       parts.push(subjectPart);
       if (adverbPart) parts.push(adverbPart);
-      parts.push(verbPart);
+      if (!isBeMainVerb) parts.push(verbPart);
       if (complementPart) parts.push(complementPart);
       parts.push({
         text: '?',
@@ -1172,7 +1176,7 @@ const EnglishSentenceBuilder = () => {
         // Con auxiliar: Sujeto + Auxiliar + Adverbio + Verbo
         parts.push(adverbPart);
       }
-      parts.push(verbPart);
+      if (!isBeMainVerb) parts.push(verbPart);
       if (complementPart) parts.push(complementPart);
     }
 
