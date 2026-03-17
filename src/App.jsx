@@ -2669,6 +2669,61 @@ const EnglishSentenceBuilder = () => {
             })()}
           </div>
 
+          {/* WH Questions */}
+          {selectedMode === 'interrogative' && (
+            <div className="space-y-2">
+              {/* Fila de chips base */}
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide shrink-0 w-6">WH</span>
+                {whWords.filter(wh => wh.id !== '').map(wh => (
+                  <button
+                    key={wh.id}
+                    type="button"
+                    onClick={() => { setWhWord(whWord === wh.id ? '' : wh.id); setWhExtension(''); }}
+                    className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all ${
+                      whWord === wh.id
+                        ? 'bg-teal-600 text-white border-teal-600'
+                        : 'bg-white text-gray-600 border-gray-300 hover:border-teal-400 hover:text-teal-700'
+                    }`}
+                  >
+                    {wh.name}
+                  </button>
+                ))}
+              </div>
+              {/* Extensión: solo para WH compuestas (What, Which, How) */}
+              {whWord && whSuggestions[whWord] && (
+                <div className="flex flex-wrap items-center gap-1.5 pl-8">
+                  {whSuggestions[whWord].map(ext => (
+                    <button
+                      key={ext}
+                      type="button"
+                      onClick={() => setWhExtension(whExtension === ext ? '' : ext)}
+                      className={`px-2.5 py-0.5 rounded-full text-xs border transition-all ${
+                        whExtension === ext
+                          ? 'bg-teal-100 text-teal-800 border-teal-400 font-medium'
+                          : 'bg-white text-gray-500 border-gray-200 hover:border-teal-300 hover:text-teal-600'
+                      }`}
+                    >
+                      {whWords.find(w => w.id === whWord)?.name} {ext}
+                    </button>
+                  ))}
+                  <input
+                    type="text"
+                    value={whExtension}
+                    onChange={(e) => setWhExtension(e.target.value)}
+                    placeholder={`${whWords.find(w => w.id === whWord)?.name} kind of...`}
+                    className="flex-1 min-w-32 px-3 py-1 text-xs border border-gray-200 rounded-full focus:outline-none focus:ring-1 focus:ring-teal-400 focus:border-teal-400 placeholder-gray-300"
+                  />
+                  {whExtension && (
+                    <span className="text-xs text-teal-700 font-medium bg-teal-50 px-2.5 py-1 rounded-full border border-teal-100">
+                      "{whWords.find(w => w.id === whWord)?.name} {whExtension}..."
+                    </span>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Campos principales */}
           <div className={`grid grid-cols-1 gap-4 ${(selectedTense === 'simple-present' || selectedTense === 'simple-past') && !selectedModal ? 'md:grid-cols-4' : 'md:grid-cols-3'}`}>
             {/* Sujeto */}
@@ -2815,63 +2870,6 @@ const EnglishSentenceBuilder = () => {
               )}
             </div>
           </div>
-
-          {/* WH Questions */}
-          {selectedMode === 'interrogative' && (
-            <div className="space-y-2">
-              {/* Fila de chips base */}
-              <div className="flex flex-wrap items-center gap-1.5">
-                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide shrink-0 w-6">WH</span>
-                {whWords.filter(wh => wh.id !== '').map(wh => (
-                  <button
-                    key={wh.id}
-                    type="button"
-                    onClick={() => { setWhWord(whWord === wh.id ? '' : wh.id); setWhExtension(''); }}
-                    className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all ${
-                      whWord === wh.id
-                        ? 'bg-teal-600 text-white border-teal-600'
-                        : 'bg-white text-gray-600 border-gray-300 hover:border-teal-400 hover:text-teal-700'
-                    }`}
-                  >
-                    {wh.name}
-                  </button>
-                ))}
-              </div>
-
-              {/* Extensión: solo para WH compuestas (What, Which, How) */}
-              {whWord && whSuggestions[whWord] && (
-                <div className="flex flex-wrap items-center gap-1.5 pl-8">
-                  {whSuggestions[whWord] && whSuggestions[whWord].map(ext => (
-                    <button
-                      key={ext}
-                      type="button"
-                      onClick={() => setWhExtension(whExtension === ext ? '' : ext)}
-                      className={`px-2.5 py-0.5 rounded-full text-xs border transition-all ${
-                        whExtension === ext
-                          ? 'bg-teal-100 text-teal-800 border-teal-400 font-medium'
-                          : 'bg-white text-gray-500 border-gray-200 hover:border-teal-300 hover:text-teal-600'
-                      }`}
-                    >
-                      {whWords.find(w => w.id === whWord)?.name} {ext}
-                    </button>
-                  ))}
-                  <input
-                    type="text"
-                    value={whExtension}
-                    onChange={(e) => setWhExtension(e.target.value)}
-                    placeholder={`${whWords.find(w => w.id === whWord)?.name} ${language === 'es' ? 'kind of...' : 'kind of...'}`}
-                    className="flex-1 min-w-32 px-3 py-1 text-xs border border-gray-200 rounded-full focus:outline-none focus:ring-1 focus:ring-teal-400 focus:border-teal-400 placeholder-gray-300"
-                  />
-                  {/* Preview */}
-                  {(whExtension) && (
-                    <span className="text-xs text-teal-700 font-medium bg-teal-50 px-2.5 py-1 rounded-full border border-teal-100">
-                      "{whWords.find(w => w.id === whWord)?.name} {whExtension}..."
-                    </span>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
 
           {/* Verbo modal */}
           <div>
