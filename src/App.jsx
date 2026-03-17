@@ -976,7 +976,12 @@ const EnglishSentenceBuilder = () => {
 
   // Función para generar análisis visual de la oración
   const generateSentenceAnalysis = (config) => {
-    const { subjectText, verbText, complementText, auxiliary, verbForm, tenseId, mode, modalId, whWordText, adverbText } = config;
+    let { subjectText, verbText, complementText, auxiliary, verbForm, tenseId, mode, modalId, whWordText, adverbText } = config;
+    // Normalize to lowercase so visual tokens show correct casing
+    subjectText = subjectText.toLowerCase();
+    verbText = verbText.toLowerCase();
+    if (complementText) complementText = complementText.toLowerCase();
+    verbForm = verbForm ? verbForm.toLowerCase() : verbForm;
     const currentTense = tenses.find(t => t.id === tenseId);
     const currentModal = modalId ? modals.find(m => m.id === modalId) : null;
     const parts = [];
@@ -1501,7 +1506,11 @@ const EnglishSentenceBuilder = () => {
 
   // Helper: construye el texto de una oración para un modo dado (sin efectos secundarios)
   const buildSentenceText = ({ mode, subject: subj, verb: v, complement: comp, tense, modal, whWord: wh, whExtension: whExt, adverb: adv }) => {
-    const subjLower = subj.toLowerCase();
+    // Normalize inputs — correct casing is applied during sentence construction
+    subj = subj.toLowerCase();
+    v = v.toLowerCase();
+    if (comp) comp = comp.toLowerCase();
+    const subjLower = subj;
     const compStr = comp ? ' ' + comp : '';
     const pp = pastParticiple(v);
     const advSp = adv ? ' ' + adv + ' ' : ' ';
