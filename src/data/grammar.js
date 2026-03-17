@@ -144,7 +144,7 @@ export const modals = [
   },
 ];
 
-// Palabras interrogativas WH
+// Palabras interrogativas WH (base)
 export const whWords = [
   { id: '', name: '—' },
   { id: 'what', name: 'What' },
@@ -152,13 +152,15 @@ export const whWords = [
   { id: 'when', name: 'When' },
   { id: 'why', name: 'Why' },
   { id: 'who', name: 'Who' },
+  { id: 'which', name: 'Which' },
   { id: 'how', name: 'How' },
 ];
 
-// Sugerencias para palabras WH
+// Sugerencias de extensión por palabra base (no exhaustivas — el usuario puede escribir cualquier cosa)
 export const whSuggestions = {
-  'what': ['kind of', 'type of', 'time'],
-  'how': ['much', 'many', 'often', 'long'],
+  'what': ['kind of', 'type of', 'color', 'time', 'size'],
+  'which': ['one', 'ones', 'type of'],
+  'how': ['much', 'many', 'often', 'long', 'far', 'old'],
 };
 
 // Adverbios de frecuencia (van entre sujeto y verbo)
