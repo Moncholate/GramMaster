@@ -2620,6 +2620,29 @@ const EnglishSentenceBuilder = () => {
                   {language === 'es' ? 'no aplica con modal' : 'not used with modal'}
                 </span>
               )}
+
+              <div className="w-px h-5 bg-gray-200 shrink-0" />
+
+              <div className="flex rounded-lg border border-gray-200 overflow-hidden shrink-0">
+                {modes.map((mode) => (
+                  <button
+                    key={mode.id}
+                    onClick={() => setSelectedMode(mode.id)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-all border-r last:border-r-0 border-gray-200 ${
+                      selectedMode === mode.id ? mode.activeClasses : 'bg-white text-gray-500 hover:bg-gray-50'
+                    }`}
+                  >
+                    {mode.id === 'affirmative' ? <CheckCircle className="w-3.5 h-3.5 shrink-0" /> : mode.id === 'negative' ? <XCircle className="w-3.5 h-3.5 shrink-0" /> : <HelpCircle className="w-3.5 h-3.5 shrink-0" />}
+                    <span className="hidden sm:inline">
+                      {mode.id === 'affirmative' ? t.affirmative : mode.id === 'negative' ? t.negative : t.interrogative}
+                    </span>
+                    <span className="sm:hidden">
+                      {mode.id === 'affirmative' ? (language === 'es' ? 'Afirm.' : 'Affirm.') : mode.id === 'negative' ? (language === 'es' ? 'Neg.' : 'Neg.') : (language === 'es' ? 'Inter.' : 'Inter.')}
+                    </span>
+                  </button>
+                ))}
+              </div>
+
               <button
                 onClick={resetForm}
                 title={language === 'es' ? 'Limpiar todo' : 'Clear all'}
@@ -2795,31 +2818,8 @@ const EnglishSentenceBuilder = () => {
             </div>
           </div>
 
-          {/* Modo de oración */}
+          {/* WH Questions */}
           <div>
-            <div className="flex items-center gap-3">
-              <label className="text-xs font-semibold text-gray-500 tracking-wide uppercase shrink-0">{t.mode}</label>
-              <div className="flex rounded-lg border border-gray-200 overflow-hidden">
-                {modes.map((mode) => (
-                  <button
-                    key={mode.id}
-                    onClick={() => setSelectedMode(mode.id)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-all border-r last:border-r-0 border-gray-200 ${
-                      selectedMode === mode.id ? mode.activeClasses : 'bg-white text-gray-500 hover:bg-gray-50'
-                    }`}
-                  >
-                    {mode.id === 'affirmative' ? <CheckCircle className="w-3.5 h-3.5 shrink-0" /> : mode.id === 'negative' ? <XCircle className="w-3.5 h-3.5 shrink-0" /> : <HelpCircle className="w-3.5 h-3.5 shrink-0" />}
-                    <span className="hidden sm:inline">
-                      {mode.id === 'affirmative' ? t.affirmative : mode.id === 'negative' ? t.negative : t.interrogative}
-                    </span>
-                    <span className="sm:hidden">
-                      {mode.id === 'affirmative' ? (language === 'es' ? 'Afirm.' : 'Affirm.') : mode.id === 'negative' ? (language === 'es' ? 'Neg.' : 'Neg.') : (language === 'es' ? 'Inter.' : 'Inter.')}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
             {/* WH Questions - solo visible en modo interrogativo */}
             {selectedMode === 'interrogative' && (
               <div className="mt-4 pt-4 border-t border-gray-200">
