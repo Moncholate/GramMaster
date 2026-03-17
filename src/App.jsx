@@ -2728,7 +2728,11 @@ const EnglishSentenceBuilder = () => {
           <div className={`grid grid-cols-1 gap-4 ${(selectedTense === 'simple-present' || selectedTense === 'simple-past') && !selectedModal ? 'md:grid-cols-4' : 'md:grid-cols-3'}`}>
             {/* Sujeto */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">{t.subject} <span className="text-red-500">*</span></label>
+              <label className="flex items-center gap-1.5 mb-1.5">
+                <span className="text-[10px] font-bold bg-indigo-100 text-indigo-600 px-1.5 py-0.5 rounded">S</span>
+                <span className="text-sm font-medium text-indigo-600">{t.subject}</span>
+                <span className="text-red-500 text-xs">*</span>
+              </label>
               <input
                 type="text"
                 value={subject}
@@ -2787,7 +2791,11 @@ const EnglishSentenceBuilder = () => {
 
             {/* Verbo */}
             <div className="relative">
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">{t.verb} <span className="text-red-500">*</span></label>
+              <label className="flex items-center gap-1.5 mb-1.5">
+                <span className="text-[10px] font-bold bg-rose-100 text-rose-600 px-1.5 py-0.5 rounded">V</span>
+                <span className="text-sm font-medium text-rose-600">{t.verb}</span>
+                <span className="text-red-500 text-xs">*</span>
+              </label>
               <input
                 type="text"
                 value={verb}
@@ -2828,7 +2836,11 @@ const EnglishSentenceBuilder = () => {
 
             {/* Complemento */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">{t.complement} <span className="text-gray-400 text-xs">({t.optional})</span></label>
+              <label className="flex items-center gap-1.5 mb-1.5">
+                <span className="text-[10px] font-bold bg-emerald-100 text-emerald-600 px-1.5 py-0.5 rounded">C</span>
+                <span className="text-sm font-medium text-emerald-600">{t.complement}</span>
+                <span className="text-gray-400 text-xs">({t.optional})</span>
+              </label>
               <input
                 type="text"
                 value={complement}
