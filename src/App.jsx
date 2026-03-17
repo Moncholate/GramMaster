@@ -2638,9 +2638,12 @@ const EnglishSentenceBuilder = () => {
 
           <div className="flex items-center gap-2">
             {/* IDIOMA toggle */}
-            <div className="flex bg-gray-100 rounded-lg p-0.5">
-              <button onClick={() => setLanguage('es')} className={`px-2.5 py-1 text-sm font-semibold rounded-md transition-all ${language === 'es' ? 'bg-white shadow-sm text-gray-800' : 'text-gray-500 hover:text-gray-700'}`}>ES</button>
-              <button onClick={() => setLanguage('en')} className={`px-2.5 py-1 text-sm font-semibold rounded-md transition-all ${language === 'en' ? 'bg-white shadow-sm text-gray-800' : 'text-gray-500 hover:text-gray-700'}`}>EN</button>
+            <div className="flex flex-col items-start">
+              <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide px-1 mb-0.5">{language === 'es' ? 'Idioma' : 'Language'}</span>
+              <div className="flex bg-slate-100 border border-slate-300 rounded-lg p-0.5">
+                <button onClick={() => setLanguage('es')} className={`px-3 py-1 rounded text-sm font-bold transition-all ${language === 'es' ? 'bg-white shadow-sm text-indigo-600' : 'hover:bg-slate-50 text-slate-600'}`} title="Español">ES</button>
+                <button onClick={() => setLanguage('en')} className={`px-3 py-1 rounded text-sm font-bold transition-all ${language === 'en' ? 'bg-white shadow-sm text-indigo-600' : 'hover:bg-slate-50 text-slate-600'}`} title="English">EN</button>
+              </div>
             </div>
 
             {/* Botones de acción — solo visibles en desktop */}
