@@ -2838,8 +2838,8 @@ const EnglishSentenceBuilder = () => {
                 ))}
               </div>
 
-              {/* Extensión: sugerencias rápidas + campo libre */}
-              {whWord && (
+              {/* Extensión: solo para WH compuestas (What, Which, How) */}
+              {whWord && whSuggestions[whWord] && (
                 <div className="flex flex-wrap items-center gap-1.5 pl-8">
                   {whSuggestions[whWord] && whSuggestions[whWord].map(ext => (
                     <button
