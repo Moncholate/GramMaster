@@ -397,11 +397,12 @@ const EnglishSentenceBuilder = () => {
     const wasWere = (subjLower === 'i' || is3p) && subjLower !== 'you' ? 'was' : 'were';
     const hasHave = is3p ? 'has' : 'have';
     const pp = pastParticiple(v);
+    const isBeVerb = v.toLowerCase() === 'be';
     if (mode === 'affirmative') {
       if (modal) return modal + ' ' + v;
-      if (tenseId === 'simple-present') return is3p ? conjugate3p(v) : v;
+      if (tenseId === 'simple-present') return isBeVerb ? beForm : (is3p ? conjugate3p(v) : v);
       if (tenseId === 'present-continuous') return beForm + ' ' + presentParticiple(v);
-      if (tenseId === 'simple-past') return simplePast(v);
+      if (tenseId === 'simple-past') return isBeVerb ? wasWere : simplePast(v);
       if (tenseId === 'past-continuous') return wasWere + ' ' + presentParticiple(v);
       if (tenseId === 'simple-future') return 'will ' + v;
       if (tenseId === 'future-going-to') return beForm + ' going to ' + v;
@@ -416,9 +417,9 @@ const EnglishSentenceBuilder = () => {
     if (mode === 'negative') {
       const negM = modal === 'can' ? "can't" : modal === 'could' ? "couldn't" : modal === 'should' ? "shouldn't" : modal === 'would' ? "wouldn't" : modal === 'will' ? "won't" : modal === 'must' ? "mustn't" : modal ? modal + ' not' : null;
       if (negM) return negM + ' ' + v;
-      if (tenseId === 'simple-present') return (is3p ? "doesn't" : "don't") + ' ' + v;
+      if (tenseId === 'simple-present') return isBeVerb ? beForm + ' not' : (is3p ? "doesn't" : "don't") + ' ' + v;
       if (tenseId === 'present-continuous') return beForm + ' not ' + presentParticiple(v);
-      if (tenseId === 'simple-past') return "didn't " + v;
+      if (tenseId === 'simple-past') return isBeVerb ? wasWere + ' not' : "didn't " + v;
       if (tenseId === 'past-continuous') return wasWere + ' not ' + presentParticiple(v);
       if (tenseId === 'simple-future') return "won't " + v;
       if (tenseId === 'future-going-to') return beForm + ' not going to ' + v;
@@ -1492,12 +1493,19 @@ const EnglishSentenceBuilder = () => {
     let fullWh = wh;
     if (wh && whExt && whExt.trim()) fullWh = wh + ' ' + whExt.trim();
     const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+    const isBeVerb = v.toLowerCase() === 'be';
 
     if (mode === 'affirmative') {
       if (modal)                              return cap(subj) + ' ' + modal + advSp + v + compStr + '.';
-      if (tense === 'simple-present')         return cap(subj) + advSp + (is3p ? conjugate3p(v) : v) + compStr + '.';
+      if (tense === 'simple-present') {
+        if (isBeVerb)                         return cap(subj) + ' ' + beForm + advSp.trimEnd() + compStr + '.';
+        return cap(subj) + advSp + (is3p ? conjugate3p(v) : v) + compStr + '.';
+      }
       if (tense === 'present-continuous')     return cap(subj) + ' ' + beForm + advSp + presentParticiple(v) + compStr + '.';
-      if (tense === 'simple-past')            return cap(subj) + advSp + simplePast(v) + compStr + '.';
+      if (tense === 'simple-past') {
+        if (isBeVerb)                         return cap(subj) + ' ' + wasWere + advSp.trimEnd() + compStr + '.';
+        return cap(subj) + advSp + simplePast(v) + compStr + '.';
+      }
       if (tense === 'past-continuous')        return cap(subj) + ' ' + wasWere + advSp + presentParticiple(v) + compStr + '.';
       if (tense === 'simple-future')          return cap(subj) + ' will' + advSp + v + compStr + '.';
       if (tense === 'future-going-to')        return cap(subj) + ' ' + beForm + advSp + 'going to ' + v + compStr + '.';
@@ -1514,9 +1522,15 @@ const EnglishSentenceBuilder = () => {
         const negM = modal === 'can' ? "can't" : modal === 'could' ? "couldn't" : modal === 'should' ? "shouldn't" : modal === 'would' ? "wouldn't" : modal === 'will' ? "won't" : modal === 'must' ? "mustn't" : modal + " not";
         return cap(subj) + ' ' + negM + advSp + v + compStr + '.';
       }
-      if (tense === 'simple-present')         return cap(subj) + ' ' + (is3p ? "doesn't" : "don't") + advSp + v + compStr + '.';
+      if (tense === 'simple-present') {
+        if (isBeVerb)                         return cap(subj) + ' ' + beForm + " not" + (compStr ? ' ' + comp : '') + '.';
+        return cap(subj) + ' ' + (is3p ? "doesn't" : "don't") + advSp + v + compStr + '.';
+      }
       if (tense === 'present-continuous')     return cap(subj) + ' ' + beForm + ' not' + advSp + presentParticiple(v) + compStr + '.';
-      if (tense === 'simple-past')            return cap(subj) + " didn't" + advSp + v + compStr + '.';
+      if (tense === 'simple-past') {
+        if (isBeVerb)                         return cap(subj) + ' ' + wasWere + " not" + (compStr ? ' ' + comp : '') + '.';
+        return cap(subj) + " didn't" + advSp + v + compStr + '.';
+      }
       if (tense === 'past-continuous')        return cap(subj) + ' ' + wasWere + ' not' + advSp + presentParticiple(v) + compStr + '.';
       if (tense === 'simple-future')          return cap(subj) + " won't" + advSp + v + compStr + '.';
       if (tense === 'future-going-to')        return cap(subj) + ' ' + beForm + ' not' + advSp + 'going to ' + v + compStr + '.';
@@ -1533,11 +1547,21 @@ const EnglishSentenceBuilder = () => {
       const prefix = fullWh ? whCap : '';
       if (modal)                              return prefix + (fullWh ? modal : cap(modal)) + ' ' + subj + advAfter + ' ' + v + compStr + '?';
       if (tense === 'simple-present') {
+        if (isBeVerb) {
+          const bf = fullWh ? beForm : cap(beForm);
+          return prefix + bf + ' ' + subj + (compStr ? ' ' + comp : '') + '?';
+        }
         const aux = is3p ? 'does' : 'do';
         return prefix + (fullWh ? aux : cap(aux)) + ' ' + subj + advAfter + ' ' + v + compStr + '?';
       }
       if (tense === 'present-continuous')     return prefix + (fullWh ? beForm : cap(beForm)) + ' ' + subj + advAfter + ' ' + presentParticiple(v) + compStr + '?';
-      if (tense === 'simple-past')            return prefix + 'did ' + subj + advAfter + ' ' + v + compStr + '?';
+      if (tense === 'simple-past') {
+        if (isBeVerb) {
+          const ww = fullWh ? wasWere : cap(wasWere);
+          return prefix + ww + ' ' + subj + (compStr ? ' ' + comp : '') + '?';
+        }
+        return prefix + 'did ' + subj + advAfter + ' ' + v + compStr + '?';
+      }
       if (tense === 'past-continuous')        return prefix + (fullWh ? wasWere : cap(wasWere)) + ' ' + subj + advAfter + ' ' + presentParticiple(v) + compStr + '?';
       if (tense === 'simple-future')          return prefix + 'will ' + subj + advAfter + ' ' + v + compStr + '?';
       if (tense === 'future-going-to')        return prefix + (fullWh ? beForm : cap(beForm)) + ' ' + subj + advAfter + ' going to ' + v + compStr + '?';
