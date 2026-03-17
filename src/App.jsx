@@ -431,6 +431,22 @@ const EnglishSentenceBuilder = () => {
       if (tenseId === 'used-to') return "didn't use to " + v;
       if (tenseId === 'would-past') return "wouldn't " + v;
     }
+    if (mode === 'interrogative') {
+      if (modal) return modal;
+      if (tenseId === 'simple-present') return isBeVerb ? beForm : (is3p ? 'does' : 'do');
+      if (tenseId === 'present-continuous') return beForm;
+      if (tenseId === 'simple-past') return isBeVerb ? wasWere : 'did';
+      if (tenseId === 'past-continuous') return wasWere;
+      if (tenseId === 'simple-future') return 'will';
+      if (tenseId === 'future-going-to') return beForm;
+      if (tenseId === 'present-perfect') return hasHave;
+      if (tenseId === 'past-perfect') return 'had';
+      if (tenseId === 'future-perfect') return 'will';
+      if (tenseId === 'present-perfect-continuous') return hasHave;
+      if (tenseId === 'past-perfect-continuous') return 'had';
+      if (tenseId === 'used-to') return 'did';
+      if (tenseId === 'would-past') return 'would';
+    }
     return v;
   };
 
@@ -1560,18 +1576,18 @@ const EnglishSentenceBuilder = () => {
           const ww = fullWh ? wasWere : cap(wasWere);
           return prefix + ww + ' ' + subj + (compStr ? ' ' + comp : '') + '?';
         }
-        return prefix + 'did ' + subj + advAfter + ' ' + v + compStr + '?';
+        return prefix + (fullWh ? 'did ' : 'Did ') + subj + advAfter + ' ' + v + compStr + '?';
       }
       if (tense === 'past-continuous')        return prefix + (fullWh ? wasWere : cap(wasWere)) + ' ' + subj + advAfter + ' ' + presentParticiple(v) + compStr + '?';
-      if (tense === 'simple-future')          return prefix + 'will ' + subj + advAfter + ' ' + v + compStr + '?';
+      if (tense === 'simple-future')          return prefix + (fullWh ? 'will ' : 'Will ') + subj + advAfter + ' ' + v + compStr + '?';
       if (tense === 'future-going-to')        return prefix + (fullWh ? beForm : cap(beForm)) + ' ' + subj + advAfter + ' going to ' + v + compStr + '?';
       if (tense === 'present-perfect')        return prefix + (fullWh ? hasHave : cap(hasHave)) + ' ' + subj + advAfter + ' ' + pp + compStr + '?';
-      if (tense === 'past-perfect')           return prefix + 'had ' + subj + advAfter + ' ' + pp + compStr + '?';
-      if (tense === 'future-perfect')         return prefix + 'will ' + subj + advAfter + ' have ' + pp + compStr + '?';
+      if (tense === 'past-perfect')           return prefix + (fullWh ? 'had ' : 'Had ') + subj + advAfter + ' ' + pp + compStr + '?';
+      if (tense === 'future-perfect')         return prefix + (fullWh ? 'will ' : 'Will ') + subj + advAfter + ' have ' + pp + compStr + '?';
       if (tense === 'present-perfect-continuous') return prefix + (fullWh ? hasHave : cap(hasHave)) + ' ' + subj + advAfter + ' been ' + presentParticiple(v) + compStr + '?';
-      if (tense === 'past-perfect-continuous')    return prefix + 'had ' + subj + advAfter + ' been ' + presentParticiple(v) + compStr + '?';
-      if (tense === 'used-to')                return prefix + 'did ' + subj + advAfter + ' use to ' + v + compStr + '?';
-      if (tense === 'would-past')             return prefix + 'would ' + subj + advAfter + ' ' + v + compStr + '?';
+      if (tense === 'past-perfect-continuous')    return prefix + (fullWh ? 'had ' : 'Had ') + subj + advAfter + ' been ' + presentParticiple(v) + compStr + '?';
+      if (tense === 'used-to')                return prefix + (fullWh ? 'did ' : 'Did ') + subj + advAfter + ' use to ' + v + compStr + '?';
+      if (tense === 'would-past')             return prefix + (fullWh ? 'would ' : 'Would ') + subj + advAfter + ' ' + v + compStr + '?';
     }
     return '';
   };
@@ -2562,7 +2578,7 @@ const EnglishSentenceBuilder = () => {
         {/* Header */}
         <header className="flex items-center justify-between mb-4 sm:mb-6">
           <div className="flex items-center gap-3">
-            <img src="/GramMaster/favicon.svg" alt="GramMaster" className="w-9 h-9 sm:w-10 sm:h-10 shrink-0" />
+            <img src="/GramMaster/favicon.svg" alt="GramMaster" className="w-9 h-9 sm:w-10 sm:h-10 shrink-0 rounded-[22%]" />
             <div>
               <h1 className="text-lg sm:text-xl font-bold text-gray-800">{t.title}</h1>
               <p className="text-xs text-gray-500 hidden sm:block">{language === 'es' ? 'Constructor de Oraciones en Inglés' : 'English Sentence Builder'}</p>
