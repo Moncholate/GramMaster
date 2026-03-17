@@ -2537,9 +2537,7 @@ const EnglishSentenceBuilder = () => {
         {/* Header */}
         <header className="flex items-center justify-between mb-4 sm:mb-6">
           <div className="flex items-center gap-3">
-            <div className="bg-gradient-to-br from-indigo-500 to-purple-600 p-2 rounded-xl shrink-0">
-              <BookOpen className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
-            </div>
+            <img src="/GramMaster/favicon.svg" alt="GramMaster" className="w-9 h-9 sm:w-10 sm:h-10 shrink-0" />
             <div>
               <h1 className="text-lg sm:text-xl font-bold text-gray-800">{t.title}</h1>
               <p className="text-xs text-gray-500 hidden sm:block">{language === 'es' ? 'Constructor de Oraciones en Inglés' : 'English Sentence Builder'}</p>
