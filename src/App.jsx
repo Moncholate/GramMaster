@@ -2818,41 +2818,48 @@ const EnglishSentenceBuilder = () => {
             </div>
           </div>
 
-          {/* WH Questions */}
-          <div>
-            {/* WH Questions - solo visible en modo interrogativo */}
-            {selectedMode === 'interrogative' && (
-              <div className="mt-4 pt-4 border-t border-gray-200">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">{t.whWord}</label>
-                    <select
-                      value={whWord}
-                      onChange={(e) => setWhWord(e.target.value)}
-                      className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none bg-white"
-                    >
-                      {whWords.map(wh => <option key={wh.id} value={wh.id}>{wh.name}</option>)}
-                    </select>
-                  </div>
-                  {whWord && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        {t.whExtension}
-                        <span className="text-gray-400 text-xs ml-2">({language === 'es' ? 'opcional' : 'optional'})</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={whExtension}
-                        onChange={(e) => setWhExtension(e.target.value)}
-                        placeholder={language === 'es' ? 'ej: kind of, much...' : 'e.g.: kind of, much...'}
-                        className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
-                      />
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
+          {/* WH Questions - chips inline bajo los controles */}
+          {selectedMode === 'interrogative' && (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide shrink-0">WH</span>
+              {whWords.filter(wh => wh.id !== '').map(wh => (
+                <button
+                  key={wh.id}
+                  type="button"
+                  onClick={() => { setWhWord(whWord === wh.id ? '' : wh.id); setWhExtension(''); }}
+                  className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all ${
+                    whWord === wh.id
+                      ? 'bg-teal-600 text-white border-teal-600'
+                      : 'bg-white text-gray-600 border-gray-300 hover:border-teal-400 hover:text-teal-700'
+                  }`}
+                >
+                  {wh.name}
+                </button>
+              ))}
+              {whWord && whSuggestions[whWord] && (() => {
+                const whName = whWords.find(w => w.id === whWord)?.name ?? '';
+                return (
+                  <>
+                    <div className="w-px h-4 bg-gray-200" />
+                    {whSuggestions[whWord].map(ext => (
+                      <button
+                        key={ext}
+                        type="button"
+                        onClick={() => setWhExtension(whExtension === ext ? '' : ext)}
+                        className={`px-3 py-1 rounded-full text-xs border transition-all ${
+                          whExtension === ext
+                            ? 'bg-teal-100 text-teal-800 border-teal-400'
+                            : 'bg-white text-gray-500 border-gray-200 hover:border-teal-300 hover:text-teal-600'
+                        }`}
+                      >
+                        {whName} {ext}
+                      </button>
+                    ))}
+                  </>
+                );
+              })()}
+            </div>
+          )}
 
           {/* Verbo modal */}
           <div>
