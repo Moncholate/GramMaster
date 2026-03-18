@@ -185,6 +185,17 @@ const EnglishSentenceBuilder = () => {
     setSpellingErrors(prev => ({ ...prev, [field]: errors }));
   };
 
+  // Grammar HUB: escuchar cambio de idioma vía postMessage
+  useEffect(() => {
+    const handler = (e) => {
+      if (e.data?.type === 'GRAMMAR_HUB_LANG' && (e.data.lang === 'es' || e.data.lang === 'en')) {
+        setLanguage(e.data.lang);
+      }
+    };
+    window.addEventListener('message', handler);
+    return () => window.removeEventListener('message', handler);
+  }, []);
+
   // FASE 1: Cargar datos del localStorage al iniciar
   useEffect(() => {
     const savedHistory = localStorage.getItem('sentenceHistory');
