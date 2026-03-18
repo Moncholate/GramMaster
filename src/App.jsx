@@ -184,11 +184,15 @@ const EnglishSentenceBuilder = () => {
     setSpellingErrors(prev => ({ ...prev, [field]: errors }));
   };
 
-  // Grammar HUB: escuchar cambio de idioma vía postMessage
+  // Grammar HUB: escuchar cambio de idioma y nivel vía postMessage
   useEffect(() => {
+    const validLevels = ['basico1','basico2','elemental1','elemental2','intermedio1','intermedio2','avanzado'];
     const handler = (e) => {
       if (e.data?.type === 'GRAMMAR_HUB_LANG' && (e.data.lang === 'es' || e.data.lang === 'en')) {
         setLanguage(e.data.lang);
+      }
+      if (e.data?.type === 'GRAMMAR_HUB_LEVEL' && validLevels.includes(e.data.level)) {
+        setCefrLevel(e.data.level);
       }
     };
     window.addEventListener('message', handler);
