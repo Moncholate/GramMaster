@@ -2580,32 +2580,27 @@ const EnglishSentenceBuilder = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             {/* NIVEL selector */}
-            <div className="flex flex-col items-start">
-              <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide px-1 mb-0.5">{language === 'es' ? 'Nivel' : 'Level'}</span>
-              <select
-                value={cefrLevel}
-                onChange={(e) => setCefrLevel(e.target.value)}
-                className="px-2 py-1 border border-slate-300 rounded-lg text-xs font-semibold text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300 cursor-pointer"
-              >
-                <option value="basico1">{language === 'es' ? 'Básico I' : 'Basic I'}</option>
-                <option value="basico2">{language === 'es' ? 'Básico II' : 'Basic II'}</option>
-                <option value="elemental1">{language === 'es' ? 'Elemental I' : 'Elementary I'}</option>
-                <option value="elemental2">{language === 'es' ? 'Elemental II' : 'Elementary II'}</option>
-                <option value="intermedio1">{language === 'es' ? 'Intermedio I' : 'Intermediate I'}</option>
-                <option value="intermedio2">{language === 'es' ? 'Intermedio II' : 'Intermediate II'}</option>
-                <option value="avanzado">{language === 'es' ? 'Intermedio Alto' : 'Upper-Interm.'}</option>
-              </select>
-            </div>
+            <select
+              value={cefrLevel}
+              onChange={(e) => setCefrLevel(e.target.value)}
+              className="px-1.5 py-1 border border-slate-200 rounded-lg text-xs font-medium text-gray-600 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300 cursor-pointer"
+              title={language === 'es' ? 'Nivel' : 'Level'}
+            >
+              <option value="basico1">{language === 'es' ? 'Bás. I' : 'Bas. I'}</option>
+              <option value="basico2">{language === 'es' ? 'Bás. II' : 'Bas. II'}</option>
+              <option value="elemental1">{language === 'es' ? 'Elem. I' : 'Elem. I'}</option>
+              <option value="elemental2">{language === 'es' ? 'Elem. II' : 'Elem. II'}</option>
+              <option value="intermedio1">{language === 'es' ? 'Inter. I' : 'Int. I'}</option>
+              <option value="intermedio2">{language === 'es' ? 'Inter. II' : 'Int. II'}</option>
+              <option value="avanzado">{language === 'es' ? 'Inter. Alto' : 'Upper'}</option>
+            </select>
 
             {/* IDIOMA toggle */}
-            <div className="flex flex-col items-start">
-              <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide px-1 mb-0.5">{language === 'es' ? 'Idioma' : 'Language'}</span>
-              <div className="flex bg-slate-100 border border-slate-300 rounded-lg p-0.5">
-                <button onClick={() => setLanguage('es')} className={`px-3 py-1 rounded text-sm font-bold transition-all ${language === 'es' ? 'bg-white shadow-sm text-indigo-600' : 'hover:bg-slate-50 text-slate-600'}`} title="Español">ES</button>
-                <button onClick={() => setLanguage('en')} className={`px-3 py-1 rounded text-sm font-bold transition-all ${language === 'en' ? 'bg-white shadow-sm text-indigo-600' : 'hover:bg-slate-50 text-slate-600'}`} title="English">EN</button>
-              </div>
+            <div className="flex bg-slate-100 border border-slate-200 rounded-lg p-0.5">
+              <button onClick={() => setLanguage('es')} className={`px-2 py-0.5 rounded text-xs font-bold transition-all ${language === 'es' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`} title="Español">ES</button>
+              <button onClick={() => setLanguage('en')} className={`px-2 py-0.5 rounded text-xs font-bold transition-all ${language === 'en' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`} title="English">EN</button>
             </div>
 
             {/* Botones de acción — solo visibles en desktop */}
