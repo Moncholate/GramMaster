@@ -2623,7 +2623,7 @@ const EnglishSentenceBuilder = () => {
                 <option value="elemental2">{language === 'es' ? 'Elemental II' : 'Elementary II'}</option>
                 <option value="intermedio1">{language === 'es' ? 'Intermedio I' : 'Intermediate I'}</option>
                 <option value="intermedio2">{language === 'es' ? 'Intermedio II' : 'Intermediate II'}</option>
-                <option value="avanzado">{language === 'es' ? 'Avanzado' : 'Upper-Interm.'}</option>
+                <option value="avanzado">{language === 'es' ? 'Intermedio Alto' : 'Upper-Interm.'}</option>
               </select>
 
               <div className="w-px h-5 bg-gray-200 shrink-0" />
