@@ -2581,6 +2581,24 @@ const EnglishSentenceBuilder = () => {
           </div>
 
           <div className="flex items-center gap-2">
+            {/* NIVEL selector */}
+            <div className="flex flex-col items-start">
+              <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide px-1 mb-0.5">{language === 'es' ? 'Nivel' : 'Level'}</span>
+              <select
+                value={cefrLevel}
+                onChange={(e) => setCefrLevel(e.target.value)}
+                className="px-2 py-1 border border-slate-300 rounded-lg text-xs font-semibold text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300 cursor-pointer"
+              >
+                <option value="basico1">{language === 'es' ? 'Básico I' : 'Basic I'}</option>
+                <option value="basico2">{language === 'es' ? 'Básico II' : 'Basic II'}</option>
+                <option value="elemental1">{language === 'es' ? 'Elemental I' : 'Elementary I'}</option>
+                <option value="elemental2">{language === 'es' ? 'Elemental II' : 'Elementary II'}</option>
+                <option value="intermedio1">{language === 'es' ? 'Intermedio I' : 'Intermediate I'}</option>
+                <option value="intermedio2">{language === 'es' ? 'Intermedio II' : 'Intermediate II'}</option>
+                <option value="avanzado">{language === 'es' ? 'Intermedio Alto' : 'Upper-Interm.'}</option>
+              </select>
+            </div>
+
             {/* IDIOMA toggle */}
             <div className="flex flex-col items-start">
               <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide px-1 mb-0.5">{language === 'es' ? 'Idioma' : 'Language'}</span>
@@ -2610,27 +2628,9 @@ const EnglishSentenceBuilder = () => {
         {/* Formulario Principal */}
         <div className="bg-white rounded-2xl shadow-sm border p-4 sm:p-6 space-y-4 sm:space-y-6">
 
-          {/* NIVEL + TIEMPO VERBAL en la misma fila */}
+          {/* TIEMPO VERBAL */}
           <div className="pb-4 border-b border-gray-100">
             <div className="flex flex-wrap items-center gap-2">
-              <label className="text-xs font-semibold text-gray-500 tracking-wide uppercase shrink-0">
-                {language === 'es' ? 'Nivel' : 'Level'}
-              </label>
-              <select
-                value={cefrLevel}
-                onChange={(e) => setCefrLevel(e.target.value)}
-                className="w-28 sm:w-40 px-2 py-1.5 border border-gray-200 rounded-lg text-sm font-semibold text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300 cursor-pointer shrink-0"
-              >
-                <option value="basico1">{language === 'es' ? 'Básico I' : 'Basic I'}</option>
-                <option value="basico2">{language === 'es' ? 'Básico II' : 'Basic II'}</option>
-                <option value="elemental1">{language === 'es' ? 'Elemental I' : 'Elementary I'}</option>
-                <option value="elemental2">{language === 'es' ? 'Elemental II' : 'Elementary II'}</option>
-                <option value="intermedio1">{language === 'es' ? 'Intermedio I' : 'Intermediate I'}</option>
-                <option value="intermedio2">{language === 'es' ? 'Intermedio II' : 'Intermediate II'}</option>
-                <option value="avanzado">{language === 'es' ? 'Intermedio Alto' : 'Upper-Interm.'}</option>
-              </select>
-
-              <div className="w-px h-5 bg-gray-200 shrink-0" />
 
               <label className="text-xs font-semibold text-gray-500 tracking-wide uppercase shrink-0">
                 {t.tense} {!selectedModal && <span className="text-red-500">*</span>}
