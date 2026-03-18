@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BookOpen, Volume2, VolumeX, Award, AlertTriangle, CheckCircle, XCircle, HelpCircle, Sparkles, X, History, Copy, Check, Trash2, Settings, Clock, Play, Info, ExternalLink, BarChart2 } from 'lucide-react';
+import { BookOpen, Volume2, VolumeX, Award, AlertTriangle, CheckCircle, XCircle, HelpCircle, Sparkles, X, History, Copy, Check, Trash2, Clock, Play, Info, ExternalLink, BarChart2 } from 'lucide-react';
 import {
   translations,
   commonVerbs,
@@ -82,7 +82,6 @@ const EnglishSentenceBuilder = () => {
   const [identifyModeAnswer, setIdentifyModeAnswer] = useState('');
   const [showHint, setShowHint] = useState(false);
   const [showGrammarAnalysis, setShowGrammarAnalysis] = useState(false);
-  const [theme, setTheme] = useState('light'); // 'light', 'dark', 'highContrast'
   const [cefrLevel, setCefrLevel] = useState('basico1');
   const [notification, setNotification] = useState(null); // { type: 'error' | 'success', message: string }
 
@@ -363,23 +362,6 @@ const EnglishSentenceBuilder = () => {
     }
   };
 
-  // FASE 2: Cargar tema desde localStorage
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('appTheme');
-    if (savedTheme) {
-      setTheme(savedTheme);
-    }
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem('appTheme', theme);
-    // Aplicar clases al body para tema oscuro
-    if (theme === 'dark') {
-      document.body.classList.add('dark-theme');
-    } else {
-      document.body.classList.remove('dark-theme');
-    }
-  }, [theme]);
 
   // Limpiar tiempo verbal al cambiar de categoría
   useEffect(() => {
@@ -2111,45 +2093,12 @@ const EnglishSentenceBuilder = () => {
 
   const verbSuggestions = getVerbSuggestions();
 
-  // FASE 2: Clases para temas
-  const getThemeClasses = () => {
-    if (theme === 'dark') {
-      return {
-        bg: 'bg-gradient-to-br from-gray-900 via-slate-800 to-gray-900',
-        card: 'bg-gray-800 border-gray-700',
-        text: 'text-gray-100',
-        textSecondary: 'text-gray-300',
-        input: 'bg-gray-700 border-gray-600 text-gray-100',
-        button: 'bg-gray-700 hover:bg-gray-600',
-      };
-    } else if (theme === 'highContrast') {
-      return {
-        bg: 'bg-black',
-        card: 'bg-white border-4 border-black',
-        text: 'text-black',
-        textSecondary: 'text-gray-800',
-        input: 'bg-white border-4 border-black text-black',
-        button: 'bg-black text-white border-4 border-black hover:bg-gray-800',
-      };
-    }
-    // Light theme (default)
-    return {
-      bg: 'bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50',
-      card: 'bg-white border-gray-100',
-      text: 'text-gray-800',
-      textSecondary: 'text-gray-600',
-      input: 'bg-white border-gray-200 text-gray-800',
-      button: 'bg-white border-gray-200 hover:bg-gray-50',
-    };
-  };
-
-  const themeClasses = getThemeClasses();
 
   // Cerrar panel activo
   const closePanel = () => setActivePanel(null);
 
   return (
-    <div className={`flex flex-col h-screen overflow-hidden ${themeClasses.bg}`}>
+    <div className="flex flex-col h-screen overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
       {/* Notificación */}
       {notification && (
         <div className={`fixed top-4 right-4 z-50 px-5 py-3 rounded-lg shadow-lg ${
@@ -2612,26 +2561,6 @@ const EnglishSentenceBuilder = () => {
                 );
               })()}
 
-              {/* Panel de Settings */}
-              {activePanel === 'settings' && (
-                <div className="space-y-3">
-                  {[
-                    { id: 'light', icon: '☀️', label: t.lightTheme },
-                    { id: 'dark', icon: '🌙', label: t.darkTheme },
-                    { id: 'highContrast', icon: '⚫⚪', label: t.highContrastTheme },
-                  ].map(th => (
-                    <button
-                      key={th.id}
-                      onClick={() => { setTheme(th.id); closePanel(); }}
-                      className={`w-full p-4 rounded-xl text-left flex items-center gap-3 transition-all ${theme === th.id ? 'bg-indigo-100 border-2 border-indigo-300' : 'bg-gray-50 hover:bg-gray-100 border-2 border-transparent'}`}
-                    >
-                      <span className="text-xl">{th.icon}</span>
-                      <span className="font-medium">{th.label}</span>
-                      {theme === th.id && <CheckCircle className="w-5 h-5 text-indigo-600 ml-auto" />}
-                    </button>
-                  ))}
-                </div>
-              )}
             </div>
           </div>
         </div>
@@ -2666,7 +2595,6 @@ const EnglishSentenceBuilder = () => {
                 <History className="w-5 h-5 text-gray-600" />
                 {totalAllTime > 0 && <span className="absolute -top-1 -right-1 bg-indigo-500 text-white text-xs w-4 h-4 rounded-full flex items-center justify-center font-bold" style={{fontSize:'9px'}}>{totalAllTime > 99 ? '99+' : totalAllTime}</span>}
               </button>
-              <button onClick={() => setActivePanel('settings')} className="p-2 hover:bg-gray-100 rounded-lg transition-colors" title={t.themes}><Settings className="w-5 h-5 text-gray-600" /></button>
             </div>
           </div>
         </header>
@@ -3264,7 +3192,6 @@ const EnglishSentenceBuilder = () => {
             { panel: 'practice',  icon: <Award className="w-5 h-5" />, label: language === 'es' ? 'Práctica' : 'Practice' },
             { panel: 'progress',  icon: <BarChart2 className="w-5 h-5" />, label: language === 'es' ? 'Progreso' : 'Progress' },
             { panel: 'history',   icon: <History className="w-5 h-5" />,  label: language === 'es' ? 'Historial' : 'History', badge: totalAllTime > 0 ? (totalAllTime > 99 ? '99+' : totalAllTime) : null },
-            { panel: 'settings',  icon: <Settings className="w-5 h-5" />, label: language === 'es' ? 'Ajustes' : 'Settings' },
           ].map(({ panel, icon, label, badge }) => (
             <button
               key={panel}
