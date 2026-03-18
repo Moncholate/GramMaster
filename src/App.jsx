@@ -2632,7 +2632,7 @@ const EnglishSentenceBuilder = () => {
             <img src="/GramMaster/favicon.svg" alt="GramMaster" className="w-9 h-9 sm:w-10 sm:h-10 shrink-0 rounded-[22%]" />
             <div>
               <h1 className="text-lg sm:text-xl font-bold text-gray-800">{t.title}</h1>
-              <p className="text-xs text-gray-500 hidden sm:block">{language === 'es' ? 'Constructor de Oraciones en Inglés' : 'English Sentence Builder'}</p>
+              <p className="text-xs text-gray-500 hidden sm:block">{language === 'es' ? 'Practica y construye oraciones en inglés.' : 'Practice and build English sentences.'}</p>
             </div>
           </div>
 
