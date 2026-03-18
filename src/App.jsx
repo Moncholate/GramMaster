@@ -39,6 +39,7 @@ const COMPLEMENT_CHIPS = {
 
 const EnglishSentenceBuilder = () => {
   const [language, setLanguage] = useState('es');
+  const [fromHub, setFromHub] = useState(false);
   const [subject, setSubject] = useState('');
   const [verb, setVerb] = useState('');
   const [complement, setComplement] = useState('');
@@ -190,9 +191,11 @@ const EnglishSentenceBuilder = () => {
     const handler = (e) => {
       if (e.data?.type === 'GRAMMAR_HUB_LANG' && (e.data.lang === 'es' || e.data.lang === 'en')) {
         setLanguage(e.data.lang);
+        setFromHub(true);
       }
       if (e.data?.type === 'GRAMMAR_HUB_LEVEL' && validLevels.includes(e.data.level)) {
         setCefrLevel(e.data.level);
+        setFromHub(true);
       }
     };
     window.addEventListener('message', handler);
@@ -2581,27 +2584,29 @@ const EnglishSentenceBuilder = () => {
           </div>
 
           <div className="flex items-center gap-1.5">
-            {/* NIVEL selector */}
-            <select
-              value={cefrLevel}
-              onChange={(e) => setCefrLevel(e.target.value)}
-              className="px-1.5 py-1 border border-slate-200 rounded-lg text-xs font-medium text-gray-600 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300 cursor-pointer"
-              title={language === 'es' ? 'Nivel' : 'Level'}
-            >
-              <option value="basico1">{language === 'es' ? 'Bás. I' : 'Bas. I'}</option>
-              <option value="basico2">{language === 'es' ? 'Bás. II' : 'Bas. II'}</option>
-              <option value="elemental1">{language === 'es' ? 'Elem. I' : 'Elem. I'}</option>
-              <option value="elemental2">{language === 'es' ? 'Elem. II' : 'Elem. II'}</option>
-              <option value="intermedio1">{language === 'es' ? 'Inter. I' : 'Int. I'}</option>
-              <option value="intermedio2">{language === 'es' ? 'Inter. II' : 'Int. II'}</option>
-              <option value="avanzado">{language === 'es' ? 'Inter. Alto' : 'Upper'}</option>
-            </select>
+            {!fromHub && <>
+              {/* NIVEL selector */}
+              <select
+                value={cefrLevel}
+                onChange={(e) => setCefrLevel(e.target.value)}
+                className="px-1.5 py-1 border border-slate-200 rounded-lg text-xs font-medium text-gray-600 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300 cursor-pointer"
+                title={language === 'es' ? 'Nivel' : 'Level'}
+              >
+                <option value="basico1">{language === 'es' ? 'Bás. I' : 'Bas. I'}</option>
+                <option value="basico2">{language === 'es' ? 'Bás. II' : 'Bas. II'}</option>
+                <option value="elemental1">{language === 'es' ? 'Elem. I' : 'Elem. I'}</option>
+                <option value="elemental2">{language === 'es' ? 'Elem. II' : 'Elem. II'}</option>
+                <option value="intermedio1">{language === 'es' ? 'Inter. I' : 'Int. I'}</option>
+                <option value="intermedio2">{language === 'es' ? 'Inter. II' : 'Int. II'}</option>
+                <option value="avanzado">{language === 'es' ? 'Inter. Alto' : 'Upper'}</option>
+              </select>
 
-            {/* IDIOMA toggle */}
-            <div className="flex bg-slate-100 border border-slate-200 rounded-lg p-0.5">
-              <button onClick={() => setLanguage('es')} className={`px-2 py-0.5 rounded text-xs font-bold transition-all ${language === 'es' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`} title="Español">ES</button>
-              <button onClick={() => setLanguage('en')} className={`px-2 py-0.5 rounded text-xs font-bold transition-all ${language === 'en' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`} title="English">EN</button>
-            </div>
+              {/* IDIOMA toggle */}
+              <div className="flex bg-slate-100 border border-slate-200 rounded-lg p-0.5">
+                <button onClick={() => setLanguage('es')} className={`px-2 py-0.5 rounded text-xs font-bold transition-all ${language === 'es' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`} title="Español">ES</button>
+                <button onClick={() => setLanguage('en')} className={`px-2 py-0.5 rounded text-xs font-bold transition-all ${language === 'en' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`} title="English">EN</button>
+              </div>
+            </>}
 
             {/* Botones de acción — solo visibles en desktop */}
             <div className="hidden sm:flex items-center">
