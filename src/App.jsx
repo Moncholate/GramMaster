@@ -39,7 +39,7 @@ const COMPLEMENT_CHIPS = {
 
 const EnglishSentenceBuilder = () => {
   const [language, setLanguage] = useState('es');
-  const [fromHub, setFromHub] = useState(false);
+  const [fromHub, setFromHub] = useState(() => window.self !== window.top);
   const [subject, setSubject] = useState('');
   const [verb, setVerb] = useState('');
   const [complement, setComplement] = useState('');
