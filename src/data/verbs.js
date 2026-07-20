@@ -33,7 +33,7 @@ export const irregularVerbs = {
   take: { past: 'took', participle: 'taken' },
   be: { past: 'was/were', participle: 'been' },
   come: { past: 'came', participle: 'come' },
-  get: { past: 'got', participle: 'got/gotten' },
+  get: { past: 'got', participle: 'gotten' },
   give: { past: 'gave', participle: 'given' },
   find: { past: 'found', participle: 'found' },
   think: { past: 'thought', participle: 'thought' },
@@ -83,7 +83,10 @@ export const irregularVerbs = {
   wake: { past: 'woke', participle: 'woken' },
   wear: { past: 'wore', participle: 'worn' },
   build: { past: 'built', participle: 'built' },
-  burn: { past: 'burnt/burned', participle: 'burnt/burned' },
+  // Verbos con doble forma (burnt/burned…): se usa la forma regular como
+  // primaria porque es la que se enseña en el curso; la variante británica
+  // existe pero no puede ir con barra en la oración generada.
+  burn: { past: 'burned', participle: 'burned' },
   catch: { past: 'caught', participle: 'caught' },
   teach: { past: 'taught', participle: 'taught' },
   fight: { past: 'fought', participle: 'fought' },
@@ -96,7 +99,7 @@ export const irregularVerbs = {
   bleed: { past: 'bled', participle: 'bled' },
   breed: { past: 'bred', participle: 'bred' },
   deal: { past: 'dealt', participle: 'dealt' },
-  dream: { past: 'dreamt/dreamed', participle: 'dreamt/dreamed' },
+  dream: { past: 'dreamed', participle: 'dreamed' },
   lay: { past: 'laid', participle: 'laid' },
   mean: { past: 'meant', participle: 'meant' },
   shoot: { past: 'shot', participle: 'shot' },
@@ -137,8 +140,8 @@ export const irregularVerbs = {
   burst: { past: 'burst', participle: 'burst' },
   weep: { past: 'wept', participle: 'wept' },
   kneel: { past: 'knelt', participle: 'knelt' },
-  lean: { past: 'leant/leaned', participle: 'leant/leaned' },
-  leap: { past: 'leapt/leaped', participle: 'leapt/leaped' },
-  spell: { past: 'spelt/spelled', participle: 'spelt/spelled' },
-  spill: { past: 'spilt/spilled', participle: 'spilt/spilled' },
+  lean: { past: 'leaned', participle: 'leaned' },
+  leap: { past: 'leaped', participle: 'leaped' },
+  spell: { past: 'spelled', participle: 'spelled' },
+  spill: { past: 'spilled', participle: 'spilled' },
 };

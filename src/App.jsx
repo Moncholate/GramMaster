@@ -18,8 +18,24 @@ import {
   englishDictionary,
   validateSubject,
   validateVerb,
-  validateComplement
+  validateComplement,
+  hispanicNames,
+  looksLikeValidWord
 } from './data';
+import {
+  smartCaseSubject,
+  isThirdPersonSingular,
+  getBeForm,
+  getWasWere,
+  getHasHave,
+  presentParticiple,
+  simplePast,
+  pastParticiple,
+  conjugate3p,
+  getAuxAndVerbForm,
+  buildVerbPhrase,
+  buildSentenceText,
+} from './conjugation';
 
 const COMPLEMENT_CHIPS = {
   'simple-present':             ['every day', 'on Mondays', 'in the morning', 'at work', 'at home'],
@@ -35,6 +51,29 @@ const COMPLEMENT_CHIPS = {
   'would-past':                 ['when I was young', 'as a child', 'every summer', 'in those days'],
   'future-perfect':             ['by tomorrow', 'by next week', 'by then', 'by the time'],
   'past-perfect-continuous':    ['for an hour', 'since morning', 'all day', 'for years'],
+};
+
+// Adverbios de sentido negativo: combinados con el modo negativo producen
+// doble negación ("She doesn't never work"), así que se excluyen en ese modo
+const NEGATIVE_SENSE_ADVERBS = ['never', 'hardly ever', 'rarely', 'seldom'];
+
+// Todos los verbos base conocidos, para detectar cuando el estudiante escribió
+// una forma ya conjugada (worked, working, works…) en vez de la forma base.
+const ALL_BASE_VERBS = [...commonVerbs, ...Object.keys(irregularVerbs)];
+
+// Si `word` coincide con alguna forma conjugada de un verbo base conocido,
+// retorna ese verbo base (p. ej. "worked" → "work"); si no, null.
+// Reutiliza el propio motor de conjugación en vez de adivinar por sufijos,
+// así el resultado siempre es consistente con lo que la app genera.
+const detectConjugatedVerbBase = (word) => {
+  const lower = word.toLowerCase().trim();
+  if (!lower || ALL_BASE_VERBS.includes(lower)) return null;
+  return ALL_BASE_VERBS.find(base =>
+    conjugate3p(base) === lower ||
+    simplePast(base) === lower ||
+    pastParticiple(base) === lower ||
+    presentParticiple(base) === lower
+  ) || null;
 };
 
 const EnglishSentenceBuilder = () => {
@@ -60,6 +99,7 @@ const EnglishSentenceBuilder = () => {
   
   // FASE 1: Nuevos estados
   const [sentenceHistory, setSentenceHistory] = useState([]);
+  const [hasLoadedHistory, setHasLoadedHistory] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [sessionStats, setSessionStats] = useState({ total: 0, today: 0 });
   const [showVerbSuggestions, setShowVerbSuggestions] = useState(false);
@@ -96,12 +136,14 @@ const EnglishSentenceBuilder = () => {
   // Análisis gramatical visual
   const [sentenceAnalysis, setSentenceAnalysis] = useState(null);
   const [showAnalysisDetails, setShowAnalysisDetails] = useState(false);
+  const [selectedPartIndex, setSelectedPartIndex] = useState(null); // parte tocada/enfocada en la oración coloreada (accesible en táctil/teclado)
   const [allModeSentences, setAllModeSentences] = useState(null);
   const [showAllModes, setShowAllModes] = useState(false);
 
   // Validación de entradas
   const [subjectValidation, setSubjectValidation] = useState({ valid: true, warning: null });
   const [verbValidation, setVerbValidation] = useState({ valid: true, warning: null });
+  const [verbBaseSuggestion, setVerbBaseSuggestion] = useState(null);
   const [complementValidation, setComplementValidation] = useState({ valid: true, warning: null });
 
   const t = translations[language];
@@ -140,12 +182,18 @@ const EnglishSentenceBuilder = () => {
   // Función para obtener sugerencias de corrección
   const getSpellingSuggestions = (word) => {
     if (!word || word.length < 2) return [];
-    
+
     const lowerWord = word.toLowerCase();
-    
+    const normalizedWord = lowerWord.normalize('NFD').replace(/[̀-ͯ]/g, '');
+
     // Si la palabra está en el diccionario, no hay error
     if (englishDictionary.includes(lowerWord)) return [];
-    
+
+    // Nombres propios (hispanos conocidos, o cualquier palabra capitalizada
+    // con estructura razonable) no se corrigen — mismo criterio que validateSubject
+    if (hispanicNames.includes(lowerWord) || hispanicNames.includes(normalizedWord)) return [];
+    if (/^[A-ZÁÉÍÓÚÑ]/.test(word) && looksLikeValidWord(lowerWord)) return [];
+
     // Buscar palabras similares
     const suggestions = englishDictionary
       .map(dictWord => ({
@@ -212,6 +260,7 @@ const EnglishSentenceBuilder = () => {
     if (savedHistory) {
       setSentenceHistory(JSON.parse(savedHistory));
     }
+    setHasLoadedHistory(true);
 
     if (savedTotal) {
       setTotalAllTime(parseInt(savedTotal));
@@ -241,11 +290,17 @@ const EnglishSentenceBuilder = () => {
   }, []);
 
   // FASE 1: Guardar en localStorage cuando cambie el historial
+  // (incluye vaciarlo: si no, borrar el último ítem no persistía al recargar).
+  // hasLoadedHistory evita que este efecto pise la clave con el estado inicial
+  // [] antes de que el efecto de carga inicial termine de leerla.
   useEffect(() => {
+    if (!hasLoadedHistory) return;
     if (sentenceHistory.length > 0) {
       localStorage.setItem('sentenceHistory', JSON.stringify(sentenceHistory));
+    } else {
+      localStorage.removeItem('sentenceHistory');
     }
-  }, [sentenceHistory]);
+  }, [sentenceHistory, hasLoadedHistory]);
 
   useEffect(() => {
     localStorage.setItem('sessionStats', JSON.stringify(sessionStats));
@@ -389,76 +444,22 @@ const EnglishSentenceBuilder = () => {
     }
   }, [selectedModal]);
 
-  // Retorna solo la frase verbal conjugada (sin sujeto ni complemento)
-  const buildVerbPhrase = (subj, v, tenseId, modal, mode) => {
-    const is3p = isThirdPersonSingular(subj);
-    const subjLower = subj.toLowerCase();
-    const beForm = subjLower === 'i' ? 'am' : is3p ? 'is' : 'are';
-    const wasWere = (subjLower === 'i' || is3p) && subjLower !== 'you' ? 'was' : 'were';
-    const hasHave = is3p ? 'has' : 'have';
-    const pp = pastParticiple(v);
-    const isBeVerb = v.toLowerCase() === 'be';
-    if (mode === 'affirmative') {
-      if (modal) return modal + ' ' + v;
-      if (tenseId === 'simple-present') return isBeVerb ? beForm : (is3p ? conjugate3p(v) : v);
-      if (tenseId === 'present-continuous') return beForm + ' ' + presentParticiple(v);
-      if (tenseId === 'simple-past') return isBeVerb ? wasWere : simplePast(v);
-      if (tenseId === 'past-continuous') return wasWere + ' ' + presentParticiple(v);
-      if (tenseId === 'simple-future') return 'will ' + v;
-      if (tenseId === 'future-going-to') return beForm + ' going to ' + v;
-      if (tenseId === 'present-perfect') return hasHave + ' ' + pp;
-      if (tenseId === 'past-perfect') return 'had ' + pp;
-      if (tenseId === 'future-perfect') return 'will have ' + pp;
-      if (tenseId === 'present-perfect-continuous') return hasHave + ' been ' + presentParticiple(v);
-      if (tenseId === 'past-perfect-continuous') return 'had been ' + presentParticiple(v);
-      if (tenseId === 'used-to') return 'used to ' + v;
-      if (tenseId === 'would-past') return 'would ' + v;
+  // En modo negativo, quitar adverbios que producirían doble negación
+  useEffect(() => {
+    if (selectedMode === 'negative' && NEGATIVE_SENSE_ADVERBS.includes(selectedAdverb)) {
+      setSelectedAdverb('');
     }
-    if (mode === 'negative') {
-      const negM = modal === 'can' ? "can't" : modal === 'could' ? "couldn't" : modal === 'should' ? "shouldn't" : modal === 'would' ? "wouldn't" : modal === 'will' ? "won't" : modal === 'must' ? "mustn't" : modal ? modal + ' not' : null;
-      if (negM) return negM + ' ' + v;
-      if (tenseId === 'simple-present') return isBeVerb ? beForm + ' not' : (is3p ? "doesn't" : "don't") + ' ' + v;
-      if (tenseId === 'present-continuous') return beForm + ' not ' + presentParticiple(v);
-      if (tenseId === 'simple-past') return isBeVerb ? wasWere + ' not' : "didn't " + v;
-      if (tenseId === 'past-continuous') return wasWere + ' not ' + presentParticiple(v);
-      if (tenseId === 'simple-future') return "won't " + v;
-      if (tenseId === 'future-going-to') return beForm + ' not going to ' + v;
-      if (tenseId === 'present-perfect') return hasHave + ' not ' + pp;
-      if (tenseId === 'past-perfect') return 'had not ' + pp;
-      if (tenseId === 'future-perfect') return 'will not have ' + pp;
-      if (tenseId === 'present-perfect-continuous') return hasHave + ' not been ' + presentParticiple(v);
-      if (tenseId === 'past-perfect-continuous') return 'had not been ' + presentParticiple(v);
-      if (tenseId === 'used-to') return "didn't use to " + v;
-      if (tenseId === 'would-past') return "wouldn't " + v;
-    }
-    if (mode === 'interrogative') {
-      if (modal) return modal;
-      if (tenseId === 'simple-present') return isBeVerb ? beForm : (is3p ? 'does' : 'do');
-      if (tenseId === 'present-continuous') return beForm;
-      if (tenseId === 'simple-past') return isBeVerb ? wasWere : 'did';
-      if (tenseId === 'past-continuous') return wasWere;
-      if (tenseId === 'simple-future') return 'will';
-      if (tenseId === 'future-going-to') return beForm;
-      if (tenseId === 'present-perfect') return hasHave;
-      if (tenseId === 'past-perfect') return 'had';
-      if (tenseId === 'future-perfect') return 'will';
-      if (tenseId === 'present-perfect-continuous') return hasHave;
-      if (tenseId === 'past-perfect-continuous') return 'had';
-      if (tenseId === 'used-to') return 'did';
-      if (tenseId === 'would-past') return 'would';
-    }
-    return v;
-  };
+  }, [selectedMode, selectedAdverb]);
 
   // Genera una oración con un error gramatical y retorna { sentence, wrongPart, correctPart }
   const buildWrongSentence = (subj, v, comp, tenseId, mode = 'affirmative') => {
     const is3p = isThirdPersonSingular(subj);
     const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
     const compStr = comp ? ' ' + comp : '';
-    const subjLower = subj.toLowerCase();
-    const beForm = subjLower === 'i' ? 'am' : is3p ? 'is' : 'are';
-    const wasWere = (subjLower === 'i' || is3p) && subjLower !== 'you' ? 'was' : 'were';
-    const hasHave = is3p ? 'has' : 'have';
+    const beForm = getBeForm(subj);
+    const wasWere = getWasWere(subj);
+    const hasHave = getHasHave(subj);
+    const sMid = smartCaseSubject(subj); // a mitad de oración: "He" → "he", pero "I" se conserva
     const pp = pastParticiple(v);
 
     if (mode === 'affirmative') {
@@ -496,18 +497,18 @@ const EnglishSentenceBuilder = () => {
       if (tenseId === 'simple-present') {
         const wrong = is3p ? 'Do' : 'Does';
         const correct = is3p ? 'Does' : 'Do';
-        return { sentence: wrong + ' ' + subj + ' ' + v + compStr + '?', wrongPart: wrong, correctPart: correct };
+        return { sentence: wrong + ' ' + sMid + ' ' + v + compStr + '?', wrongPart: wrong, correctPart: correct };
       }
       if (tenseId === 'simple-past')
-        return { sentence: 'Did ' + subj + ' ' + simplePast(v) + compStr + '?', wrongPart: simplePast(v), correctPart: v };
+        return { sentence: 'Did ' + sMid + ' ' + simplePast(v) + compStr + '?', wrongPart: simplePast(v), correctPart: v };
       if (tenseId === 'present-continuous')
-        return { sentence: cap(beForm) + ' ' + subj + ' ' + v + compStr + '?', wrongPart: v, correctPart: presentParticiple(v) };
+        return { sentence: cap(beForm) + ' ' + sMid + ' ' + v + compStr + '?', wrongPart: v, correctPart: presentParticiple(v) };
       if (tenseId === 'present-perfect') {
         const wrong = is3p ? 'Have' : 'Has';
-        return { sentence: wrong + ' ' + subj + ' ' + pp + compStr + '?', wrongPart: wrong, correctPart: cap(hasHave) };
+        return { sentence: wrong + ' ' + sMid + ' ' + pp + compStr + '?', wrongPart: wrong, correctPart: cap(hasHave) };
       }
       if (tenseId === 'past-continuous')
-        return { sentence: cap(wasWere) + ' ' + subj + ' ' + v + compStr + '?', wrongPart: v, correctPart: presentParticiple(v) };
+        return { sentence: cap(wasWere) + ' ' + sMid + ' ' + v + compStr + '?', wrongPart: v, correctPart: presentParticiple(v) };
     }
 
     // Fallback
@@ -974,13 +975,15 @@ const EnglishSentenceBuilder = () => {
     return analysis;
   };
 
-  // Función para generar análisis visual de la oración
+  // Análisis visual de la oración. El ORDEN de las partes debe coincidir siempre
+  // con el texto de buildSentenceText: ambos derivan del mismo motor (conjugation.js).
   const generateSentenceAnalysis = (config) => {
     let { subjectText, verbText, complementText, auxiliary, verbForm, tenseId, mode, modalId, whWordText, adverbText } = config;
-    // Normalize to lowercase so visual tokens show correct casing
-    subjectText = subjectText.toLowerCase();
-    verbText = verbText.toLowerCase();
-    if (complementText) complementText = complementText.toLowerCase();
+    // El sujeto conserva nombres propios ("Maria") y normaliza "i" → "I";
+    // el verbo siempre va en minúscula a mitad de oración.
+    subjectText = smartCaseSubject(subjectText);
+    verbText = verbText.toLowerCase().trim();
+    if (complementText) complementText = complementText.trim();
     verbForm = verbForm ? verbForm.toLowerCase() : verbForm;
     const currentTense = tenses.find(t => t.id === tenseId);
     const currentModal = modalId ? modals.find(m => m.id === modalId) : null;
@@ -1013,6 +1016,7 @@ const EnglishSentenceBuilder = () => {
         'going to': { es: 'Estructura "going to" para futuro con intención/plan', en: '"Going to" structure for future with intention/plan' },
         'been': { es: 'Participio de "be" para tiempos perfectos continuos', en: 'Past participle of "be" for perfect continuous tenses' },
         'used to': { es: 'Estructura para hábitos pasados que ya no existen', en: 'Structure for past habits that no longer exist' },
+        'use to': { es: 'Forma de "used to" tras el auxiliar did (pierde la -d)', en: 'Form of "used to" after the auxiliary did (drops the -d)' },
         'not': { es: 'Partícula negativa', en: 'Negative particle' },
         // Modales
         'can': { es: 'Modal "can" - expresa habilidad o posibilidad', en: 'Modal "can" - expresses ability or possibility' },
@@ -1066,23 +1070,32 @@ const EnglishSentenceBuilder = () => {
       changed: false
     };
 
-    const auxiliaryParts = [];
+    // Unidades del auxiliar: "going to" / "used to" / "use to" se explican como bloque
+    const auxUnits = [];
     if (auxiliary) {
-      const auxTokens = auxiliary.split(' ');
-      auxTokens.forEach((aux, idx) => {
-        const auxLower = aux.toLowerCase();
-        const auxExplanation = explanations.auxiliary[auxLower] || explanations.auxiliary[aux];
-        auxiliaryParts.push({
-          text: (isInterrogative && idx === 0 && !whWordText) ? aux.charAt(0).toUpperCase() + aux.slice(1) : aux,
-          type: 'auxiliary',
-          color: 'purple',
-          explanation: auxExplanation ? (language === 'es' ? auxExplanation.es : auxExplanation.en) : (language === 'es' ? 'Auxiliar verbal' : 'Verbal auxiliary'),
-          original: null,
-          changed: true,
-          isNew: true
-        });
-      });
+      const words = auxiliary.split(' ');
+      for (let i = 0; i < words.length; i++) {
+        const pair = words[i + 1] ? words[i] + ' ' + words[i + 1] : null;
+        if (pair && ['going to', 'used to', 'use to'].includes(pair)) {
+          auxUnits.push(pair);
+          i++;
+        } else {
+          auxUnits.push(words[i]);
+        }
+      }
     }
+    const makeAuxPart = (aux, capitalize) => {
+      const auxExplanation = explanations.auxiliary[aux.toLowerCase()];
+      return {
+        text: capitalize ? aux.charAt(0).toUpperCase() + aux.slice(1) : aux,
+        type: 'auxiliary',
+        color: 'purple',
+        explanation: auxExplanation ? (language === 'es' ? auxExplanation.es : auxExplanation.en) : (language === 'es' ? 'Auxiliar verbal' : 'Verbal auxiliary'),
+        original: null,
+        changed: true,
+        isNew: true
+      };
+    };
 
     const verbExplanation = explanations.verbChanges[verbChangeType];
     let verbDetailedExplanation = language === 'es' ? verbExplanation.es : verbExplanation.en;
@@ -1141,9 +1154,14 @@ const EnglishSentenceBuilder = () => {
     const isBeMainVerb = verbText.toLowerCase() === 'be' && !modalId &&
       (tenseId === 'simple-present' || tenseId === 'simple-past');
 
+    // El texto omite el adverbio en oraciones con "be" salvo en afirmativa;
+    // el desglose debe omitirlo igual para no mostrar partes que no suenan
+    const showAdverb = adverbPart && !(isBeMainVerb && mode !== 'affirmative');
+
     // Construir partes según el modo
     if (isInterrogative) {
-      // Orden interrogativo: [WH word] + Auxiliar + Sujeto + [Adverbio] + Verbo + Complemento + ?
+      // Orden interrogativo: [WH] + PRIMER auxiliar + Sujeto + [Adverbio] + resto
+      // del auxiliar + Verbo + Complemento + ?  →  "Will she have worked?"
       if (whWordText) {
         parts.push({
           text: whWordText.charAt(0).toUpperCase() + whWordText.slice(1),
@@ -1156,9 +1174,11 @@ const EnglishSentenceBuilder = () => {
           changed: false
         });
       }
-      auxiliaryParts.forEach(part => parts.push(part));
+      const [firstAux, ...restAux] = auxUnits;
+      if (firstAux) parts.push(makeAuxPart(firstAux, !whWordText));
       parts.push(subjectPart);
-      if (adverbPart) parts.push(adverbPart);
+      if (showAdverb) parts.push(adverbPart);
+      restAux.forEach(aux => parts.push(makeAuxPart(aux, false)));
       if (!isBeMainVerb) parts.push(verbPart);
       if (complementPart) parts.push(complementPart);
       parts.push({
@@ -1170,19 +1190,27 @@ const EnglishSentenceBuilder = () => {
         changed: false
       });
     } else {
-      // Orden normal: Sujeto + [Adverbio si no hay auxiliar] + Auxiliar + [Adverbio si hay auxiliar] + Verbo + Complemento
+      // Orden normal: Sujeto + [Adverbio si no hay auxiliar] + Auxiliar + [Adverbio si hay auxiliar] + Verbo + Complemento + .
       parts.push(subjectPart);
-      if (adverbPart && !auxiliary) {
+      if (showAdverb && auxUnits.length === 0) {
         // Sin auxiliar: Sujeto + Adverbio + Verbo
         parts.push(adverbPart);
       }
-      auxiliaryParts.forEach(part => parts.push(part));
-      if (adverbPart && auxiliary) {
+      auxUnits.forEach(aux => parts.push(makeAuxPart(aux, false)));
+      if (showAdverb && auxUnits.length > 0) {
         // Con auxiliar: Sujeto + Auxiliar + Adverbio + Verbo
         parts.push(adverbPart);
       }
       if (!isBeMainVerb) parts.push(verbPart);
       if (complementPart) parts.push(complementPart);
+      parts.push({
+        text: '.',
+        type: 'punctuation',
+        color: 'gray',
+        explanation: language === 'es' ? 'Punto final' : 'Period',
+        original: '.',
+        changed: false
+      });
     }
 
     // Generar resumen de la estructura
@@ -1229,86 +1257,6 @@ const EnglishSentenceBuilder = () => {
     };
 
     return { parts, summary };
-  };
-
-  const isThirdPersonSingular = (subjectText) => {
-    const subj = subjectText.toLowerCase().trim();
-
-    // Sujetos compuestos → siempre plural
-    if (subj.includes(' and ') || subj.includes(',')) return false;
-
-    // Pronombres explícitos
-    if (subj === 'he' || subj === 'she' || subj === 'it') return true;
-    if (subj === 'i' || subj === 'you' || subj === 'we' || subj === 'they') return false;
-
-    const words = subj.split(' ');
-    const firstWord = words[0];
-    const lastWord = words[words.length - 1];
-
-    // Cuantificadores que implican plural
-    if (['both', 'all', 'many', 'several', 'few', 'most', 'some'].includes(firstWord)) return false;
-
-    // Plurales irregulares comunes
-    const irregularPlurals = ['people', 'children', 'men', 'women', 'teeth', 'feet', 'mice', 'geese', 'oxen'];
-    if (irregularPlurals.includes(lastWord)) return false;
-
-    // Plurales regulares: terminan en -s pero no en -ss, -us, -is
-    // ni son palabras singulares o pronombres que terminan en -s
-    const singularExceptions = ['this', 'his', 'hers', 'its', 'ours', 'yours', 'theirs', 'was', 'has', 'does', 'is', 'as', 'us'];
-    if (
-      lastWord.endsWith('s') &&
-      !lastWord.endsWith('ss') &&
-      !lastWord.endsWith('us') &&
-      !lastWord.endsWith('is') &&
-      !singularExceptions.includes(lastWord)
-    ) return false;
-
-    // Por defecto: sustantivo singular (he/she/it)
-    return true;
-  };
-
-  const isCVCVerb = (v) => {
-    const vowels = 'aeiou';
-    const len = v.length;
-    if (len < 3) return false;
-    const last = v[len - 1];
-    const mid = v[len - 2];
-    const prev = v[len - 3];
-    if (vowels.includes(last) || 'wxy'.includes(last)) return false;
-    if (!vowels.includes(mid)) return false;
-    if (vowels.includes(prev)) return false;
-    // disqualify 2-syllable+ words stressed on first syllable (heuristic: 4+ letters with vowel before CVC)
-    if (len >= 4 && vowels.includes(v[len - 4])) return false;
-    return true;
-  };
-
-  const presentParticiple = (v) => {
-    if (v.endsWith('ie')) return v.slice(0, -2) + 'ying';
-    if (v.endsWith('e') && !v.endsWith('ee')) return v.slice(0, -1) + 'ing';
-    if (isCVCVerb(v)) return v + v[v.length - 1] + 'ing';
-    return v + 'ing';
-  };
-
-  const simplePast = (v) => {
-    const lowerV = v.toLowerCase();
-    if (irregularVerbs[lowerV]) return irregularVerbs[lowerV].past;
-    if (v.endsWith('e')) return v + 'd';
-    if (v.endsWith('y') && !v.match(/[aeiou]y$/)) return v.slice(0, -1) + 'ied';
-    if (isCVCVerb(v)) return v + v[v.length - 1] + 'ed';
-    return v + 'ed';
-  };
-
-  const pastParticiple = (v) => {
-    const lowerV = v.toLowerCase();
-    if (irregularVerbs[lowerV]) return irregularVerbs[lowerV].participle;
-    return simplePast(v);
-  };
-
-  // Conjugación 3ª persona singular presente simple
-  const conjugate3p = (v) => {
-    if (v.endsWith('y') && !v.match(/[aeiou]y$/)) return v.slice(0, -1) + 'ies'; // study→studies
-    if (v.match(/(s|sh|ch|x|z|o)$/)) return v + 'es'; // watch→watches, go→goes
-    return v + 's';
   };
 
   const validateWhExtension = (extension) => {
@@ -1393,19 +1341,17 @@ const EnglishSentenceBuilder = () => {
     }
   };
 
-  const [shouldRegenerate, setShouldRegenerate] = useState(false);
-
+  // Los "fixes" solo cambian el estado: la regeneración en vivo se encarga
+  // de actualizar la oración mostrada (ver efecto junto a generateSentence)
   const applyTimeMarkerFix = () => {
     if (semanticWarning && semanticWarning.suggestedMarkers && semanticWarning.suggestedMarkers.length > 0) {
       setComplement(semanticWarning.suggestedMarkers[0]);
-      setShouldRegenerate(true);
     }
   };
 
   const applyTenseFix = () => {
     if (semanticWarning && semanticWarning.suggestedTenseId) {
       setSelectedTense(semanticWarning.suggestedTenseId);
-      setShouldRegenerate(true);
     }
   };
 
@@ -1430,14 +1376,6 @@ const EnglishSentenceBuilder = () => {
   };
 
   useEffect(() => {
-    if (shouldRegenerate) {
-      if (subject && verb && selectedTense) generateSentence();
-      setShouldRegenerate(false);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [complement, selectedTense, shouldRegenerate, subject, verb]);
-
-  useEffect(() => {
     const warning = validateWhExtension(whExtension);
     setWhWarning(warning);
     checkSemanticCoherence(complement, selectedTense);
@@ -1447,6 +1385,11 @@ const EnglishSentenceBuilder = () => {
     const lowerVerb = verb.toLowerCase();
     setIsIrregular(!!irregularVerbs[lowerVerb]);
   }, [verb]);
+
+  // La parte seleccionada/enfocada de la oración pierde sentido si se regenera
+  useEffect(() => {
+    setSelectedPartIndex(null);
+  }, [sentenceAnalysis]);
 
   // Validación de entradas en tiempo real
   useEffect(() => {
@@ -1464,8 +1407,10 @@ const EnglishSentenceBuilder = () => {
     const timer = setTimeout(() => {
       if (verb.trim()) {
         setVerbValidation(validateVerb(verb, language));
+        setVerbBaseSuggestion(detectConjugatedVerbBase(verb));
       } else {
         setVerbValidation({ valid: true, warning: null });
+        setVerbBaseSuggestion(null);
       }
     }, 300);
     return () => clearTimeout(timer);
@@ -1504,106 +1449,6 @@ const EnglishSentenceBuilder = () => {
     return () => clearTimeout(timer);
   }, [complement]);
 
-  // Helper: construye el texto de una oración para un modo dado (sin efectos secundarios)
-  const buildSentenceText = ({ mode, subject: subj, verb: v, complement: comp, tense, modal, whWord: wh, whExtension: whExt, adverb: adv }) => {
-    // Normalize inputs — correct casing is applied during sentence construction
-    subj = subj.toLowerCase();
-    v = v.toLowerCase();
-    if (comp) comp = comp.toLowerCase();
-    const subjLower = subj;
-    const compStr = comp ? ' ' + comp : '';
-    const pp = pastParticiple(v);
-    const advSp = adv ? ' ' + adv + ' ' : ' ';
-    const advAfter = adv ? ' ' + adv : '';
-    const is3p = !subjLower.includes(' and ') && !subjLower.includes(',') && isThirdPersonSingular(subj);
-    const beForm = subjLower === 'i' ? 'am' : is3p ? 'is' : 'are';
-    const wasWere = (subjLower === 'i' || is3p) && subjLower !== 'you' ? 'was' : 'were';
-    const hasHave = is3p ? 'has' : 'have';
-    let fullWh = wh;
-    if (wh && whExt && whExt.trim()) fullWh = wh + ' ' + whExt.trim();
-    const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
-    const isBeVerb = v.toLowerCase() === 'be';
-
-    if (mode === 'affirmative') {
-      if (modal)                              return cap(subj) + ' ' + modal + advSp + v + compStr + '.';
-      if (tense === 'simple-present') {
-        if (isBeVerb)                         return cap(subj) + ' ' + beForm + advSp.trimEnd() + compStr + '.';
-        return cap(subj) + advSp + (is3p ? conjugate3p(v) : v) + compStr + '.';
-      }
-      if (tense === 'present-continuous')     return cap(subj) + ' ' + beForm + advSp + presentParticiple(v) + compStr + '.';
-      if (tense === 'simple-past') {
-        if (isBeVerb)                         return cap(subj) + ' ' + wasWere + advSp.trimEnd() + compStr + '.';
-        return cap(subj) + advSp + simplePast(v) + compStr + '.';
-      }
-      if (tense === 'past-continuous')        return cap(subj) + ' ' + wasWere + advSp + presentParticiple(v) + compStr + '.';
-      if (tense === 'simple-future')          return cap(subj) + ' will' + advSp + v + compStr + '.';
-      if (tense === 'future-going-to')        return cap(subj) + ' ' + beForm + advSp + 'going to ' + v + compStr + '.';
-      if (tense === 'present-perfect')        return cap(subj) + ' ' + hasHave + advSp + pp + compStr + '.';
-      if (tense === 'past-perfect')           return cap(subj) + ' had' + advSp + pp + compStr + '.';
-      if (tense === 'future-perfect')         return cap(subj) + ' will' + advSp + 'have ' + pp + compStr + '.';
-      if (tense === 'present-perfect-continuous') return cap(subj) + ' ' + hasHave + advSp + 'been ' + presentParticiple(v) + compStr + '.';
-      if (tense === 'past-perfect-continuous')    return cap(subj) + ' had' + advSp + 'been ' + presentParticiple(v) + compStr + '.';
-      if (tense === 'used-to')                return cap(subj) + advSp + 'used to ' + v + compStr + '.';
-      if (tense === 'would-past')             return cap(subj) + ' would' + advSp + v + compStr + '.';
-    }
-    if (mode === 'negative') {
-      if (modal) {
-        const negM = modal === 'can' ? "can't" : modal === 'could' ? "couldn't" : modal === 'should' ? "shouldn't" : modal === 'would' ? "wouldn't" : modal === 'will' ? "won't" : modal === 'must' ? "mustn't" : modal + " not";
-        return cap(subj) + ' ' + negM + advSp + v + compStr + '.';
-      }
-      if (tense === 'simple-present') {
-        if (isBeVerb)                         return cap(subj) + ' ' + beForm + " not" + (compStr ? ' ' + comp : '') + '.';
-        return cap(subj) + ' ' + (is3p ? "doesn't" : "don't") + advSp + v + compStr + '.';
-      }
-      if (tense === 'present-continuous')     return cap(subj) + ' ' + beForm + ' not' + advSp + presentParticiple(v) + compStr + '.';
-      if (tense === 'simple-past') {
-        if (isBeVerb)                         return cap(subj) + ' ' + wasWere + " not" + (compStr ? ' ' + comp : '') + '.';
-        return cap(subj) + " didn't" + advSp + v + compStr + '.';
-      }
-      if (tense === 'past-continuous')        return cap(subj) + ' ' + wasWere + ' not' + advSp + presentParticiple(v) + compStr + '.';
-      if (tense === 'simple-future')          return cap(subj) + " won't" + advSp + v + compStr + '.';
-      if (tense === 'future-going-to')        return cap(subj) + ' ' + beForm + ' not' + advSp + 'going to ' + v + compStr + '.';
-      if (tense === 'present-perfect')        return cap(subj) + ' ' + hasHave + ' not' + advSp + pp + compStr + '.';
-      if (tense === 'past-perfect')           return cap(subj) + ' had not' + advSp + pp + compStr + '.';
-      if (tense === 'future-perfect')         return cap(subj) + ' will not' + advSp + 'have ' + pp + compStr + '.';
-      if (tense === 'present-perfect-continuous') return cap(subj) + ' ' + hasHave + ' not' + advSp + 'been ' + presentParticiple(v) + compStr + '.';
-      if (tense === 'past-perfect-continuous')    return cap(subj) + ' had not' + advSp + 'been ' + presentParticiple(v) + compStr + '.';
-      if (tense === 'used-to')                return cap(subj) + " didn't" + advSp + "use to " + v + compStr + '.';
-      if (tense === 'would-past')             return cap(subj) + " wouldn't" + advSp + v + compStr + '.';
-    }
-    if (mode === 'interrogative') {
-      const whCap = fullWh ? cap(fullWh) + ' ' : '';
-      const prefix = fullWh ? whCap : '';
-      if (modal)                              return prefix + (fullWh ? modal : cap(modal)) + ' ' + subj + advAfter + ' ' + v + compStr + '?';
-      if (tense === 'simple-present') {
-        if (isBeVerb) {
-          const bf = fullWh ? beForm : cap(beForm);
-          return prefix + bf + ' ' + subj + (compStr ? ' ' + comp : '') + '?';
-        }
-        const aux = is3p ? 'does' : 'do';
-        return prefix + (fullWh ? aux : cap(aux)) + ' ' + subj + advAfter + ' ' + v + compStr + '?';
-      }
-      if (tense === 'present-continuous')     return prefix + (fullWh ? beForm : cap(beForm)) + ' ' + subj + advAfter + ' ' + presentParticiple(v) + compStr + '?';
-      if (tense === 'simple-past') {
-        if (isBeVerb) {
-          const ww = fullWh ? wasWere : cap(wasWere);
-          return prefix + ww + ' ' + subj + (compStr ? ' ' + comp : '') + '?';
-        }
-        return prefix + (fullWh ? 'did ' : 'Did ') + subj + advAfter + ' ' + v + compStr + '?';
-      }
-      if (tense === 'past-continuous')        return prefix + (fullWh ? wasWere : cap(wasWere)) + ' ' + subj + advAfter + ' ' + presentParticiple(v) + compStr + '?';
-      if (tense === 'simple-future')          return prefix + (fullWh ? 'will ' : 'Will ') + subj + advAfter + ' ' + v + compStr + '?';
-      if (tense === 'future-going-to')        return prefix + (fullWh ? beForm : cap(beForm)) + ' ' + subj + advAfter + ' going to ' + v + compStr + '?';
-      if (tense === 'present-perfect')        return prefix + (fullWh ? hasHave : cap(hasHave)) + ' ' + subj + advAfter + ' ' + pp + compStr + '?';
-      if (tense === 'past-perfect')           return prefix + (fullWh ? 'had ' : 'Had ') + subj + advAfter + ' ' + pp + compStr + '?';
-      if (tense === 'future-perfect')         return prefix + (fullWh ? 'will ' : 'Will ') + subj + advAfter + ' have ' + pp + compStr + '?';
-      if (tense === 'present-perfect-continuous') return prefix + (fullWh ? hasHave : cap(hasHave)) + ' ' + subj + advAfter + ' been ' + presentParticiple(v) + compStr + '?';
-      if (tense === 'past-perfect-continuous')    return prefix + (fullWh ? 'had ' : 'Had ') + subj + advAfter + ' been ' + presentParticiple(v) + compStr + '?';
-      if (tense === 'used-to')                return prefix + (fullWh ? 'did ' : 'Did ') + subj + advAfter + ' use to ' + v + compStr + '?';
-      if (tense === 'would-past')             return prefix + (fullWh ? 'would ' : 'Would ') + subj + advAfter + ' ' + v + compStr + '?';
-    }
-    return '';
-  };
 
   // Fórmulas estructurales por tiempo verbal y modo
   const tenseFormulas = {
@@ -1634,416 +1479,26 @@ const EnglishSentenceBuilder = () => {
     setComplementValidation({ valid: true, warning: null });
   };
 
-  const generateSentence = () => {
-    // Si hay modal, no se requiere tiempo. Si no hay modal, sí se requiere tiempo.
-    if (!subject || !verb || (!selectedModal && !selectedTense)) {
-      showNotification('error', language === 'es' ? 'Por favor completa todos los campos' : 'Please complete all fields');
-      return;
-    }
+  // Calcula la oración, las 3 variantes de modo y el análisis visual, y los
+  // muestra. Sin efectos sobre historial ni estadísticas — eso solo ocurre al
+  // pulsar "Generar". Retorna la oración construida.
+  const computeSentenceDisplay = () => {
+    const adverb = selectedAdverb || '';
+    const fullWhWord = whWord && whExtension.trim() ? whWord + ' ' + whExtension.trim() : whWord;
+    const params = { subject, verb, complement, tense: selectedTense, modal: selectedModal, whWord, whExtension, adverb };
 
-    const whValidation = validateWhExtension(whExtension);
-    setWhWarning(whValidation);
-
-    const subj = subject.toLowerCase();
-    const isBeVerb = verb.toLowerCase() === 'be';
-    const beFormSubj = subj === 'i' ? 'am' : (!subj.includes(' and ') && !subj.includes(',') && isThirdPersonSingular(subject)) ? 'is' : 'are';
-    const wasWereSubj = (subj === 'i' || (!subj.includes(' and ') && !subj.includes(',') && isThirdPersonSingular(subject))) && subj !== 'you' ? 'was' : 'were';
-    const capStr = s => s.charAt(0).toUpperCase() + s.slice(1);
-    const comp = complement ? ' ' + complement : '';
-    const participle = pastParticiple(verb);
-    let sentence = '';
-    let fullWhWord = whWord;
-
-    // Adverbio de frecuencia
-    const adverb = selectedAdverb ? selectedAdverb : '';
-    const adverbSpace = adverb ? ' ' + adverb + ' ' : ' ';
-
-    // Variables para análisis gramatical
-    let auxiliary = '';
-    let verbForm = verb;
-
-    if (whWord && whExtension.trim()) {
-      fullWhWord = whWord + ' ' + whExtension.trim();
-    }
-
-    if (selectedMode === 'affirmative') {
-      if (selectedModal) {
-        auxiliary = selectedModal;
-        verbForm = verb;
-        sentence = subject.charAt(0).toUpperCase() + subject.slice(1) + ' ' + selectedModal + adverbSpace + verb + comp + '.';
-      } else if (selectedTense === 'simple-present') {
-        if (isBeVerb) {
-          auxiliary = beFormSubj; verbForm = beFormSubj;
-          sentence = capStr(subject) + ' ' + beFormSubj + (adverb ? ' ' + adverb : '') + comp + '.';
-        } else {
-          const conjugated = isThirdPersonSingular(subject) ? conjugate3p(verb) : verb;
-          verbForm = conjugated;
-          // En presente simple sin auxiliar, el adverbio va antes del verbo
-          sentence = subject.charAt(0).toUpperCase() + subject.slice(1) + adverbSpace + conjugated + comp + '.';
-        }
-      } else if (selectedTense === 'present-continuous') {
-        let beForm = 'are';
-        if (!subj.includes(' and ') && !subj.includes(',')) {
-          beForm = subj === 'i' ? 'am' : isThirdPersonSingular(subject) ? 'is' : 'are';
-        }
-        auxiliary = beForm;
-        verbForm = presentParticiple(verb);
-        sentence = subject.charAt(0).toUpperCase() + subject.slice(1) + ' ' + beForm + adverbSpace + verbForm + comp + '.';
-      } else if (selectedTense === 'simple-past') {
-        if (isBeVerb) {
-          auxiliary = wasWereSubj; verbForm = wasWereSubj;
-          sentence = capStr(subject) + ' ' + wasWereSubj + (adverb ? ' ' + adverb : '') + comp + '.';
-        } else {
-          verbForm = simplePast(verb);
-          // En pasado simple sin auxiliar, el adverbio va antes del verbo
-          sentence = subject.charAt(0).toUpperCase() + subject.slice(1) + adverbSpace + verbForm + comp + '.';
-        }
-      } else if (selectedTense === 'past-continuous') {
-        let wasWere = 'were';
-        if (!subj.includes(' and ') && !subj.includes(',')) {
-          wasWere = (subj === 'i' || isThirdPersonSingular(subject)) && subj !== 'you' ? 'was' : 'were';
-        }
-        auxiliary = wasWere;
-        verbForm = presentParticiple(verb);
-        sentence = subject.charAt(0).toUpperCase() + subject.slice(1) + ' ' + wasWere + adverbSpace + verbForm + comp + '.';
-      } else if (selectedTense === 'simple-future') {
-        auxiliary = 'will';
-        verbForm = verb;
-        sentence = subject.charAt(0).toUpperCase() + subject.slice(1) + ' will' + adverbSpace + verb + comp + '.';
-      } else if (selectedTense === 'future-going-to') {
-        let beForm = 'are';
-        if (!subj.includes(' and ') && !subj.includes(',')) {
-          beForm = subj === 'i' ? 'am' : isThirdPersonSingular(subject) ? 'is' : 'are';
-        }
-        auxiliary = beForm + ' going to';
-        verbForm = verb;
-        sentence = subject.charAt(0).toUpperCase() + subject.slice(1) + ' ' + beForm + adverbSpace + 'going to ' + verb + comp + '.';
-      } else if (selectedTense === 'present-perfect') {
-        let hasHave = 'have';
-        if (!subj.includes(' and ') && !subj.includes(',')) {
-          hasHave = isThirdPersonSingular(subject) ? 'has' : 'have';
-        }
-        auxiliary = hasHave;
-        verbForm = participle;
-        sentence = subject.charAt(0).toUpperCase() + subject.slice(1) + ' ' + hasHave + adverbSpace + participle + comp + '.';
-      } else if (selectedTense === 'past-perfect') {
-        auxiliary = 'had';
-        verbForm = participle;
-        sentence = subject.charAt(0).toUpperCase() + subject.slice(1) + ' had' + adverbSpace + participle + comp + '.';
-      } else if (selectedTense === 'future-perfect') {
-        auxiliary = 'will have';
-        verbForm = participle;
-        sentence = subject.charAt(0).toUpperCase() + subject.slice(1) + ' will' + adverbSpace + 'have ' + participle + comp + '.';
-      } else if (selectedTense === 'present-perfect-continuous') {
-        let hasHave = 'have';
-        if (!subj.includes(' and ') && !subj.includes(',')) {
-          hasHave = isThirdPersonSingular(subject) ? 'has' : 'have';
-        }
-        auxiliary = hasHave + ' been';
-        verbForm = presentParticiple(verb);
-        sentence = subject.charAt(0).toUpperCase() + subject.slice(1) + ' ' + hasHave + adverbSpace + 'been ' + verbForm + comp + '.';
-      } else if (selectedTense === 'past-perfect-continuous') {
-        auxiliary = 'had been';
-        verbForm = presentParticiple(verb);
-        sentence = subject.charAt(0).toUpperCase() + subject.slice(1) + ' had' + adverbSpace + 'been ' + verbForm + comp + '.';
-      } else if (selectedTense === 'used-to') {
-        auxiliary = 'used to';
-        verbForm = verb;
-        sentence = subject.charAt(0).toUpperCase() + subject.slice(1) + adverbSpace + 'used to ' + verb + comp + '.';
-      } else if (selectedTense === 'would-past') {
-        auxiliary = 'would';
-        verbForm = verb;
-        sentence = subject.charAt(0).toUpperCase() + subject.slice(1) + ' would' + adverbSpace + verb + comp + '.';
-      }
-    } else if (selectedMode === 'negative') {
-      if (selectedModal) {
-        const negModal = selectedModal === 'can' ? "can't" :
-                        selectedModal === 'could' ? "couldn't" :
-                        selectedModal === 'should' ? "shouldn't" :
-                        selectedModal === 'would' ? "wouldn't" :
-                        selectedModal === 'will' ? "won't" :
-                        selectedModal === 'must' ? "mustn't" :
-                        selectedModal + " not";
-        auxiliary = negModal;
-        verbForm = verb;
-        sentence = subject.charAt(0).toUpperCase() + subject.slice(1) + ' ' + negModal + adverbSpace + verb + comp + '.';
-      } else if (selectedTense === 'simple-present') {
-        if (isBeVerb) {
-          auxiliary = beFormSubj + ' not'; verbForm = beFormSubj;
-          sentence = capStr(subject) + ' ' + beFormSubj + ' not' + comp + '.';
-        } else {
-          const aux = isThirdPersonSingular(subject) ? "doesn't" : "don't";
-          auxiliary = aux; verbForm = verb;
-          sentence = subject.charAt(0).toUpperCase() + subject.slice(1) + ' ' + aux + adverbSpace + verb + comp + '.';
-        }
-      } else if (selectedTense === 'present-continuous') {
-        let beForm = 'are';
-        if (!subj.includes(' and ') && !subj.includes(',')) {
-          beForm = subj === 'i' ? 'am' : isThirdPersonSingular(subject) ? 'is' : 'are';
-        }
-        auxiliary = beForm + ' not';
-        verbForm = presentParticiple(verb);
-        sentence = subject.charAt(0).toUpperCase() + subject.slice(1) + ' ' + beForm + ' not' + adverbSpace + verbForm + comp + '.';
-      } else if (selectedTense === 'simple-past') {
-        if (isBeVerb) {
-          auxiliary = wasWereSubj + ' not'; verbForm = wasWereSubj;
-          sentence = capStr(subject) + ' ' + wasWereSubj + ' not' + comp + '.';
-        } else {
-          auxiliary = "didn't"; verbForm = verb;
-          sentence = subject.charAt(0).toUpperCase() + subject.slice(1) + " didn't" + adverbSpace + verb + comp + '.';
-        }
-      } else if (selectedTense === 'past-continuous') {
-        let wasWere = 'were';
-        if (!subj.includes(' and ') && !subj.includes(',')) {
-          wasWere = (subj === 'i' || isThirdPersonSingular(subject)) && subj !== 'you' ? 'was' : 'were';
-        }
-        auxiliary = wasWere + ' not';
-        verbForm = presentParticiple(verb);
-        sentence = subject.charAt(0).toUpperCase() + subject.slice(1) + ' ' + wasWere + ' not' + adverbSpace + verbForm + comp + '.';
-      } else if (selectedTense === 'simple-future') {
-        auxiliary = "won't";
-        verbForm = verb;
-        sentence = subject.charAt(0).toUpperCase() + subject.slice(1) + " won't" + adverbSpace + verb + comp + '.';
-      } else if (selectedTense === 'future-going-to') {
-        let beForm = 'are';
-        if (!subj.includes(' and ') && !subj.includes(',')) {
-          beForm = subj === 'i' ? 'am' : isThirdPersonSingular(subject) ? 'is' : 'are';
-        }
-        auxiliary = beForm + ' not going to';
-        verbForm = verb;
-        sentence = subject.charAt(0).toUpperCase() + subject.slice(1) + ' ' + beForm + ' not' + adverbSpace + 'going to ' + verb + comp + '.';
-      } else if (selectedTense === 'present-perfect') {
-        let hasHave = 'have';
-        if (!subj.includes(' and ') && !subj.includes(',')) {
-          hasHave = isThirdPersonSingular(subject) ? 'has' : 'have';
-        }
-        auxiliary = hasHave + ' not';
-        verbForm = participle;
-        sentence = subject.charAt(0).toUpperCase() + subject.slice(1) + ' ' + hasHave + ' not' + adverbSpace + participle + comp + '.';
-      } else if (selectedTense === 'past-perfect') {
-        auxiliary = 'had not';
-        verbForm = participle;
-        sentence = subject.charAt(0).toUpperCase() + subject.slice(1) + ' had not' + adverbSpace + participle + comp + '.';
-      } else if (selectedTense === 'future-perfect') {
-        auxiliary = 'will not have';
-        verbForm = participle;
-        sentence = subject.charAt(0).toUpperCase() + subject.slice(1) + ' will not' + adverbSpace + 'have ' + participle + comp + '.';
-      } else if (selectedTense === 'present-perfect-continuous') {
-        let hasHave = 'have';
-        if (!subj.includes(' and ') && !subj.includes(',')) {
-          hasHave = isThirdPersonSingular(subject) ? 'has' : 'have';
-        }
-        auxiliary = hasHave + ' not been';
-        verbForm = presentParticiple(verb);
-        sentence = subject.charAt(0).toUpperCase() + subject.slice(1) + ' ' + hasHave + ' not' + adverbSpace + 'been ' + verbForm + comp + '.';
-      } else if (selectedTense === 'past-perfect-continuous') {
-        auxiliary = 'had not been';
-        verbForm = presentParticiple(verb);
-        sentence = subject.charAt(0).toUpperCase() + subject.slice(1) + ' had not' + adverbSpace + 'been ' + verbForm + comp + '.';
-      } else if (selectedTense === 'used-to') {
-        auxiliary = "didn't use to";
-        verbForm = verb;
-        sentence = subject.charAt(0).toUpperCase() + subject.slice(1) + " didn't" + adverbSpace + "use to " + verb + comp + '.';
-      } else if (selectedTense === 'would-past') {
-        auxiliary = "wouldn't";
-        verbForm = verb;
-        sentence = subject.charAt(0).toUpperCase() + subject.slice(1) + " wouldn't" + adverbSpace + verb + comp + '.';
-      }
-    } else if (selectedMode === 'interrogative') {
-      // En interrogativas, el adverbio va después del sujeto
-      const advAfterSubj = adverb ? ' ' + adverb : '';
-      if (fullWhWord) {
-        const whCap = fullWhWord.charAt(0).toUpperCase() + fullWhWord.slice(1);
-        if (selectedModal) {
-          auxiliary = selectedModal;
-          verbForm = verb;
-          sentence = whCap + ' ' + selectedModal + ' ' + subject + advAfterSubj + ' ' + verb + comp + '?';
-        } else if (selectedTense === 'simple-present') {
-          if (isBeVerb) {
-            auxiliary = beFormSubj; verbForm = beFormSubj;
-            sentence = whCap + ' ' + beFormSubj + ' ' + subject + advAfterSubj + comp + '?';
-          } else {
-            const aux = isThirdPersonSingular(subject) ? 'does' : 'do';
-            auxiliary = aux; verbForm = verb;
-            sentence = whCap + ' ' + aux + ' ' + subject + advAfterSubj + ' ' + verb + comp + '?';
-          }
-        } else if (selectedTense === 'present-continuous') {
-          let beForm = 'are';
-          if (!subj.includes(' and ') && !subj.includes(',')) {
-            beForm = subj === 'i' ? 'am' : isThirdPersonSingular(subject) ? 'is' : 'are';
-          }
-          auxiliary = beForm;
-          verbForm = presentParticiple(verb);
-          sentence = whCap + ' ' + beForm + ' ' + subject + advAfterSubj + ' ' + verbForm + comp + '?';
-        } else if (selectedTense === 'simple-past') {
-          if (isBeVerb) {
-            auxiliary = wasWereSubj; verbForm = wasWereSubj;
-            sentence = whCap + ' ' + wasWereSubj + ' ' + subject + advAfterSubj + comp + '?';
-          } else {
-            auxiliary = 'did'; verbForm = verb;
-            sentence = whCap + ' did ' + subject + advAfterSubj + ' ' + verb + comp + '?';
-          }
-        } else if (selectedTense === 'past-continuous') {
-          let wasWere = 'were';
-          if (!subj.includes(' and ') && !subj.includes(',')) {
-            wasWere = (subj === 'i' || isThirdPersonSingular(subject)) && subj !== 'you' ? 'was' : 'were';
-          }
-          auxiliary = wasWere;
-          verbForm = presentParticiple(verb);
-          sentence = whCap + ' ' + wasWere + ' ' + subject + advAfterSubj + ' ' + verbForm + comp + '?';
-        } else if (selectedTense === 'simple-future') {
-          auxiliary = 'will';
-          verbForm = verb;
-          sentence = whCap + ' will ' + subject + advAfterSubj + ' ' + verb + comp + '?';
-        } else if (selectedTense === 'future-going-to') {
-          let beForm = 'are';
-          if (!subj.includes(' and ') && !subj.includes(',')) {
-            beForm = subj === 'i' ? 'am' : isThirdPersonSingular(subject) ? 'is' : 'are';
-          }
-          auxiliary = beForm + ' going to';
-          verbForm = verb;
-          sentence = whCap + ' ' + beForm + ' ' + subject + advAfterSubj + ' going to ' + verb + comp + '?';
-        } else if (selectedTense === 'present-perfect') {
-          let hasHave = 'have';
-          if (!subj.includes(' and ') && !subj.includes(',')) {
-            hasHave = isThirdPersonSingular(subject) ? 'has' : 'have';
-          }
-          auxiliary = hasHave;
-          verbForm = participle;
-          sentence = whCap + ' ' + hasHave + ' ' + subject + advAfterSubj + ' ' + participle + comp + '?';
-        } else if (selectedTense === 'past-perfect') {
-          auxiliary = 'had';
-          verbForm = participle;
-          sentence = whCap + ' had ' + subject + advAfterSubj + ' ' + participle + comp + '?';
-        } else if (selectedTense === 'future-perfect') {
-          auxiliary = 'will have';
-          verbForm = participle;
-          sentence = whCap + ' will ' + subject + advAfterSubj + ' have ' + participle + comp + '?';
-        } else if (selectedTense === 'present-perfect-continuous') {
-          let hasHave = 'have';
-          if (!subj.includes(' and ') && !subj.includes(',')) {
-            hasHave = isThirdPersonSingular(subject) ? 'has' : 'have';
-          }
-          auxiliary = hasHave + ' been';
-          verbForm = presentParticiple(verb);
-          sentence = whCap + ' ' + hasHave + ' ' + subject + advAfterSubj + ' been ' + verbForm + comp + '?';
-        } else if (selectedTense === 'past-perfect-continuous') {
-          auxiliary = 'had been';
-          verbForm = presentParticiple(verb);
-          sentence = whCap + ' had ' + subject + advAfterSubj + ' been ' + verbForm + comp + '?';
-        } else if (selectedTense === 'used-to') {
-          auxiliary = 'did use to';
-          verbForm = verb;
-          sentence = whCap + ' did ' + subject + advAfterSubj + ' use to ' + verb + comp + '?';
-        } else if (selectedTense === 'would-past') {
-          auxiliary = 'would';
-          verbForm = verb;
-          sentence = whCap + ' would ' + subject + advAfterSubj + ' ' + verb + comp + '?';
-        }
-      } else {
-        if (selectedModal) {
-          auxiliary = selectedModal;
-          verbForm = verb;
-          sentence = selectedModal.charAt(0).toUpperCase() + selectedModal.slice(1) + ' ' + subject + advAfterSubj + ' ' + verb + comp + '?';
-        } else if (selectedTense === 'simple-present') {
-          if (isBeVerb) {
-            auxiliary = beFormSubj; verbForm = beFormSubj;
-            sentence = capStr(beFormSubj) + ' ' + subject + advAfterSubj + comp + '?';
-          } else {
-            const aux = isThirdPersonSingular(subject) ? 'does' : 'do';
-            auxiliary = aux; verbForm = verb;
-            sentence = aux.charAt(0).toUpperCase() + aux.slice(1) + ' ' + subject + advAfterSubj + ' ' + verb + comp + '?';
-          }
-        } else if (selectedTense === 'present-continuous') {
-          let beForm = 'are';
-          if (!subj.includes(' and ') && !subj.includes(',')) {
-            beForm = subj === 'i' ? 'am' : isThirdPersonSingular(subject) ? 'is' : 'are';
-          }
-          auxiliary = beForm;
-          verbForm = presentParticiple(verb);
-          sentence = beForm.charAt(0).toUpperCase() + beForm.slice(1) + ' ' + subject + advAfterSubj + ' ' + verbForm + comp + '?';
-        } else if (selectedTense === 'simple-past') {
-          if (isBeVerb) {
-            auxiliary = wasWereSubj; verbForm = wasWereSubj;
-            sentence = capStr(wasWereSubj) + ' ' + subject + advAfterSubj + comp + '?';
-          } else {
-            auxiliary = 'did'; verbForm = verb;
-            sentence = 'Did ' + subject + advAfterSubj + ' ' + verb + comp + '?';
-          }
-        } else if (selectedTense === 'past-continuous') {
-          let wasWere = 'were';
-          if (!subj.includes(' and ') && !subj.includes(',')) {
-            wasWere = (subj === 'i' || isThirdPersonSingular(subject)) && subj !== 'you' ? 'was' : 'were';
-          }
-          auxiliary = wasWere;
-          verbForm = presentParticiple(verb);
-          sentence = wasWere.charAt(0).toUpperCase() + wasWere.slice(1) + ' ' + subject + advAfterSubj + ' ' + verbForm + comp + '?';
-        } else if (selectedTense === 'simple-future') {
-          auxiliary = 'will';
-          verbForm = verb;
-          sentence = 'Will ' + subject + advAfterSubj + ' ' + verb + comp + '?';
-        } else if (selectedTense === 'future-going-to') {
-          let beForm = 'are';
-          if (!subj.includes(' and ') && !subj.includes(',')) {
-            beForm = subj === 'i' ? 'am' : isThirdPersonSingular(subject) ? 'is' : 'are';
-          }
-          auxiliary = beForm + ' going to';
-          verbForm = verb;
-          sentence = beForm.charAt(0).toUpperCase() + beForm.slice(1) + ' ' + subject + advAfterSubj + ' going to ' + verb + comp + '?';
-        } else if (selectedTense === 'present-perfect') {
-          let hasHave = 'have';
-          if (!subj.includes(' and ') && !subj.includes(',')) {
-            hasHave = isThirdPersonSingular(subject) ? 'has' : 'have';
-          }
-          auxiliary = hasHave;
-          verbForm = participle;
-          sentence = hasHave.charAt(0).toUpperCase() + hasHave.slice(1) + ' ' + subject + advAfterSubj + ' ' + participle + comp + '?';
-        } else if (selectedTense === 'past-perfect') {
-          auxiliary = 'had';
-          verbForm = participle;
-          sentence = 'Had ' + subject + advAfterSubj + ' ' + participle + comp + '?';
-        } else if (selectedTense === 'future-perfect') {
-          auxiliary = 'will have';
-          verbForm = participle;
-          sentence = 'Will ' + subject + advAfterSubj + ' have ' + participle + comp + '?';
-        } else if (selectedTense === 'present-perfect-continuous') {
-          let hasHave = 'have';
-          if (!subj.includes(' and ') && !subj.includes(',')) {
-            hasHave = isThirdPersonSingular(subject) ? 'has' : 'have';
-          }
-          auxiliary = hasHave + ' been';
-          verbForm = presentParticiple(verb);
-          sentence = hasHave.charAt(0).toUpperCase() + hasHave.slice(1) + ' ' + subject + advAfterSubj + ' been ' + verbForm + comp + '?';
-        } else if (selectedTense === 'past-perfect-continuous') {
-          auxiliary = 'had been';
-          verbForm = presentParticiple(verb);
-          sentence = 'Had ' + subject + advAfterSubj + ' been ' + verbForm + comp + '?';
-        } else if (selectedTense === 'used-to') {
-          auxiliary = 'did use to';
-          verbForm = verb;
-          sentence = 'Did ' + subject + advAfterSubj + ' use to ' + verb + comp + '?';
-        } else if (selectedTense === 'would-past') {
-          auxiliary = 'would';
-          verbForm = verb;
-          sentence = 'Would ' + subject + advAfterSubj + ' ' + verb + comp + '?';
-        }
-      }
-    }
-    
-    // Única fuente de verdad: buildSentenceText maneja toda la lógica de conjugación
-    sentence = buildSentenceText({ mode: selectedMode, subject, verb, complement, tense: selectedTense, modal: selectedModal, whWord, whExtension, adverb });
+    const sentence = buildSentenceText({ mode: selectedMode, ...params });
     setGeneratedSentence(sentence);
 
-    // Generar las 3 variantes de modo
-    const sentenceParams = { subject, verb, complement, tense: selectedTense, modal: selectedModal, whWord, whExtension, adverb };
     setAllModeSentences({
-      aff: buildSentenceText({ mode: 'affirmative',   ...sentenceParams }),
-      neg: buildSentenceText({ mode: 'negative',      ...sentenceParams }),
-      int: buildSentenceText({ mode: 'interrogative', ...sentenceParams }),
+      aff: buildSentenceText({ mode: 'affirmative',   ...params }),
+      neg: buildSentenceText({ mode: 'negative',      ...params }),
+      int: buildSentenceText({ mode: 'interrogative', ...params }),
     });
 
-    // Generar análisis gramatical visual
-    const analysis = generateSentenceAnalysis({
+    // El análisis usa el MISMO motor que el texto (auxiliar + forma verbal)
+    const { auxiliary, verbForm } = getAuxAndVerbForm(subject, verb, selectedTense, selectedModal, selectedMode);
+    setSentenceAnalysis(generateSentenceAnalysis({
       subjectText: subject,
       verbText: verb,
       complementText: complement,
@@ -2054,8 +1509,19 @@ const EnglishSentenceBuilder = () => {
       modalId: selectedModal,
       whWordText: fullWhWord,
       adverbText: adverb
-    });
-    setSentenceAnalysis(analysis);
+    }));
+    return sentence;
+  };
+
+  const generateSentence = () => {
+    // Si hay modal, no se requiere tiempo. Si no hay modal, sí se requiere tiempo.
+    if (!subject || !verb || (!selectedModal && !selectedTense)) {
+      showNotification('error', language === 'es' ? 'Por favor completa todos los campos' : 'Please complete all fields');
+      return;
+    }
+
+    setWhWarning(validateWhExtension(whExtension));
+    const sentence = computeSentenceDisplay();
 
     // FASE 1: Guardar en historial y actualizar estadísticas
     const newHistoryItem = {
@@ -2080,6 +1546,15 @@ const EnglishSentenceBuilder = () => {
     setTotalAllTime(prev => prev + 1);
     recordPracticeDay();
   };
+
+  // Tiempo real: una vez generada la primera oración, cualquier cambio de
+  // tiempo, modo o entradas actualiza la vista al instante (sin tocar historial)
+  useEffect(() => {
+    if (!generatedSentence) return;
+    if (!subject || !verb || (!selectedModal && !selectedTense)) return;
+    computeSentenceDisplay();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [subject, verb, complement, selectedTense, selectedMode, selectedModal, whWord, whExtension, selectedAdverb, language]);
 
   const speakSentence = () => {
     if ('speechSynthesis' in window && generatedSentence) {
@@ -2108,7 +1583,7 @@ const EnglishSentenceBuilder = () => {
     <div className="flex flex-col h-screen overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
       {/* Notificación */}
       {notification && (
-        <div className={`fixed top-4 right-4 z-50 px-5 py-3 rounded-lg shadow-lg ${
+        <div role="status" aria-live="polite" className={`fixed top-4 right-4 z-50 px-5 py-3 rounded-lg shadow-lg ${
           notification.type === 'error' ? 'bg-red-500 text-white' : 'bg-green-500 text-white'
         }`}>
           <div className="flex items-center gap-2">
@@ -2603,19 +2078,19 @@ const EnglishSentenceBuilder = () => {
 
               {/* IDIOMA toggle */}
               <div className="flex bg-slate-100 border border-slate-200 rounded-lg p-0.5">
-                <button onClick={() => setLanguage('es')} className={`px-2 py-0.5 rounded text-xs font-bold transition-all ${language === 'es' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`} title="Español">ES</button>
-                <button onClick={() => setLanguage('en')} className={`px-2 py-0.5 rounded text-xs font-bold transition-all ${language === 'en' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`} title="English">EN</button>
+                <button onClick={() => setLanguage('es')} aria-pressed={language === 'es'} className={`px-2 py-0.5 rounded text-xs font-bold transition-all ${language === 'es' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`} title="Español">ES</button>
+                <button onClick={() => setLanguage('en')} aria-pressed={language === 'en'} className={`px-2 py-0.5 rounded text-xs font-bold transition-all ${language === 'en' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`} title="English">EN</button>
               </div>
             </>}
 
             {/* Botones de acción — solo visibles en desktop */}
             <div className="hidden sm:flex items-center">
-              <button onClick={() => setActivePanel('timeGuide')} className="p-2 hover:bg-gray-100 rounded-lg transition-colors" title={t.timeGuideTitle}><Clock className="w-5 h-5 text-gray-600" /></button>
-              <button onClick={() => setActivePanel('practice')} className="p-2 hover:bg-gray-100 rounded-lg transition-colors" title={t.practiceMode}><Award className="w-5 h-5 text-gray-600" /></button>
-              <button onClick={() => setActivePanel('progress')} className="p-2 hover:bg-gray-100 rounded-lg transition-colors" title={t.progressTitle}><BarChart2 className="w-5 h-5 text-gray-600" /></button>
-              <button onClick={() => setActivePanel('history')} className="p-2 hover:bg-gray-100 rounded-lg transition-colors relative" title={t.history}>
+              <button onClick={() => setActivePanel('timeGuide')} className="p-2 hover:bg-gray-100 rounded-lg transition-colors" title={t.timeGuideTitle} aria-label={t.timeGuideTitle}><Clock className="w-5 h-5 text-gray-600" /></button>
+              <button onClick={() => setActivePanel('practice')} className="p-2 hover:bg-gray-100 rounded-lg transition-colors" title={t.practiceMode} aria-label={t.practiceMode}><Award className="w-5 h-5 text-gray-600" /></button>
+              <button onClick={() => setActivePanel('progress')} className="p-2 hover:bg-gray-100 rounded-lg transition-colors" title={t.progressTitle} aria-label={t.progressTitle}><BarChart2 className="w-5 h-5 text-gray-600" /></button>
+              <button onClick={() => setActivePanel('history')} className="p-2 hover:bg-gray-100 rounded-lg transition-colors relative" title={t.history} aria-label={`${t.history}${totalAllTime > 0 ? ` (${totalAllTime})` : ''}`}>
                 <History className="w-5 h-5 text-gray-600" />
-                {totalAllTime > 0 && <span className="absolute -top-1 -right-1 bg-indigo-500 text-white text-xs w-4 h-4 rounded-full flex items-center justify-center font-bold" style={{fontSize:'9px'}}>{totalAllTime > 99 ? '99+' : totalAllTime}</span>}
+                {totalAllTime > 0 && <span aria-hidden="true" className="absolute -top-1 -right-1 bg-indigo-500 text-white text-xs w-4 h-4 rounded-full flex items-center justify-center font-bold" style={{fontSize:'9px'}}>{totalAllTime > 99 ? '99+' : totalAllTime}</span>}
               </button>
             </div>
           </div>
@@ -2669,6 +2144,7 @@ const EnglishSentenceBuilder = () => {
                     <button
                       key={mode.id}
                       onClick={() => setSelectedMode(mode.id)}
+                      aria-pressed={selectedMode === mode.id}
                       className={`flex flex-1 sm:flex-none items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-all border-r last:border-r-0 border-gray-200 ${
                         selectedMode === mode.id ? mode.activeClasses : 'bg-white text-gray-500 hover:bg-gray-50'
                       }`}
@@ -2819,7 +2295,9 @@ const EnglishSentenceBuilder = () => {
                   onChange={(e) => setSelectedAdverb(e.target.value)}
                   className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all bg-white"
                 >
-                  {frequencyAdverbs.map((adv) => (
+                  {frequencyAdverbs
+                    .filter((adv) => selectedMode !== 'negative' || !NEGATIVE_SENSE_ADVERBS.includes(adv.id))
+                    .map((adv) => (
                     <option key={adv.id} value={adv.id}>
                       {adv.name}{adv.id && (language === 'es' ? ` - ${adv.descEs}` : ` (${adv.percentage}%)`)}
                     </option>
@@ -2848,7 +2326,7 @@ const EnglishSentenceBuilder = () => {
                 onBlur={() => setTimeout(() => setShowVerbSuggestions(false), 200)}
                 placeholder="work, study, play..."
                 className={`w-full px-4 py-2.5 border-y border-r rounded-lg border-l-4 focus:ring-2 focus:ring-indigo-500 outline-none transition-all ${
-                  !verbValidation.valid ? 'border-red-400 bg-red-50' :
+                  verbBaseSuggestion || !verbValidation.valid ? 'border-red-400 bg-red-50' :
                   verbValidation.warning ? 'border-amber-400 bg-amber-50 border-l-amber-400' :
                   'border-gray-300 border-l-rose-400 focus:border-indigo-500'
                 }`}
@@ -2860,15 +2338,36 @@ const EnglishSentenceBuilder = () => {
                   ))}
                 </div>
               )}
-              {!verbValidation.valid && verbValidation.warning && (
-                <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
-                  <AlertTriangle className="w-3 h-3" /> {verbValidation.warning}
+              {/* El verbo escribido ya está conjugado (worked, working, works…):
+                  se prioriza esta sugerencia sobre los avisos genéricos de validación,
+                  porque ya explica el problema y ofrece el arreglo con un click. */}
+              {verbBaseSuggestion ? (
+                <p className="text-xs text-red-600 mt-1 flex items-center gap-1.5 flex-wrap">
+                  <AlertTriangle className="w-3 h-3 shrink-0" />
+                  {language === 'es'
+                    ? <>Escribe el verbo en forma base, no conjugada.</>
+                    : <>Type the verb in base form, not conjugated.</>}
+                  <button
+                    type="button"
+                    onClick={() => setVerb(verbBaseSuggestion)}
+                    className="underline font-semibold text-red-700 hover:text-red-800"
+                  >
+                    {language === 'es' ? `Usar "${verbBaseSuggestion}"` : `Use "${verbBaseSuggestion}"`}
+                  </button>
                 </p>
-              )}
-              {verbValidation.valid && verbValidation.warning && (
-                <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
-                  <AlertTriangle className="w-3 h-3" /> {verbValidation.warning}
-                </p>
+              ) : (
+                <>
+                  {!verbValidation.valid && verbValidation.warning && (
+                    <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
+                      <AlertTriangle className="w-3 h-3" /> {verbValidation.warning}
+                    </p>
+                  )}
+                  {verbValidation.valid && verbValidation.warning && (
+                    <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
+                      <AlertTriangle className="w-3 h-3" /> {verbValidation.warning}
+                    </p>
+                  )}
+                </>
               )}
               {isIrregular && irregularVerbs[verb.toLowerCase()] && verbValidation.valid && !verbValidation.warning && (
                 <p className="text-xs text-emerald-600 mt-1">
@@ -3060,46 +2559,72 @@ const EnglishSentenceBuilder = () => {
             {sentenceAnalysis ? (
               <div className="mb-4">
                 <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-xl sm:text-2xl md:text-3xl font-bold">
-                  {sentenceAnalysis.parts.map((part, index) => (
-                    <span
-                      key={index}
-                      className={`relative group cursor-help transition-all duration-200 ${
-                        part.type === 'wh-word' ? 'text-teal-700 hover:bg-teal-50' :
-                        part.type === 'subject' ? 'text-indigo-600 hover:bg-indigo-50' :
-                        part.type === 'adverb' ? 'text-indigo-500 hover:bg-indigo-50' :
-                        part.type === 'auxiliary' ? 'text-rose-600 hover:bg-rose-50' :
-                        part.type === 'verb' ? 'text-rose-600 hover:bg-rose-50' :
-                        part.type === 'complement' ? 'text-emerald-600 hover:bg-emerald-50' :
-                        part.type === 'adverbial' ? 'text-amber-600 hover:bg-amber-50' :
-                        part.type === 'punctuation' ? 'text-gray-500' :
-                        'text-gray-800'
-                      } px-1 rounded`}
-                    >
-                      {part.text}
-                      {/* Tooltip */}
-                      <span className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 pointer-events-none shadow-lg">
-                        <span className="font-semibold block mb-1">
-                          {part.type === 'wh-word' ? (language === 'es' ? 'Palabra WH' : 'WH Word') :
-                           part.type === 'subject' ? t.subjectLabel :
-                           part.type === 'adverb' ? t.adverbLabel :
-                           part.type === 'auxiliary' ? t.auxiliaryLabel :
-                           part.type === 'verb' ? t.verbLabel :
-                           part.type === 'punctuation' ? (language === 'es' ? 'Puntuación' : 'Punctuation') :
-                           part.type === 'adverbial' ? (language === 'es' ? 'Adverbial (A)' : 'Adverbial (A)') :
-                           t.complementLabel + ' (C)'}
+                  {sentenceAnalysis.parts.map((part, index) => {
+                    const partLabel =
+                      part.type === 'wh-word' ? (language === 'es' ? 'Palabra WH' : 'WH Word') :
+                      part.type === 'subject' ? t.subjectLabel :
+                      part.type === 'adverb' ? t.adverbLabel :
+                      part.type === 'auxiliary' ? t.auxiliaryLabel :
+                      part.type === 'verb' ? t.verbLabel :
+                      part.type === 'adverbial' ? (language === 'es' ? 'Adverbial (A)' : 'Adverbial (A)') :
+                      t.complementLabel + ' (C)';
+                    const colorClasses =
+                      part.type === 'wh-word' ? 'text-teal-700 hover:bg-teal-50' :
+                      part.type === 'subject' ? 'text-indigo-600 hover:bg-indigo-50' :
+                      part.type === 'adverb' ? 'text-indigo-500 hover:bg-indigo-50' :
+                      part.type === 'auxiliary' ? 'text-rose-600 hover:bg-rose-50' :
+                      part.type === 'verb' ? 'text-rose-600 hover:bg-rose-50' :
+                      part.type === 'complement' ? 'text-emerald-600 hover:bg-emerald-50' :
+                      part.type === 'adverbial' ? 'text-amber-600 hover:bg-amber-50' :
+                      'text-gray-800';
+
+                    // La puntuación no lleva explicación — se muestra como texto simple
+                    if (part.type === 'punctuation') {
+                      return <span key={index} className="text-gray-500 px-1">{part.text}</span>;
+                    }
+
+                    const isPinned = selectedPartIndex === index;
+                    return (
+                      <button
+                        key={index}
+                        type="button"
+                        onClick={() => setSelectedPartIndex(prev => prev === index ? null : index)}
+                        onFocus={() => setSelectedPartIndex(index)}
+                        aria-describedby={`part-desc-${index}`}
+                        aria-expanded={isPinned}
+                        className={`relative group appearance-none bg-transparent border-0 cursor-pointer transition-all duration-200 ${colorClasses} px-1 rounded ${isPinned ? 'ring-2 ring-offset-1 ring-indigo-300' : ''}`}
+                      >
+                        {part.text}
+                        {/* Tooltip visual — decorativo; el contenido real para lectores de pantalla vive en el span sr-only de abajo */}
+                        <span aria-hidden="true" className={`absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg transition-opacity whitespace-nowrap z-10 pointer-events-none shadow-lg ${isPinned ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 group-focus:opacity-100'}`}>
+                          <span className="font-semibold block mb-1">{partLabel}</span>
+                          {part.explanation}
+                          {part.transformation && (
+                            <span className="block mt-1 text-green-300">{part.transformation}</span>
+                          )}
+                          {part.isNew && (
+                            <span className="block mt-1 text-purple-300">{t.addedElement}</span>
+                          )}
+                          <span className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></span>
                         </span>
-                        {part.explanation}
-                        {part.transformation && (
-                          <span className="block mt-1 text-green-300">{part.transformation}</span>
+                        {/* Panel siempre visible en móvil cuando esta parte está seleccionada (tap) */}
+                        {isPinned && (
+                          <span className="sm:hidden absolute top-full left-1/2 transform -translate-x-1/2 mt-2 w-56 max-w-[80vw] px-3 py-2 bg-gray-900 text-white text-xs rounded-lg whitespace-normal z-10 shadow-lg text-left normal-case font-normal">
+                            <span className="font-semibold block mb-1">{partLabel}</span>
+                            {part.explanation}
+                            {part.transformation && (
+                              <span className="block mt-1 text-green-300">{part.transformation}</span>
+                            )}
+                          </span>
                         )}
-                        {part.isNew && (
-                          <span className="block mt-1 text-purple-300">{t.addedElement}</span>
-                        )}
-                        <span className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></span>
-                      </span>
-                    </span>
-                  ))}
-                  <span className="text-gray-800">{selectedMode === 'interrogative' ? '' : ''}</span>
+                        <span id={`part-desc-${index}`} className="sr-only">
+                          {partLabel}. {part.explanation}
+                          {part.transformation ? `. ${part.transformation}` : ''}
+                          {part.isNew ? `. ${t.addedElement}` : ''}
+                        </span>
+                      </button>
+                    );
+                  })}
                 </div>
 
               </div>
@@ -3200,6 +2725,7 @@ const EnglishSentenceBuilder = () => {
             <button
               key={panel}
               onClick={() => setActivePanel(panel)}
+              aria-pressed={activePanel === panel}
               className={`flex-1 flex flex-col items-center justify-center gap-0.5 py-2.5 transition-colors relative ${
                 activePanel === panel ? 'text-indigo-600' : 'text-gray-400 hover:text-gray-600'
               }`}
@@ -3207,7 +2733,7 @@ const EnglishSentenceBuilder = () => {
               {icon}
               <span className="text-[10px] font-medium leading-tight">{label}</span>
               {badge && (
-                <span className="absolute top-1.5 right-1/2 translate-x-3 bg-indigo-500 text-white font-bold rounded-full flex items-center justify-center" style={{fontSize:'9px', minWidth:'16px', height:'16px', padding:'0 3px'}}>
+                <span aria-hidden="true" className="absolute top-1.5 right-1/2 translate-x-3 bg-indigo-500 text-white font-bold rounded-full flex items-center justify-center" style={{fontSize:'9px', minWidth:'16px', height:'16px', padding:'0 3px'}}>
                   {badge}
                 </span>
               )}

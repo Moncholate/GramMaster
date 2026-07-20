@@ -22,5 +22,7 @@ export {
   validateComplement,
   validPronouns,
   validSubjectNouns,
-  allValidVerbs
+  allValidVerbs,
+  hispanicNames,
+  looksLikeValidWord
 } from './validation';
