@@ -9,6 +9,7 @@ import {
   buildVerbPhrase,
   getAuxAndVerbForm,
   detectConjugatedVerbBase,
+  getVerbChangeType,
 } from './conjugation';
 
 describe('presentParticiple', () => {
@@ -146,6 +147,27 @@ describe('buildSentenceText — casos críticos de la revisión', () => {
       .toBe('Had they been studying?');
   });
 
+  it('adverbio con "be" como verbo principal: afirmativa', () => {
+    expect(s({ mode: 'affirmative', subject: 'Victor', verb: 'be', complement: 'a good teacher', tense: 'simple-present', adverb: 'always' }))
+      .toBe('Victor is always a good teacher.');
+  });
+  it('adverbio con "be" como verbo principal: negativa (antes se perdía el adverbio)', () => {
+    expect(s({ mode: 'negative', subject: 'Victor', verb: 'be', complement: 'a good teacher', tense: 'simple-present', adverb: 'always' }))
+      .toBe('Victor is not always a good teacher.');
+  });
+  it('adverbio con "be" como verbo principal: interrogativa (antes se perdía el adverbio)', () => {
+    expect(s({ mode: 'interrogative', subject: 'Victor', verb: 'be', complement: 'a good teacher', tense: 'simple-present', adverb: 'always' }))
+      .toBe('Is Victor always a good teacher?');
+  });
+  it('adverbio con "be" en pasado simple: negativa', () => {
+    expect(s({ mode: 'negative', subject: 'she', verb: 'be', complement: 'happy', tense: 'simple-past', adverb: 'always' }))
+      .toBe('She was not always happy.');
+  });
+  it('adverbio con "be" en pasado simple: interrogativa', () => {
+    expect(s({ mode: 'interrogative', subject: 'she', verb: 'be', complement: 'happy', tense: 'simple-past', adverb: 'always' }))
+      .toBe('Was she always happy?');
+  });
+
   it('C2/C3: be y have conjugan correctamente en presente continuo/simple', () => {
     expect(s({ mode: 'affirmative', subject: 'she', verb: 'be', complement: 'careful', tense: 'present-continuous' }))
       .toBe('She is being careful.');
@@ -229,5 +251,55 @@ describe('detectConjugatedVerbBase — I5', () => {
   });
   it('no marca texto sin sentido', () => {
     expect(detectConjugatedVerbBase('xyzabc')).toBeNull();
+  });
+});
+
+describe('getVerbChangeType — clasificación para el desglose visual', () => {
+  // Deriva verbForm como lo hace App.jsx (vía getAuxAndVerbForm) para que
+  // el test ejercite el mismo camino real, no un valor inventado a mano.
+  const changeType = (subject, verb, tenseId) => {
+    const { verbForm } = getAuxAndVerbForm(subject, verb, tenseId, '', 'affirmative');
+    return getVerbChangeType(verbForm, verb, tenseId);
+  };
+
+  it('cambio ortográfico -y→-ies en 3ra persona (el bug reportado: "study" en presente simple)', () => {
+    expect(changeType('she', 'study', 'simple-present')).toBe('third-person-s');
+  });
+  it('otros verbos con -y→-ies', () => {
+    expect(changeType('he', 'try', 'simple-present')).toBe('third-person-s');
+    expect(changeType('it', 'carry', 'simple-present')).toBe('third-person-s');
+  });
+  it('3ra persona con +es normal', () => {
+    expect(changeType('she', 'watch', 'simple-present')).toBe('third-person-s');
+    expect(changeType('he', 'go', 'simple-present')).toBe('third-person-s');
+  });
+  it('3ra persona con +s normal', () => {
+    expect(changeType('she', 'work', 'simple-present')).toBe('third-person-s');
+  });
+  it('sin cambio cuando el sujeto no es 3ra persona', () => {
+    expect(changeType('I', 'work', 'simple-present')).toBe('base');
+  });
+
+  it('pasado simple regular', () => {
+    expect(changeType('she', 'work', 'simple-past')).toBe('past');
+    expect(changeType('she', 'study', 'simple-past')).toBe('past');
+  });
+  it('pasado simple irregular', () => {
+    expect(changeType('she', 'go', 'simple-past')).toBe('irregular');
+    expect(changeType('she', 'have', 'simple-past')).toBe('irregular');
+  });
+
+  it('participio regular en tiempos perfectos', () => {
+    expect(changeType('she', 'work', 'present-perfect')).toBe('participle');
+    expect(changeType('they', 'study', 'past-perfect')).toBe('participle');
+  });
+  it('participio irregular en tiempos perfectos', () => {
+    expect(changeType('she', 'go', 'present-perfect')).toBe('irregular');
+  });
+
+  it('siempre -ing en continuos, sin importar irregularidad', () => {
+    expect(changeType('she', 'run', 'present-continuous')).toBe('ing');
+    expect(changeType('she', 'study', 'present-continuous')).toBe('ing');
+    expect(changeType('she', 'be', 'present-continuous')).toBe('ing');
   });
 });

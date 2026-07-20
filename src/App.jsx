@@ -36,6 +36,7 @@ import {
   buildVerbPhrase,
   buildSentenceText,
   detectConjugatedVerbBase,
+  getVerbChangeType,
 } from './conjugation';
 import { useClipboard, useSpeechSynthesis, useLocalStorage, useSessionStats } from './hooks';
 
@@ -201,7 +202,6 @@ const EnglishSentenceBuilder = () => {
   const [identifyTenseAnswer, setIdentifyTenseAnswer] = useState('');
   const [identifyModeAnswer, setIdentifyModeAnswer] = useState('');
   const [showHint, setShowHint] = useState(false);
-  const [showGrammarAnalysis, setShowGrammarAnalysis] = useState(false);
   const [cefrLevel, setCefrLevel] = useState('basico1');
   const [notification, setNotification] = useState(null); // { type: 'error' | 'success', message: string }
 
@@ -427,6 +427,17 @@ const EnglishSentenceBuilder = () => {
       setSelectedAdverb('');
     }
   }, [selectedMode, selectedAdverb]);
+
+  // Limpiar la palabra WH al salir de interrogativa: si no, queda oculta en
+  // el estado y se filtra en la variante "interrogativa" del comparador de
+  // los 3 modos aunque el picker de WH ya no esté visible — confuso.
+  useEffect(() => {
+    if (selectedMode !== 'interrogative') {
+      setWhWord('');
+      setWhExtension('');
+      setWhWarning('');
+    }
+  }, [selectedMode]);
 
   // Genera una oración con un error gramatical y retorna { sentence, wrongPart, correctPart }
   const buildWrongSentence = (subj, v, comp, tenseId, mode = 'affirmative') => {
@@ -890,66 +901,6 @@ const EnglishSentenceBuilder = () => {
     });
   };
 
-  // FASE 2: Generar análisis gramatical
-  const generateGrammarAnalysis = () => {
-    if (!generatedSentence) return null;
-
-    const analysis = {
-      structure: [],
-      explanation: '',
-      rule: ''
-    };
-
-    // Identificar partes de la oración
-    const words = generatedSentence.split(' ');
-    
-    // Análisis básico
-    analysis.structure.push({
-      text: subject,
-      type: 'subject',
-      color: 'blue',
-      description: language === 'es' ? 'Sujeto - Quién realiza la acción' : 'Subject - Who performs the action'
-    });
-
-    // Identificar auxiliares y verbos
-    const currentTense = tenses.find(t => t.id === selectedTense);
-    
-    analysis.structure.push({
-      text: verb,
-      type: 'verb',
-      color: 'green',
-      description: language === 'es' ? 'Verbo - La acción principal' : 'Verb - The main action'
-    });
-
-    if (complement) {
-      analysis.structure.push({
-        text: complement,
-        type: 'complement',
-        color: 'purple',
-        description: language === 'es' ? 'Complemento - Información adicional' : 'Complement - Additional information'
-      });
-    }
-
-    // Explicación de la regla
-    if (selectedMode === 'affirmative') {
-      analysis.explanation = language === 'es' 
-        ? `Oración afirmativa en ${currentTense?.nameEs}. El verbo se conjuga según el sujeto y el tiempo verbal.`
-        : `Affirmative sentence in ${currentTense?.nameEn}. The verb is conjugated according to the subject and tense.`;
-    } else if (selectedMode === 'negative') {
-      analysis.explanation = language === 'es'
-        ? `Oración negativa en ${currentTense?.nameEs}. Se usa un auxiliar negativo y el verbo base.`
-        : `Negative sentence in ${currentTense?.nameEn}. Uses a negative auxiliary and the base verb.`;
-    } else if (selectedMode === 'interrogative') {
-      analysis.explanation = language === 'es'
-        ? `Oración interrogativa en ${currentTense?.nameEs}. El auxiliar va al inicio de la oración.`
-        : `Interrogative sentence in ${currentTense?.nameEn}. The auxiliary comes at the beginning.`;
-    }
-
-    analysis.rule = `${currentTense?.nameEn} - ${selectedMode}`;
-
-    return analysis;
-  };
-
   // Análisis visual de la oración. El ORDEN de las partes debe coincidir siempre
   // con el texto de buildSentenceText: ambos derivan del mismo motor (conjugation.js).
   const generateSentenceAnalysis = (config) => {
@@ -966,21 +917,8 @@ const EnglishSentenceBuilder = () => {
     const isInterrogative = mode === 'interrogative';
 
 
-    // Determinar el tipo de cambio del verbo
-    const getVerbChangeType = () => {
-      if (verbForm === verbText) return 'base';
-      if (verbForm === verbText + 's' || verbForm === verbText + 'es') return 'third-person-s';
-      if (verbForm.endsWith('ing')) return 'ing';
-      if (irregularVerbs[verbText.toLowerCase()]) {
-        if (verbForm === irregularVerbs[verbText.toLowerCase()].past) return 'irregular';
-        if (verbForm === irregularVerbs[verbText.toLowerCase()].participle) return 'irregular';
-      }
-      if (verbForm.endsWith('ed') || verbForm !== verbText) return 'past';
-      return 'base';
-    };
-
-    const verbChangeType = getVerbChangeType();
     const isIrregularVerb = irregularVerbs[verbText.toLowerCase()] !== undefined;
+    const verbChangeType = getVerbChangeType(verbForm, verbText, tenseId);
 
     // Preparar las partes individuales
     const subjectPart = {
@@ -1076,9 +1014,7 @@ const EnglishSentenceBuilder = () => {
     const isBeMainVerb = verbText.toLowerCase() === 'be' && !modalId &&
       (tenseId === 'simple-present' || tenseId === 'simple-past');
 
-    // El texto omite el adverbio en oraciones con "be" salvo en afirmativa;
-    // el desglose debe omitirlo igual para no mostrar partes que no suenan
-    const showAdverb = adverbPart && !(isBeMainVerb && mode !== 'affirmative');
+    const showAdverb = !!adverbPart;
 
     // Construir partes según el modo
     if (isInterrogative) {
@@ -1574,7 +1510,7 @@ const EnglishSentenceBuilder = () => {
                           {[
                             { type: 'fill', icon: '📝', title: t.fillInBlank, desc: language === 'es' ? 'Completa la oración' : 'Complete the sentence' },
                             { type: 'correct', icon: '✏️', title: t.correctError, desc: language === 'es' ? 'Corrige el error' : 'Correct the error' },
-                            { type: 'identify', icon: '🔍', title: language === 'es' ? 'Identificar tiempo' : 'Identify tense', desc: language === 'es' ? 'Reconoce el tiempo verbal y el modo' : 'Recognize the tense and mode' },
+                            { type: 'identify', icon: '🔍', title: language === 'es' ? 'Identificar estructura' : 'Identify structure', desc: language === 'es' ? 'Reconoce el tiempo/estructura verbal y el modo' : 'Recognize the tense/structure and mode' },
                           ].map(p => (
                             <button key={p.type} onClick={() => startPractice(p.type)} className="w-full p-4 bg-gray-50 hover:bg-indigo-50 rounded-xl border-2 border-transparent hover:border-indigo-200 text-left transition-all">
                               <span className="text-2xl mr-3">{p.icon}</span>
@@ -1653,14 +1589,14 @@ const EnglishSentenceBuilder = () => {
                           <>
                             <p className="text-xs text-purple-500 font-medium mb-2 uppercase tracking-wide">
                               {practiceQuestion.askTense
-                                ? (language === 'es' ? '¿Qué tiempo verbal y modo es?' : 'What tense and mode is this?')
+                                ? (language === 'es' ? '¿Qué tiempo/estructura verbal y modo es?' : 'What tense/structure and mode is this?')
                                 : (language === 'es' ? '¿Qué modo tiene esta oración?' : 'What mode is this sentence?')}
                             </p>
                             <p className="text-xl font-semibold text-gray-800 mb-4">"{practiceQuestion.fullSentence}"</p>
                             {/* Opciones de tiempo (solo si hay suficientes tiempos disponibles) */}
                             {practiceQuestion.askTense && (
                               <>
-                                <p className="text-xs font-medium text-gray-500 mb-2">{language === 'es' ? 'Tiempo verbal:' : 'Tense:'}</p>
+                                <p className="text-xs font-medium text-gray-500 mb-2">{language === 'es' ? 'Tiempo/Estructura verbal:' : 'Tense/Structure:'}</p>
                                 <div className="flex flex-wrap gap-2 mb-4">
                                   {practiceQuestion.tenseOptions.map(opt => (
                                     <button
@@ -2000,7 +1936,7 @@ const EnglishSentenceBuilder = () => {
                 disabled={!!selectedModal}
                 className={`flex-1 min-w-0 px-2 py-1.5 border border-gray-200 rounded-lg text-sm font-semibold text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300 cursor-pointer ${selectedModal ? 'opacity-40 cursor-not-allowed' : ''}`}
               >
-                <option value="">{language === 'es' ? 'Selecciona un tiempo...' : 'Select a tense...'}</option>
+                <option value="">{language === 'es' ? 'Selecciona un tiempo/estructura...' : 'Select a tense/structure...'}</option>
                 {['present', 'past', 'future'].map(timeType => {
                   const filtered = tenses.filter(t => t.timeType === timeType && COURSE_ORDER.indexOf(t.cefr) <= COURSE_ORDER.indexOf(cefrLevel));
                   if (filtered.length === 0) return null;
@@ -2439,6 +2375,14 @@ const EnglishSentenceBuilder = () => {
                 </div>
               )}
             </div>
+            {/* Aviso de interactividad: cómo descubrir el desglose por palabra */}
+            {sentenceAnalysis && (
+              <p className="text-xs text-gray-400 mb-3 flex items-center gap-1">
+                💡 {language === 'es'
+                  ? 'Toca o pasa el mouse sobre cada palabra para ver su función en la oración.'
+                  : 'Tap or hover each word to see its role in the sentence.'}
+              </p>
+            )}
             {/* Oración con colores */}
             {sentenceAnalysis ? (
               <div className="mb-4">

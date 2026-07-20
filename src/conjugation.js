@@ -298,12 +298,12 @@ export const buildSentenceText = ({ mode, subject: subjRaw, verb: vRaw, compleme
   if (mode === 'negative') {
     if (modal)                              return cap(subj) + ' ' + negateModal(modal) + advSp + v + compStr + '.';
     if (tense === 'simple-present') {
-      if (isBeVerb)                         return cap(subj) + ' ' + beForm + ' not' + compStr + '.';
+      if (isBeVerb)                         return cap(subj) + ' ' + beForm + ' not' + advAfter + compStr + '.';
       return cap(subj) + ' ' + (is3p ? "doesn't" : "don't") + advSp + v + compStr + '.';
     }
     if (tense === 'present-continuous')     return cap(subj) + ' ' + beForm + ' not' + advSp + presentParticiple(v) + compStr + '.';
     if (tense === 'simple-past') {
-      if (isBeVerb)                         return cap(subj) + ' ' + wasWere + ' not' + compStr + '.';
+      if (isBeVerb)                         return cap(subj) + ' ' + wasWere + ' not' + advAfter + compStr + '.';
       return cap(subj) + " didn't" + advSp + v + compStr + '.';
     }
     if (tense === 'past-continuous')        return cap(subj) + ' ' + wasWere + ' not' + advSp + presentParticiple(v) + compStr + '.';
@@ -329,12 +329,12 @@ export const buildSentenceText = ({ mode, subject: subjRaw, verb: vRaw, compleme
     const first = (aux) => prefix + (fullWh ? aux : cap(aux));
     if (modal)                              return first(modal) + ' ' + subj + advAfter + ' ' + v + compStr + '?';
     if (tense === 'simple-present') {
-      if (isBeVerb)                         return first(beForm) + ' ' + subj + compStr + '?';
+      if (isBeVerb)                         return first(beForm) + ' ' + subj + advAfter + compStr + '?';
       return first(is3p ? 'does' : 'do') + ' ' + subj + advAfter + ' ' + v + compStr + '?';
     }
     if (tense === 'present-continuous')     return first(beForm) + ' ' + subj + advAfter + ' ' + presentParticiple(v) + compStr + '?';
     if (tense === 'simple-past') {
-      if (isBeVerb)                         return first(wasWere) + ' ' + subj + compStr + '?';
+      if (isBeVerb)                         return first(wasWere) + ' ' + subj + advAfter + compStr + '?';
       return first('did') + ' ' + subj + advAfter + ' ' + v + compStr + '?';
     }
     if (tense === 'past-continuous')        return first(wasWere) + ' ' + subj + advAfter + ' ' + presentParticiple(v) + compStr + '?';
@@ -372,4 +372,25 @@ export const detectConjugatedVerbBase = (word) => {
     pastParticiple(base) === lower ||
     presentParticiple(base) === lower
   ) || null;
+};
+
+// ---------------------------------------------------------------------------
+// Clasificación del cambio verbal (para el desglose visual con tooltips)
+// ---------------------------------------------------------------------------
+
+// Determina QUÉ tipo de cambio sufrió el verbo (base/3ra persona/-ing/pasado/
+// participio/irregular) a partir del tiempo verbal REAL, no adivinando por
+// forma del texto. Adivinar por texto falla con cambios ortográficos en 3ra
+// persona (study → studies no matchea "verbText + s/es") y por eso este caso
+// terminaba cayendo en el fallback "pasado simple" — el bug que esto arregla.
+export const getVerbChangeType = (verbForm, verbText, tenseId) => {
+  const isIrregularVerb = irregularVerbs[verbText.toLowerCase()] !== undefined;
+  if (verbForm === verbText) return 'base';
+  if (verbForm.endsWith('ing')) return 'ing';
+  if (tenseId === 'simple-present') return 'third-person-s';
+  if (['present-perfect', 'past-perfect', 'future-perfect'].includes(tenseId)) {
+    return isIrregularVerb ? 'irregular' : 'participle';
+  }
+  if (tenseId === 'simple-past') return isIrregularVerb ? 'irregular' : 'past';
+  return 'base';
 };

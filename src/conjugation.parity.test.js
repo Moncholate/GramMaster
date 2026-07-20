@@ -35,7 +35,7 @@ const assemble = ({ subject, verb, tense, mode, complement, adverb }) => {
     }
   }
   const isBeMainVerb = verb === 'be' && (tense === 'simple-present' || tense === 'simple-past');
-  const showAdverb = adverb && !(isBeMainVerb && mode !== 'affirmative');
+  const showAdverb = !!adverb;
   const parts = [];
   if (mode === 'interrogative') {
     const [firstAux, ...restAux] = auxUnits;
@@ -74,10 +74,12 @@ describe('paridad texto ↔ desglose visual (los 13 tiempos × 3 modos × 6 suje
 describe('paridad con adverbios de frecuencia (simple present / simple past)', () => {
   for (const mode of MODES) {
     for (const tense of ['simple-present', 'simple-past']) {
-      it(`${tense} / ${mode} con "usually"`, () => {
-        const cfg = { mode, subject: 'she', verb: 'work', complement: 'at home', tense, adverb: 'usually' };
-        expect(assemble(cfg)).toBe(buildSentenceText(cfg));
-      });
+      for (const verb of ['work', 'be']) {
+        it(`${tense} / ${mode} / ${verb} con "usually"`, () => {
+          const cfg = { mode, subject: 'she', verb, complement: verb === 'be' ? 'happy' : 'at home', tense, adverb: 'usually' };
+          expect(assemble(cfg)).toBe(buildSentenceText(cfg));
+        });
+      }
     }
   }
 });
