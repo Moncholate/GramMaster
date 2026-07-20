@@ -35,7 +35,9 @@ import {
   getAuxAndVerbForm,
   buildVerbPhrase,
   buildSentenceText,
+  detectConjugatedVerbBase,
 } from './conjugation';
+import { useClipboard, useSpeechSynthesis, useLocalStorage, useSessionStats } from './hooks';
 
 const COMPLEMENT_CHIPS = {
   'simple-present':             ['every day', 'on Mondays', 'in the morning', 'at work', 'at home'],
@@ -57,23 +59,102 @@ const COMPLEMENT_CHIPS = {
 // doble negación ("She doesn't never work"), así que se excluyen en ese modo
 const NEGATIVE_SENSE_ADVERBS = ['never', 'hardly ever', 'rarely', 'seldom'];
 
-// Todos los verbos base conocidos, para detectar cuando el estudiante escribió
-// una forma ya conjugada (worked, working, works…) en vez de la forma base.
-const ALL_BASE_VERBS = [...commonVerbs, ...Object.keys(irregularVerbs)];
+// Distancia de edición entre dos palabras, usada por el corrector ortográfico.
+// Pura y sin dependencias de props/estado — no hace falta recrearla en cada render.
+const levenshteinDistance = (str1, str2) => {
+  const m = str1.length;
+  const n = str2.length;
+  const dp = Array(m + 1).fill(null).map(() => Array(n + 1).fill(0));
 
-// Si `word` coincide con alguna forma conjugada de un verbo base conocido,
-// retorna ese verbo base (p. ej. "worked" → "work"); si no, null.
-// Reutiliza el propio motor de conjugación en vez de adivinar por sufijos,
-// así el resultado siempre es consistente con lo que la app genera.
-const detectConjugatedVerbBase = (word) => {
-  const lower = word.toLowerCase().trim();
-  if (!lower || ALL_BASE_VERBS.includes(lower)) return null;
-  return ALL_BASE_VERBS.find(base =>
-    conjugate3p(base) === lower ||
-    simplePast(base) === lower ||
-    pastParticiple(base) === lower ||
-    presentParticiple(base) === lower
-  ) || null;
+  for (let i = 0; i <= m; i++) dp[i][0] = i;
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      if (str1[i - 1] === str2[j - 1]) {
+        dp[i][j] = dp[i - 1][j - 1];
+      } else {
+        dp[i][j] = Math.min(
+          dp[i - 1][j - 1] + 1,
+          dp[i][j - 1] + 1,
+          dp[i - 1][j] + 1
+        );
+      }
+    }
+  }
+  return dp[m][n];
+};
+
+// Fórmulas estructurales por tiempo verbal y modo (S/V/C = sujeto/verbo/complemento)
+const TENSE_FORMULAS = {
+  'simple-present':             { aff: 'S + V(s/es) + C',                          neg: 'S + do/does not + V + C',                    int: 'Do/Does + S + V + C?' },
+  'present-continuous':         { aff: 'S + am/is/are + V(ing) + C',               neg: 'S + am/is/are + not + V(ing) + C',            int: 'Am/Is/Are + S + V(ing) + C?' },
+  'simple-past':                { aff: 'S + V(past) + C',                          neg: 'S + did not + V + C',                         int: 'Did + S + V + C?' },
+  'past-continuous':            { aff: 'S + was/were + V(ing) + C',                neg: 'S + was/were + not + V(ing) + C',             int: 'Was/Were + S + V(ing) + C?' },
+  'simple-future':              { aff: 'S + will + V + C',                         neg: 'S + will not + V + C',                        int: 'Will + S + V + C?' },
+  'future-going-to':            { aff: 'S + am/is/are + going to + V + C',         neg: 'S + am/is/are + not + going to + V + C',      int: 'Am/Is/Are + S + going to + V + C?' },
+  'present-perfect':            { aff: 'S + have/has + V(pp) + C',                 neg: 'S + have/has + not + V(pp) + C',              int: 'Have/Has + S + V(pp) + C?' },
+  'past-perfect':               { aff: 'S + had + V(pp) + C',                      neg: 'S + had + not + V(pp) + C',                   int: 'Had + S + V(pp) + C?' },
+  'future-perfect':             { aff: 'S + will + have + V(pp) + C',              neg: 'S + will + not + have + V(pp) + C',           int: 'Will + S + have + V(pp) + C?' },
+  'present-perfect-continuous': { aff: 'S + have/has + been + V(ing) + C',         neg: 'S + have/has + not + been + V(ing) + C',      int: 'Have/Has + S + been + V(ing) + C?' },
+  'past-perfect-continuous':    { aff: 'S + had + been + V(ing) + C',              neg: 'S + had + not + been + V(ing) + C',           int: 'Had + S + been + V(ing) + C?' },
+  'used-to':                    { aff: 'S + used to + V + C',                      neg: 'S + did not + use to + V + C',                int: 'Did + S + use to + V + C?' },
+  'would-past':                 { aff: 'S + would + V + C',                        neg: 'S + would not + V + C',                       int: 'Would + S + V + C?' },
+};
+
+// Explicaciones (ES/EN) de cada parte de la oración, usadas en el desglose visual.
+// Estático — no depende de props/estado, el idioma se elige en el punto de uso.
+const SENTENCE_PART_EXPLANATIONS = {
+  subject: {
+    es: `Sujeto de la oración`,
+    en: `Subject of the sentence`
+  },
+  auxiliary: {
+    'am': { es: 'Verbo "to be" para 1ra persona singular (I)', en: '"To be" verb for 1st person singular (I)' },
+    'is': { es: 'Verbo "to be" para 3ra persona singular (he/she/it)', en: '"To be" verb for 3rd person singular (he/she/it)' },
+    'are': { es: 'Verbo "to be" para plural o "you"', en: '"To be" verb for plural or "you"' },
+    'was': { es: 'Verbo "to be" en pasado para singular', en: '"To be" verb in past for singular' },
+    'were': { es: 'Verbo "to be" en pasado para plural o "you"', en: '"To be" verb in past for plural or "you"' },
+    'do': { es: 'Auxiliar "do" para presente (I/you/we/they)', en: 'Auxiliary "do" for present (I/you/we/they)' },
+    'does': { es: 'Auxiliar "does" para 3ra persona singular', en: 'Auxiliary "does" for 3rd person singular' },
+    'did': { es: 'Auxiliar "did" para pasado (todas las personas)', en: 'Auxiliary "did" for past (all persons)' },
+    'will': { es: 'Auxiliar "will" para futuro simple', en: 'Auxiliary "will" for simple future' },
+    'have': { es: 'Auxiliar "have" para tiempos perfectos (I/you/we/they)', en: 'Auxiliary "have" for perfect tenses (I/you/we/they)' },
+    'has': { es: 'Auxiliar "has" para tiempos perfectos (3ra persona)', en: 'Auxiliary "has" for perfect tenses (3rd person)' },
+    'had': { es: 'Auxiliar "had" para pasado perfecto', en: 'Auxiliary "had" for past perfect' },
+    "don't": { es: 'Auxiliar negativo para presente', en: 'Negative auxiliary for present' },
+    "doesn't": { es: 'Auxiliar negativo para 3ra persona singular', en: 'Negative auxiliary for 3rd person singular' },
+    "didn't": { es: 'Auxiliar negativo para pasado', en: 'Negative auxiliary for past' },
+    "won't": { es: 'Auxiliar/Modal negativo para futuro o rechazo', en: 'Negative auxiliary/modal for future or refusal' },
+    'going to': { es: 'Estructura "going to" para futuro con intención/plan', en: '"Going to" structure for future with intention/plan' },
+    'been': { es: 'Participio de "be" para tiempos perfectos continuos', en: 'Past participle of "be" for perfect continuous tenses' },
+    'used to': { es: 'Estructura para hábitos pasados que ya no existen', en: 'Structure for past habits that no longer exist' },
+    'use to': { es: 'Forma de "used to" tras el auxiliar did (pierde la -d)', en: 'Form of "used to" after the auxiliary did (drops the -d)' },
+    'not': { es: 'Partícula negativa', en: 'Negative particle' },
+    // Modales
+    'can': { es: 'Modal "can" - expresa habilidad o posibilidad', en: 'Modal "can" - expresses ability or possibility' },
+    'could': { es: 'Modal "could" - habilidad pasada, posibilidad o cortesía', en: 'Modal "could" - past ability, possibility, or politeness' },
+    'should': { es: 'Modal "should" - consejo u obligación moral', en: 'Modal "should" - advice or moral obligation' },
+    'would': { es: 'Modal "would" - condicional, cortesía o hábito pasado', en: 'Modal "would" - conditional, politeness, or past habit' },
+    'must': { es: 'Modal "must" - obligación fuerte o certeza', en: 'Modal "must" - strong obligation or certainty' },
+    'may': { es: 'Modal "may" - permiso formal o posibilidad', en: 'Modal "may" - formal permission or possibility' },
+    'might': { es: 'Modal "might" - posibilidad remota', en: 'Modal "might" - remote possibility' },
+    'shall': { es: 'Modal "shall" - sugerencia u ofrecimiento formal', en: 'Modal "shall" - suggestion or formal offer' },
+    // Modales negativos
+    "can't": { es: 'Modal negativo - inhabilidad o imposibilidad', en: 'Negative modal - inability or impossibility' },
+    "couldn't": { es: 'Modal negativo - inhabilidad pasada o imposibilidad', en: 'Negative modal - past inability or impossibility' },
+    "shouldn't": { es: 'Modal negativo - consejo en contra', en: 'Negative modal - advice against' },
+    "wouldn't": { es: 'Modal negativo - rechazo condicional', en: 'Negative modal - conditional refusal' },
+    "mustn't": { es: 'Modal negativo - prohibición', en: 'Negative modal - prohibition' },
+  },
+  verbChanges: {
+    'base': { es: 'Verbo en forma base (infinitivo sin "to")', en: 'Verb in base form (infinitive without "to")' },
+    'third-person-s': { es: 'Se añade "-s" para 3ra persona singular en presente', en: '"-s" is added for 3rd person singular in present' },
+    'ing': { es: 'Se añade "-ing" para formar el gerundio/participio presente', en: '"-ing" is added to form the gerund/present participle' },
+    'past': { es: 'Verbo conjugado en pasado simple', en: 'Verb conjugated in simple past' },
+    'participle': { es: 'Verbo en participio pasado', en: 'Verb in past participle' },
+    'irregular': { es: 'Verbo irregular (no sigue la regla -ed)', en: 'Irregular verb (does not follow -ed rule)' },
+  }
 };
 
 const EnglishSentenceBuilder = () => {
@@ -94,17 +175,15 @@ const EnglishSentenceBuilder = () => {
   const [semanticWarning, setSemanticWarning] = useState(null);
   const [showTimeGuide, setShowTimeGuide] = useState(false);
   const [isIrregular, setIsIrregular] = useState(false);
-  const [isSpeaking, setIsSpeaking] = useState(false);
+  const { speak, stop: stopSpeaking, isSpeaking } = useSpeechSynthesis();
   const [speechRate, setSpeechRate] = useState(0.9);
-  
+
   // FASE 1: Nuevos estados
-  const [sentenceHistory, setSentenceHistory] = useState([]);
-  const [hasLoadedHistory, setHasLoadedHistory] = useState(false);
+  const [sentenceHistory, setSentenceHistory] = useLocalStorage('sentenceHistory', []);
   const [showHistory, setShowHistory] = useState(false);
-  const [sessionStats, setSessionStats] = useState({ total: 0, today: 0 });
+  const { stats: sessionStats, totalAllTime, incrementStats } = useSessionStats();
   const [showVerbSuggestions, setShowVerbSuggestions] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const [totalAllTime, setTotalAllTime] = useState(0);
+  const { copy: copyToClipboard, copied } = useClipboard();
   
   // Corrector ortográfico
   const [spellingErrors, setSpellingErrors] = useState({
@@ -126,8 +205,8 @@ const EnglishSentenceBuilder = () => {
   const [cefrLevel, setCefrLevel] = useState('basico1');
   const [notification, setNotification] = useState(null); // { type: 'error' | 'success', message: string }
 
-  const [practiceDays, setPracticeDays] = useState([]); // array of 'YYYY-MM-DD' strings
-  const [srsData, setSrsData] = useState({}); // { 'tenseId|mode': { lastPracticed, timesCorrect, timesWrong, interval } }
+  const [practiceDays, setPracticeDays] = useLocalStorage('practiceDays', []); // array of 'YYYY-MM-DD' strings
+  const [srsData, setSrsData] = useLocalStorage('srsData', {}); // { 'tenseId|mode': { lastPracticed, timesCorrect, timesWrong, interval } }
   const [reviewUpToDate, setReviewUpToDate] = useState(false);
 
   // UI simplificada
@@ -152,31 +231,6 @@ const EnglishSentenceBuilder = () => {
   const showNotification = (type, message) => {
     setNotification({ type, message });
     setTimeout(() => setNotification(null), 3000);
-  };
-
-  // Función de distancia Levenshtein simplificada
-  const levenshteinDistance = (str1, str2) => {
-    const m = str1.length;
-    const n = str2.length;
-    const dp = Array(m + 1).fill(null).map(() => Array(n + 1).fill(0));
-
-    for (let i = 0; i <= m; i++) dp[i][0] = i;
-    for (let j = 0; j <= n; j++) dp[0][j] = j;
-
-    for (let i = 1; i <= m; i++) {
-      for (let j = 1; j <= n; j++) {
-        if (str1[i - 1] === str2[j - 1]) {
-          dp[i][j] = dp[i - 1][j - 1];
-        } else {
-          dp[i][j] = Math.min(
-            dp[i - 1][j - 1] + 1,
-            dp[i][j - 1] + 1,
-            dp[i - 1][j] + 1
-          );
-        }
-      }
-    }
-    return dp[m][n];
   };
 
   // Función para obtener sugerencias de corrección
@@ -250,66 +304,6 @@ const EnglishSentenceBuilder = () => {
     return () => window.removeEventListener('message', handler);
   }, []);
 
-  // FASE 1: Cargar datos del localStorage al iniciar
-  useEffect(() => {
-    const savedHistory = localStorage.getItem('sentenceHistory');
-    const savedStats = localStorage.getItem('sessionStats');
-    const savedTotal = localStorage.getItem('totalAllTime');
-    const savedPracticeDays = localStorage.getItem('practiceDays');
-
-    if (savedHistory) {
-      setSentenceHistory(JSON.parse(savedHistory));
-    }
-    setHasLoadedHistory(true);
-
-    if (savedTotal) {
-      setTotalAllTime(parseInt(savedTotal));
-    }
-
-    if (savedPracticeDays) {
-      setPracticeDays(JSON.parse(savedPracticeDays));
-    }
-
-    const savedSrsData = localStorage.getItem('srsData');
-    if (savedSrsData) {
-      setSrsData(JSON.parse(savedSrsData));
-    }
-    
-    // Verificar si es un nuevo día
-    const today = new Date().toDateString();
-    const lastVisit = localStorage.getItem('lastVisit');
-    
-    if (savedStats && lastVisit === today) {
-      setSessionStats(JSON.parse(savedStats));
-    } else {
-      // Nuevo día, resetear contador diario
-      const newStats = { total: 0, today: 0 };
-      setSessionStats(newStats);
-      localStorage.setItem('lastVisit', today);
-    }
-  }, []);
-
-  // FASE 1: Guardar en localStorage cuando cambie el historial
-  // (incluye vaciarlo: si no, borrar el último ítem no persistía al recargar).
-  // hasLoadedHistory evita que este efecto pise la clave con el estado inicial
-  // [] antes de que el efecto de carga inicial termine de leerla.
-  useEffect(() => {
-    if (!hasLoadedHistory) return;
-    if (sentenceHistory.length > 0) {
-      localStorage.setItem('sentenceHistory', JSON.stringify(sentenceHistory));
-    } else {
-      localStorage.removeItem('sentenceHistory');
-    }
-  }, [sentenceHistory, hasLoadedHistory]);
-
-  useEffect(() => {
-    localStorage.setItem('sessionStats', JSON.stringify(sessionStats));
-  }, [sessionStats]);
-
-  useEffect(() => {
-    localStorage.setItem('totalAllTime', totalAllTime.toString());
-  }, [totalAllTime]);
-
   // FASE 1: Filtrar verbos sugeridos
   const getVerbSuggestions = () => {
     if (!verb) return [];
@@ -317,22 +311,10 @@ const EnglishSentenceBuilder = () => {
     return commonVerbs.filter(v => v.startsWith(lowerVerb) && v !== lowerVerb).slice(0, 8);
   };
 
-  // FASE 1: Copiar al portapapeles
-  const copyToClipboard = async (text) => {
-    try {
-      await navigator.clipboard.writeText(text);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error('Error al copiar:', err);
-    }
-  };
-
   // FASE 1: Limpiar historial
   const clearHistory = () => {
     if (window.confirm(language === 'es' ? '¿Seguro que quieres limpiar el historial?' : 'Are you sure you want to clear the history?')) {
-      setSentenceHistory([]);
-      localStorage.removeItem('sentenceHistory');
+      setSentenceHistory([]); // useLocalStorage persiste el array vacío solo
     }
   };
 
@@ -370,12 +352,7 @@ const EnglishSentenceBuilder = () => {
   // Registrar día de práctica en localStorage y estado
   const recordPracticeDay = () => {
     const today = new Date().toISOString().split('T')[0];
-    setPracticeDays(prev => {
-      if (prev.includes(today)) return prev;
-      const updated = [...prev, today];
-      localStorage.setItem('practiceDays', JSON.stringify(updated));
-      return updated;
-    });
+    setPracticeDays(prev => prev.includes(today) ? prev : [...prev, today]);
   };
 
   // Calcular racha de días consecutivos
@@ -615,9 +592,7 @@ const EnglishSentenceBuilder = () => {
         timesWrong: isCorrect ? existing.timesWrong : existing.timesWrong + 1,
         interval: isCorrect ? Math.min(existing.interval * 2, 30) : 1,
       };
-      const newData = { ...prev, [key]: updated };
-      localStorage.setItem('srsData', JSON.stringify(newData));
-      return newData;
+      return { ...prev, [key]: updated };
     });
   };
 
@@ -990,59 +965,6 @@ const EnglishSentenceBuilder = () => {
     const parts = [];
     const isInterrogative = mode === 'interrogative';
 
-    // Explicaciones en español e inglés
-    const explanations = {
-      subject: {
-        es: `Sujeto de la oración`,
-        en: `Subject of the sentence`
-      },
-      auxiliary: {
-        'am': { es: 'Verbo "to be" para 1ra persona singular (I)', en: '"To be" verb for 1st person singular (I)' },
-        'is': { es: 'Verbo "to be" para 3ra persona singular (he/she/it)', en: '"To be" verb for 3rd person singular (he/she/it)' },
-        'are': { es: 'Verbo "to be" para plural o "you"', en: '"To be" verb for plural or "you"' },
-        'was': { es: 'Verbo "to be" en pasado para singular', en: '"To be" verb in past for singular' },
-        'were': { es: 'Verbo "to be" en pasado para plural o "you"', en: '"To be" verb in past for plural or "you"' },
-        'do': { es: 'Auxiliar "do" para presente (I/you/we/they)', en: 'Auxiliary "do" for present (I/you/we/they)' },
-        'does': { es: 'Auxiliar "does" para 3ra persona singular', en: 'Auxiliary "does" for 3rd person singular' },
-        'did': { es: 'Auxiliar "did" para pasado (todas las personas)', en: 'Auxiliary "did" for past (all persons)' },
-        'will': { es: 'Auxiliar "will" para futuro simple', en: 'Auxiliary "will" for simple future' },
-        'have': { es: 'Auxiliar "have" para tiempos perfectos (I/you/we/they)', en: 'Auxiliary "have" for perfect tenses (I/you/we/they)' },
-        'has': { es: 'Auxiliar "has" para tiempos perfectos (3ra persona)', en: 'Auxiliary "has" for perfect tenses (3rd person)' },
-        'had': { es: 'Auxiliar "had" para pasado perfecto', en: 'Auxiliary "had" for past perfect' },
-        "don't": { es: 'Auxiliar negativo para presente', en: 'Negative auxiliary for present' },
-        "doesn't": { es: 'Auxiliar negativo para 3ra persona singular', en: 'Negative auxiliary for 3rd person singular' },
-        "didn't": { es: 'Auxiliar negativo para pasado', en: 'Negative auxiliary for past' },
-        "won't": { es: 'Auxiliar/Modal negativo para futuro o rechazo', en: 'Negative auxiliary/modal for future or refusal' },
-        'going to': { es: 'Estructura "going to" para futuro con intención/plan', en: '"Going to" structure for future with intention/plan' },
-        'been': { es: 'Participio de "be" para tiempos perfectos continuos', en: 'Past participle of "be" for perfect continuous tenses' },
-        'used to': { es: 'Estructura para hábitos pasados que ya no existen', en: 'Structure for past habits that no longer exist' },
-        'use to': { es: 'Forma de "used to" tras el auxiliar did (pierde la -d)', en: 'Form of "used to" after the auxiliary did (drops the -d)' },
-        'not': { es: 'Partícula negativa', en: 'Negative particle' },
-        // Modales
-        'can': { es: 'Modal "can" - expresa habilidad o posibilidad', en: 'Modal "can" - expresses ability or possibility' },
-        'could': { es: 'Modal "could" - habilidad pasada, posibilidad o cortesía', en: 'Modal "could" - past ability, possibility, or politeness' },
-        'should': { es: 'Modal "should" - consejo u obligación moral', en: 'Modal "should" - advice or moral obligation' },
-        'would': { es: 'Modal "would" - condicional, cortesía o hábito pasado', en: 'Modal "would" - conditional, politeness, or past habit' },
-        'must': { es: 'Modal "must" - obligación fuerte o certeza', en: 'Modal "must" - strong obligation or certainty' },
-        'may': { es: 'Modal "may" - permiso formal o posibilidad', en: 'Modal "may" - formal permission or possibility' },
-        'might': { es: 'Modal "might" - posibilidad remota', en: 'Modal "might" - remote possibility' },
-        'shall': { es: 'Modal "shall" - sugerencia u ofrecimiento formal', en: 'Modal "shall" - suggestion or formal offer' },
-        // Modales negativos
-        "can't": { es: 'Modal negativo - inhabilidad o imposibilidad', en: 'Negative modal - inability or impossibility' },
-        "couldn't": { es: 'Modal negativo - inhabilidad pasada o imposibilidad', en: 'Negative modal - past inability or impossibility' },
-        "shouldn't": { es: 'Modal negativo - consejo en contra', en: 'Negative modal - advice against' },
-        "wouldn't": { es: 'Modal negativo - rechazo condicional', en: 'Negative modal - conditional refusal' },
-        "mustn't": { es: 'Modal negativo - prohibición', en: 'Negative modal - prohibition' },
-      },
-      verbChanges: {
-        'base': { es: 'Verbo en forma base (infinitivo sin "to")', en: 'Verb in base form (infinitive without "to")' },
-        'third-person-s': { es: 'Se añade "-s" para 3ra persona singular en presente', en: '"-s" is added for 3rd person singular in present' },
-        'ing': { es: 'Se añade "-ing" para formar el gerundio/participio presente', en: '"-ing" is added to form the gerund/present participle' },
-        'past': { es: 'Verbo conjugado en pasado simple', en: 'Verb conjugated in simple past' },
-        'participle': { es: 'Verbo en participio pasado', en: 'Verb in past participle' },
-        'irregular': { es: 'Verbo irregular (no sigue la regla -ed)', en: 'Irregular verb (does not follow -ed rule)' },
-      }
-    };
 
     // Determinar el tipo de cambio del verbo
     const getVerbChangeType = () => {
@@ -1065,7 +987,7 @@ const EnglishSentenceBuilder = () => {
       text: isInterrogative ? subjectText : subjectText.charAt(0).toUpperCase() + subjectText.slice(1),
       type: 'subject',
       color: 'blue',
-      explanation: language === 'es' ? explanations.subject.es : explanations.subject.en,
+      explanation: language === 'es' ? SENTENCE_PART_EXPLANATIONS.subject.es : SENTENCE_PART_EXPLANATIONS.subject.en,
       original: subjectText,
       changed: false
     };
@@ -1085,7 +1007,7 @@ const EnglishSentenceBuilder = () => {
       }
     }
     const makeAuxPart = (aux, capitalize) => {
-      const auxExplanation = explanations.auxiliary[aux.toLowerCase()];
+      const auxExplanation = SENTENCE_PART_EXPLANATIONS.auxiliary[aux.toLowerCase()];
       return {
         text: capitalize ? aux.charAt(0).toUpperCase() + aux.slice(1) : aux,
         type: 'auxiliary',
@@ -1097,7 +1019,7 @@ const EnglishSentenceBuilder = () => {
       };
     };
 
-    const verbExplanation = explanations.verbChanges[verbChangeType];
+    const verbExplanation = SENTENCE_PART_EXPLANATIONS.verbChanges[verbChangeType];
     let verbDetailedExplanation = language === 'es' ? verbExplanation.es : verbExplanation.en;
 
     if (isIrregularVerb && (verbChangeType === 'irregular' || verbChangeType === 'past')) {
@@ -1450,23 +1372,6 @@ const EnglishSentenceBuilder = () => {
   }, [complement]);
 
 
-  // Fórmulas estructurales por tiempo verbal y modo
-  const tenseFormulas = {
-    'simple-present':             { aff: 'S + V(s/es) + C',                          neg: 'S + do/does not + V + C',                    int: 'Do/Does + S + V + C?' },
-    'present-continuous':         { aff: 'S + am/is/are + V(ing) + C',               neg: 'S + am/is/are + not + V(ing) + C',            int: 'Am/Is/Are + S + V(ing) + C?' },
-    'simple-past':                { aff: 'S + V(past) + C',                          neg: 'S + did not + V + C',                         int: 'Did + S + V + C?' },
-    'past-continuous':            { aff: 'S + was/were + V(ing) + C',                neg: 'S + was/were + not + V(ing) + C',             int: 'Was/Were + S + V(ing) + C?' },
-    'simple-future':              { aff: 'S + will + V + C',                         neg: 'S + will not + V + C',                        int: 'Will + S + V + C?' },
-    'future-going-to':            { aff: 'S + am/is/are + going to + V + C',         neg: 'S + am/is/are + not + going to + V + C',      int: 'Am/Is/Are + S + going to + V + C?' },
-    'present-perfect':            { aff: 'S + have/has + V(pp) + C',                 neg: 'S + have/has + not + V(pp) + C',              int: 'Have/Has + S + V(pp) + C?' },
-    'past-perfect':               { aff: 'S + had + V(pp) + C',                      neg: 'S + had + not + V(pp) + C',                   int: 'Had + S + V(pp) + C?' },
-    'future-perfect':             { aff: 'S + will + have + V(pp) + C',              neg: 'S + will + not + have + V(pp) + C',           int: 'Will + S + have + V(pp) + C?' },
-    'present-perfect-continuous': { aff: 'S + have/has + been + V(ing) + C',         neg: 'S + have/has + not + been + V(ing) + C',      int: 'Have/Has + S + been + V(ing) + C?' },
-    'past-perfect-continuous':    { aff: 'S + had + been + V(ing) + C',              neg: 'S + had + not + been + V(ing) + C',           int: 'Had + S + been + V(ing) + C?' },
-    'used-to':                    { aff: 'S + used to + V + C',                      neg: 'S + did not + use to + V + C',                int: 'Did + S + use to + V + C?' },
-    'would-past':                 { aff: 'S + would + V + C',                        neg: 'S + would not + V + C',                       int: 'Would + S + V + C?' },
-  };
-
   const resetForm = () => {
     setSubject(''); setVerb(''); setComplement('');
     setSelectedTense(''); setSelectedMode('affirmative'); setSelectedModal('');
@@ -1539,11 +1444,7 @@ const EnglishSentenceBuilder = () => {
     };
 
     setSentenceHistory(prev => [newHistoryItem, ...prev].slice(0, 20)); // Mantener últimas 20
-    setSessionStats(prev => ({
-      total: prev.total + 1,
-      today: prev.today + 1
-    }));
-    setTotalAllTime(prev => prev + 1);
+    incrementStats();
     recordPracticeDay();
   };
 
@@ -1555,23 +1456,6 @@ const EnglishSentenceBuilder = () => {
     computeSentenceDisplay();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [subject, verb, complement, selectedTense, selectedMode, selectedModal, whWord, whExtension, selectedAdverb, language]);
-
-  const speakSentence = () => {
-    if ('speechSynthesis' in window && generatedSentence) {
-      window.speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(generatedSentence);
-      utterance.rate = speechRate;
-      utterance.lang = 'en-US';
-      utterance.onstart = () => setIsSpeaking(true);
-      utterance.onend = () => setIsSpeaking(false);
-      window.speechSynthesis.speak(utterance);
-    }
-  };
-
-  const stopSpeaking = () => {
-    window.speechSynthesis.cancel();
-    setIsSpeaking(false);
-  };
 
   const verbSuggestions = getVerbSuggestions();
 
@@ -2171,7 +2055,7 @@ const EnglishSentenceBuilder = () => {
             </div>
             {selectedTense && !selectedModal && (() => {
               const tenseData = tenses.find(t => t.id === selectedTense);
-              const formula = tenseFormulas[selectedTense];
+              const formula = TENSE_FORMULAS[selectedTense];
               if (!tenseData || !formula) return null;
               const modeKey = selectedMode === 'affirmative' ? 'aff' : selectedMode === 'negative' ? 'neg' : 'int';
               return (
@@ -2644,7 +2528,7 @@ const EnglishSentenceBuilder = () => {
                   {copied ? t.copied : t.copyToClipboard}
                 </button>
                 <button
-                  onClick={isSpeaking ? stopSpeaking : speakSentence}
+                  onClick={() => isSpeaking ? stopSpeaking() : speak(generatedSentence, { rate: speechRate, lang: 'en-US' })}
                   className={`flex-1 px-3 py-2 rounded-lg flex items-center justify-center gap-2 text-sm font-medium transition-all ${isSpeaking ? 'bg-red-100 text-red-700' : 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200'}`}
                 >
                   {isSpeaking ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}

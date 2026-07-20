@@ -1,6 +1,6 @@
 // Motor de conjugación — única fuente de verdad para construir oraciones.
 // Todo es puro (sin estado de React) para poder testearse de forma aislada.
-import { irregularVerbs } from './data/verbs';
+import { commonVerbs, irregularVerbs } from './data/verbs';
 import { englishDictionary } from './data/dictionary';
 import { validPronouns, validDeterminers, hispanicNames } from './data/validation';
 
@@ -318,6 +318,12 @@ export const buildSentenceText = ({ mode, subject: subjRaw, verb: vRaw, compleme
     if (tense === 'would-past')             return cap(subj) + " wouldn't" + advSp + v + compStr + '.';
   }
   if (mode === 'interrogative') {
+    // LIMITACIÓN CONOCIDA: no se soportan preguntas sobre el sujeto
+    // ("Who works here?"). Esta rama siempre asume que `subj` es conocido y
+    // que la palabra WH pregunta por otra parte de la oración (objeto,
+    // lugar, tiempo…), con inversión de auxiliar. Una pregunta de sujeto no
+    // lleva ese auxiliar y usa el orden normal (Who + verbo), así que
+    // requeriría una rama de construcción distinta, no solo un ajuste acá.
     const prefix = fullWh ? cap(fullWh) + ' ' : '';
     // Con palabra WH delante, el auxiliar va en minúscula (What does she…?)
     const first = (aux) => prefix + (fullWh ? aux : cap(aux));
@@ -343,4 +349,27 @@ export const buildSentenceText = ({ mode, subject: subjRaw, verb: vRaw, compleme
     if (tense === 'would-past')             return first('would') + ' ' + subj + advAfter + ' ' + v + compStr + '?';
   }
   return '';
+};
+
+// ---------------------------------------------------------------------------
+// Detección de verbo ya conjugado (entrada inválida del estudiante)
+// ---------------------------------------------------------------------------
+
+// Todos los verbos base conocidos, para detectar cuando el estudiante escribió
+// una forma ya conjugada (worked, working, works…) en vez de la forma base.
+export const ALL_BASE_VERBS = [...commonVerbs, ...Object.keys(irregularVerbs)];
+
+// Si `word` coincide con alguna forma conjugada de un verbo base conocido,
+// retorna ese verbo base (p. ej. "worked" → "work"); si no, null.
+// Reutiliza el propio motor de conjugación en vez de adivinar por sufijos,
+// así el resultado siempre es consistente con lo que la app genera.
+export const detectConjugatedVerbBase = (word) => {
+  const lower = word.toLowerCase().trim();
+  if (!lower || ALL_BASE_VERBS.includes(lower)) return null;
+  return ALL_BASE_VERBS.find(base =>
+    conjugate3p(base) === lower ||
+    simplePast(base) === lower ||
+    pastParticiple(base) === lower ||
+    presentParticiple(base) === lower
+  ) || null;
 };
