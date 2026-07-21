@@ -39,6 +39,7 @@ import {
   getVerbChangeType,
 } from './conjugation';
 import { useClipboard, useSpeechSynthesis, useLocalStorage, useSessionStats } from './hooks';
+import { ROLE_TW } from './tokens.generated.js';
 
 const COMPLEMENT_CHIPS = {
   'simple-present':             ['every day', 'on Mondays', 'in the morning', 'at work', 'at home'],
@@ -2397,12 +2398,12 @@ const EnglishSentenceBuilder = () => {
                       part.type === 'adverbial' ? (language === 'es' ? 'Adverbial (A)' : 'Adverbial (A)') :
                       t.complementLabel + ' (C)';
                     const colorClasses =
-                      part.type === 'wh-word' ? 'text-teal-700 hover:bg-teal-50' :
-                      part.type === 'subject' ? 'text-indigo-600 hover:bg-indigo-50' :
+                      part.type === 'wh-word' ? ROLE_TW['wh-word'] :
+                      part.type === 'subject' ? ROLE_TW.subject :
                       part.type === 'adverb' ? 'text-indigo-500 hover:bg-indigo-50' :
-                      part.type === 'auxiliary' ? 'text-rose-600 hover:bg-rose-50' :
-                      part.type === 'verb' ? 'text-rose-600 hover:bg-rose-50' :
-                      part.type === 'complement' ? 'text-emerald-600 hover:bg-emerald-50' :
+                      part.type === 'auxiliary' ? ROLE_TW.auxiliary :
+                      part.type === 'verb' ? ROLE_TW.verb :
+                      part.type === 'complement' ? ROLE_TW.complement :
                       part.type === 'adverbial' ? 'text-amber-600 hover:bg-amber-50' :
                       'text-gray-800';
 
