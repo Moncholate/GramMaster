@@ -41,6 +41,7 @@ import {
 import { useClipboard, useSpeechSynthesis, useLocalStorage, useSessionStats } from './hooks';
 import { ROLE_TW } from './tokens.generated.js';
 import { TENSE_FAMILIES, ASPECTS } from './tenseFamilies.generated.js';
+import { loadProgress, saveProgress, recordAttempt, evaluateBadges, BADGES } from './gamification.generated.js';
 
 /* Familia de tiempo (tono = timeType, aspecto del id) para el acento del selector */
 const aspectOf = (id = '') => (/continuous/.test(id) && /perfect/.test(id)) ? 3 : /perfect/.test(id) ? 2 : /continuous/.test(id) ? 1 : 0;
@@ -211,6 +212,7 @@ const EnglishSentenceBuilder = () => {
   const [practiceQuestion, setPracticeQuestion] = useState(null);
   const [practiceAnswer, setPracticeAnswer] = useState('');
   const [practiceResult, setPracticeResult] = useState(null);
+  const [badgeToasts, setBadgeToasts] = useState([]);   // gamificación de suite
   const [identifyTenseAnswer, setIdentifyTenseAnswer] = useState('');
   const [identifyModeAnswer, setIdentifyModeAnswer] = useState('');
   const [showHint, setShowHint] = useState(false);
@@ -694,6 +696,22 @@ const EnglishSentenceBuilder = () => {
   };
 
   // FASE 2: Verificar respuesta de práctica
+  // Gamificación de suite: registra un intento en gh_progress + toasts de logro
+  const recordGameAttempt = (tenseId, isCorrect) => {
+    try {
+      const p = loadProgress(window.localStorage);
+      recordAttempt(p, { app: 'grammaster', tenseId, correct: !!isCorrect });
+      const { newly } = evaluateBadges(p, BADGES, tenseId ? [tenseId] : []);
+      saveProgress(window.localStorage, p);
+      if (newly.length) setBadgeToasts(prev => [...prev, ...newly]);
+    } catch (e) {}
+  };
+  useEffect(() => {
+    if (!badgeToasts.length) return;
+    const timer = setTimeout(() => setBadgeToasts(prev => prev.slice(1)), 3800);
+    return () => clearTimeout(timer);
+  }, [badgeToasts]);
+
   const checkPracticeAnswer = () => {
     if (!practiceQuestion) return;
     recordPracticeDay();
@@ -701,6 +719,7 @@ const EnglishSentenceBuilder = () => {
       const tenseOk = !practiceQuestion.askTense || identifyTenseAnswer === practiceQuestion.tense.id;
       const modeOk = identifyModeAnswer === practiceQuestion.mode;
       const isCorrect = tenseOk && modeOk;
+      recordGameAttempt(practiceQuestion.tense?.id, isCorrect);
       setPracticeResult({
         correct: isCorrect,
         tenseOk,
@@ -715,6 +734,7 @@ const EnglishSentenceBuilder = () => {
     const accepted = practiceQuestion.acceptedAnswers || [practiceQuestion.correctAnswer.toLowerCase()];
     const isCorrect = accepted.some(a => a.replace(/\.$/, '') === userAns);
     updateSRS(practiceQuestion.tense?.id, practiceQuestion.mode, isCorrect);
+    recordGameAttempt(practiceQuestion.tense?.id, isCorrect);
 
     let hint = null;
     if (!isCorrect) {
@@ -1413,6 +1433,25 @@ const EnglishSentenceBuilder = () => {
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-[#f5f6fb]">
+      {badgeToasts.length > 0 && (
+        <div className="fixed left-0 right-0 bottom-4 z-50 flex flex-col items-center gap-2 px-4 pointer-events-none" aria-live="polite">
+          {badgeToasts.map((key, i) => {
+            const ci = key.indexOf(':'); const bid = ci < 0 ? key : key.slice(0, ci); const tid = ci < 0 ? null : key.slice(ci + 1);
+            const b = BADGES.find(x => x.id === bid); if (!b) return null;
+            let name = language === 'es' ? b.name.es : b.name.en;
+            if (tid) { const o = tenses.find(x => x.id === tid); name = name.replace('{tense}', o ? (language === 'es' ? o.nameEs : o.nameEn) : tid); }
+            return (
+              <div key={key + i} role="status" className="pointer-events-auto flex items-center gap-2.5 max-w-sm px-3.5 py-2.5 rounded-xl text-white shadow-lg bg-gradient-to-br from-rose-500 to-amber-400">
+                <span className="text-2xl leading-none">{b.icon}</span>
+                <span className="flex flex-col leading-tight">
+                  <b className="text-[0.68rem] uppercase tracking-wide opacity-90 font-extrabold">{language === 'es' ? '¡Logro!' : 'Achievement!'}</b>
+                  <span className="text-sm font-semibold">{name}</span>
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
       {/* Notificación */}
       {notification && (
         <div role="status" aria-live="polite" className={`fixed top-4 right-4 z-50 px-5 py-3 rounded-lg shadow-lg ${
