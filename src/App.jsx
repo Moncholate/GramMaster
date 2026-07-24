@@ -1643,7 +1643,7 @@ const EnglishSentenceBuilder = () => {
                                 ? (language === 'es' ? '¿Qué tiempo/estructura verbal y modo es?' : 'What tense/structure and mode is this?')
                                 : (language === 'es' ? '¿Qué modo tiene esta oración?' : 'What mode is this sentence?')}
                             </p>
-                            <p className="text-xl font-semibold text-gray-800 mb-4">"{practiceQuestion.fullSentence}"</p>
+                            <p className="text-xl font-semibold text-gray-800 mb-4 font-['Atkinson_Hyperlegible']">"{practiceQuestion.fullSentence}"</p>
                             {/* Opciones de tiempo (solo si hay suficientes tiempos disponibles) */}
                             {practiceQuestion.askTense && (
                               <>
@@ -2447,7 +2447,7 @@ const EnglishSentenceBuilder = () => {
             {/* Oración con colores */}
             {sentenceAnalysis ? (
               <div className="mb-4">
-                <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-xl sm:text-2xl md:text-3xl font-bold">
+                <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-xl sm:text-2xl md:text-3xl font-bold font-['Atkinson_Hyperlegible']">
                   {sentenceAnalysis.parts.map((part, index) => {
                     const partLabel =
                       part.type === 'wh-word' ? (language === 'es' ? 'Palabra WH' : 'WH Word') :
