@@ -1412,7 +1412,7 @@ const EnglishSentenceBuilder = () => {
   const closePanel = () => setActivePanel(null);
 
   return (
-    <div className="flex flex-col h-screen overflow-hidden bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+    <div className="flex flex-col h-screen overflow-hidden bg-[#f5f6fb]">
       {/* Notificación */}
       {notification && (
         <div role="status" aria-live="polite" className={`fixed top-4 right-4 z-50 px-5 py-3 rounded-lg shadow-lg ${
