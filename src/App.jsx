@@ -1978,7 +1978,7 @@ const EnglishSentenceBuilder = () => {
           <div className="pb-4 border-b border-gray-100">
             <div className="flex flex-wrap items-center gap-2">
 
-              <label className="text-xs font-semibold text-gray-500 tracking-wide uppercase shrink-0">
+              <label className={`text-xs font-semibold tracking-wide uppercase shrink-0 ${!selectedTense && !selectedModal ? 'text-indigo-600' : 'text-gray-500'}`}>
                 {t.tense} {!selectedModal && <span className="text-red-500">*</span>}
               </label>
               <select
@@ -1986,7 +1986,7 @@ const EnglishSentenceBuilder = () => {
                 onChange={(e) => setSelectedTense(e.target.value)}
                 disabled={!!selectedModal}
                 style={tenseFam(selectedTense) && !selectedModal ? { borderLeftWidth: '4px', borderLeftColor: tenseFam(selectedTense).color } : undefined}
-                className={`flex-1 min-w-0 px-2 py-1.5 border border-gray-200 rounded-lg text-sm font-semibold text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300 cursor-pointer ${selectedModal ? 'opacity-40 cursor-not-allowed' : ''}`}
+                className={`flex-1 min-w-0 px-2 py-1.5 rounded-lg text-sm font-semibold text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300 cursor-pointer ${!selectedTense && !selectedModal ? 'border-2 border-indigo-400 ring-2 ring-indigo-200' : 'border border-gray-200'} ${selectedModal ? 'opacity-40 cursor-not-allowed' : ''}`}
               >
                 <option value="">{language === 'es' ? 'Selecciona un tiempo/estructura...' : 'Select a tense/structure...'}</option>
                 {['present', 'past', 'future'].map(timeType => {
@@ -2479,33 +2479,13 @@ const EnglishSentenceBuilder = () => {
                         type="button"
                         onClick={() => setSelectedPartIndex(prev => prev === index ? null : index)}
                         onFocus={() => setSelectedPartIndex(index)}
+                        onMouseEnter={() => setSelectedPartIndex(index)}
                         aria-describedby={`part-desc-${index}`}
                         aria-expanded={isPinned}
                         className={`relative group appearance-none bg-transparent border-0 cursor-pointer transition-all duration-200 ${colorClasses} px-1 rounded ${isPinned ? 'ring-2 ring-offset-1 ring-indigo-300' : ''}`}
                       >
                         {part.text}
-                        {/* Tooltip visual — decorativo; el contenido real para lectores de pantalla vive en el span sr-only de abajo */}
-                        <span aria-hidden="true" className={`absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-2 bg-gray-900 text-white text-xs rounded-lg transition-opacity whitespace-nowrap z-10 pointer-events-none shadow-lg ${isPinned ? 'opacity-100' : 'opacity-0 group-hover:opacity-100 group-focus:opacity-100'}`}>
-                          <span className="font-semibold block mb-1">{partLabel}</span>
-                          {part.explanation}
-                          {part.transformation && (
-                            <span className="block mt-1 text-green-300">{part.transformation}</span>
-                          )}
-                          {part.isNew && (
-                            <span className="block mt-1 text-purple-300">{t.addedElement}</span>
-                          )}
-                          <span className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></span>
-                        </span>
-                        {/* Panel siempre visible en móvil cuando esta parte está seleccionada (tap) */}
-                        {isPinned && (
-                          <span className="sm:hidden absolute top-full left-1/2 transform -translate-x-1/2 mt-2 w-56 max-w-[80vw] px-3 py-2 bg-gray-900 text-white text-xs rounded-lg whitespace-normal z-10 shadow-lg text-left normal-case font-normal">
-                            <span className="font-semibold block mb-1">{partLabel}</span>
-                            {part.explanation}
-                            {part.transformation && (
-                              <span className="block mt-1 text-green-300">{part.transformation}</span>
-                            )}
-                          </span>
-                        )}
+                        {/* La explicación se muestra en un panel único bajo la oración (evita el recorte en los bordes de la pantalla) */}
                         <span id={`part-desc-${index}`} className="sr-only">
                           {partLabel}. {part.explanation}
                           {part.transformation ? `. ${part.transformation}` : ''}
@@ -2515,6 +2495,24 @@ const EnglishSentenceBuilder = () => {
                     );
                   })}
                 </div>
+                {selectedPartIndex != null && sentenceAnalysis.parts[selectedPartIndex] && sentenceAnalysis.parts[selectedPartIndex].type !== 'punctuation' && (() => {
+                  const part = sentenceAnalysis.parts[selectedPartIndex];
+                  const label = part.type === 'wh-word' ? (language === 'es' ? 'Palabra WH' : 'WH Word')
+                    : part.type === 'subject' ? t.subjectLabel
+                    : part.type === 'adverb' ? t.adverbLabel
+                    : part.type === 'auxiliary' ? t.auxiliaryLabel
+                    : part.type === 'verb' ? t.verbLabel
+                    : part.type === 'adverbial' ? 'Adverbial (A)'
+                    : t.complementLabel + ' (C)';
+                  return (
+                    <div className="mt-3 px-3.5 py-2.5 bg-gray-900 text-white text-sm rounded-lg shadow-lg motion-safe:animate-[gtoastIn_.25s_ease]">
+                      <span className="font-bold block mb-0.5">{label}</span>
+                      <span className="text-gray-100">{part.explanation}</span>
+                      {part.transformation && <span className="block mt-1 text-green-300">{part.transformation}</span>}
+                      {part.isNew && <span className="block mt-1 text-purple-300">{t.addedElement}</span>}
+                    </div>
+                  );
+                })()}
 
               </div>
             ) : (
