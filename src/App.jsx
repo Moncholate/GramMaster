@@ -1441,7 +1441,7 @@ const EnglishSentenceBuilder = () => {
             let name = language === 'es' ? b.name.es : b.name.en;
             if (tid) { const o = tenses.find(x => x.id === tid); name = name.replace('{tense}', o ? (language === 'es' ? o.nameEs : o.nameEn) : tid); }
             return (
-              <div key={key + i} role="status" className="pointer-events-auto flex items-center gap-2.5 max-w-sm px-3.5 py-2.5 rounded-xl text-white shadow-lg bg-gradient-to-br from-rose-500 to-amber-400">
+              <div key={key + i} role="status" className="gtoast-in pointer-events-auto flex items-center gap-2.5 max-w-sm px-3.5 py-2.5 rounded-xl text-white shadow-lg bg-gradient-to-br from-rose-500 to-amber-400">
                 <span className="text-2xl leading-none">{b.icon}</span>
                 <span className="flex flex-col leading-tight">
                   <b className="text-[0.68rem] uppercase tracking-wide opacity-90 font-extrabold">{language === 'es' ? '¡Logro!' : 'Achievement!'}</b>
