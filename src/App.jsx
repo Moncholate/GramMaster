@@ -1766,13 +1766,13 @@ const EnglishSentenceBuilder = () => {
                     ) : (
                       <>
                         {/* 1. RACHA */}
-                        <div className={`rounded-xl p-4 flex items-center gap-4 ${streak > 0 ? 'bg-orange-50 border border-orange-200' : 'bg-gray-50 border border-gray-200'}`}>
+                        <div className={`rounded-xl p-4 flex items-center gap-4 ${streak > 0 ? 'bg-gradient-to-br from-rose-500 to-amber-400 shadow-lg shadow-rose-500/25' : 'bg-gray-50 border border-gray-200'}`}>
                           <span className="text-4xl">{streak > 0 ? '🔥' : '💤'}</span>
                           <div>
                             {streak > 0 ? (
                               <>
-                                <p className="text-2xl font-bold text-orange-600">{streak} {streak === 1 ? t.dayStreakSingle : t.dayStreak}</p>
-                                <p className="text-xs text-orange-500">{t.streakSubtitle}</p>
+                                <p className="text-2xl font-bold text-white">{streak} {streak === 1 ? t.dayStreakSingle : t.dayStreak}</p>
+                                <p className="text-xs text-white/90">{t.streakSubtitle}</p>
                               </>
                             ) : (
                               <>
