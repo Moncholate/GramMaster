@@ -58,7 +58,7 @@ export const modals = [
     id: 'could',
     name: 'Could',
     category: 'ability',
-    cefr: 'avanzado',
+    cefr: 'elemental2',
     descEs: 'Habilidad pasada / Cortesía',
     descEn: 'Past ability / Politeness',
     timeContext: 'past',
@@ -124,12 +124,12 @@ export const modals = [
     id: 'would',
     name: 'Would',
     category: 'future',
-    cefr: 'basico2',
-    descEs: 'Condicional / Cortesía',
-    descEn: 'Conditional / Politeness',
+    cefr: 'elemental1',
+    descEs: 'Ofrecimientos / Condicional',
+    descEn: 'Offers / Conditional',
     timeContext: 'conditional',
-    fullDescEs: 'Expresa situaciones condicionales, cortesía o hábitos pasados. El tiempo verbal seleccionado no afectará la estructura.',
-    fullDescEn: 'Expresses conditional situations, politeness, or past habits. The selected tense will not affect the structure.'
+    fullDescEs: 'Expresa ofrecimientos e invitaciones (Would you like…?), situaciones condicionales y cortesía. El tiempo verbal seleccionado no afectará la estructura.',
+    fullDescEn: 'Expresses offers and invitations (Would you like…?), conditional situations, and politeness. The selected tense will not affect the structure.'
   },
   {
     id: 'shall',

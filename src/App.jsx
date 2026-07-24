@@ -137,7 +137,7 @@ const SENTENCE_PART_EXPLANATIONS = {
     'can': { es: 'Modal "can" - expresa habilidad o posibilidad', en: 'Modal "can" - expresses ability or possibility' },
     'could': { es: 'Modal "could" - habilidad pasada, posibilidad o cortesía', en: 'Modal "could" - past ability, possibility, or politeness' },
     'should': { es: 'Modal "should" - consejo u obligación moral', en: 'Modal "should" - advice or moral obligation' },
-    'would': { es: 'Modal "would" - condicional, cortesía o hábito pasado', en: 'Modal "would" - conditional, politeness, or past habit' },
+    'would': { es: 'Modal "would" - ofrecimientos, condicional o cortesía', en: 'Modal "would" - offers, conditional, or politeness' },
     'must': { es: 'Modal "must" - obligación fuerte o certeza', en: 'Modal "must" - strong obligation or certainty' },
     'may': { es: 'Modal "may" - permiso formal o posibilidad', en: 'Modal "may" - formal permission or possibility' },
     'might': { es: 'Modal "might" - posibilidad remota', en: 'Modal "might" - remote possibility' },
