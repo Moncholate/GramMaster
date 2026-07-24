@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { BookOpen, Volume2, VolumeX, Award, AlertTriangle, CheckCircle, XCircle, HelpCircle, Sparkles, X, History, Copy, Check, Trash2, Clock, Play, Info, ExternalLink, BarChart2 } from 'lucide-react';
 import {
   translations,
@@ -1386,6 +1386,15 @@ const EnglishSentenceBuilder = () => {
     return sentence;
   };
 
+  // Llevar la vista a la oración generada al pulsar "Generar" (queda escondida en móvil)
+  const sentenceRef = useRef(null);
+  const [genTick, setGenTick] = useState(0);
+  useEffect(() => {
+    if (!genTick || !sentenceRef.current) return;
+    const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    sentenceRef.current.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+  }, [genTick]);
+
   const generateSentence = () => {
     // Si hay modal, no se requiere tiempo. Si no hay modal, sí se requiere tiempo.
     if (!subject || !verb || (!selectedModal && !selectedTense)) {
@@ -1395,6 +1404,7 @@ const EnglishSentenceBuilder = () => {
 
     setWhWarning(validateWhExtension(whExtension));
     const sentence = computeSentenceDisplay();
+    setGenTick(t => t + 1);   // dispara el scroll a la oración
 
     // FASE 1: Guardar en historial y actualizar estadísticas
     const newHistoryItem = {
@@ -1986,7 +1996,7 @@ const EnglishSentenceBuilder = () => {
                 onChange={(e) => setSelectedTense(e.target.value)}
                 disabled={!!selectedModal}
                 style={tenseFam(selectedTense) && !selectedModal ? { borderLeftWidth: '4px', borderLeftColor: tenseFam(selectedTense).color } : undefined}
-                className={`flex-1 min-w-0 px-2 py-1.5 rounded-lg text-sm font-semibold text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300 cursor-pointer ${!selectedTense && !selectedModal ? 'border-2 border-indigo-400 ring-2 ring-indigo-200' : 'border border-gray-200'} ${selectedModal ? 'opacity-40 cursor-not-allowed' : ''}`}
+                className={`w-full sm:w-auto sm:flex-1 min-w-0 px-2 py-2 sm:py-1.5 rounded-lg text-sm font-semibold text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300 cursor-pointer ${!selectedTense && !selectedModal ? 'border-2 border-indigo-400 ring-2 ring-indigo-200' : 'border border-gray-200'} ${selectedModal ? 'opacity-40 cursor-not-allowed' : ''}`}
               >
                 <option value="">{language === 'es' ? 'Selecciona un tiempo/estructura...' : 'Select a tense/structure...'}</option>
                 {['present', 'past', 'future'].map(timeType => {
@@ -2006,7 +2016,7 @@ const EnglishSentenceBuilder = () => {
                 <span
                   title={tenseFam(selectedTense).label}
                   style={{ background: tenseFam(selectedTense).bg, color: tenseFam(selectedTense).ink, borderColor: tenseFam(selectedTense).color }}
-                  className="shrink-0 inline-flex items-center justify-center w-8 h-8 rounded-lg border text-base font-bold"
+                  className="shrink-0 hidden sm:inline-flex items-center justify-center w-8 h-8 rounded-lg border text-base font-bold"
                 >
                   {tenseFam(selectedTense).icon}
                 </span>
@@ -2412,7 +2422,7 @@ const EnglishSentenceBuilder = () => {
 
         {/* Generated Sentence con Análisis Visual */}
         {generatedSentence && (
-          <div className="bg-white rounded-2xl shadow-sm border p-4 sm:p-6 mt-4 sm:mt-6">
+          <div ref={sentenceRef} className="bg-white rounded-2xl shadow-sm border p-4 sm:p-6 mt-4 sm:mt-6 scroll-mt-4">
             {/* Encabezado del resultado */}
             <div className="flex items-center justify-between gap-2 mb-4 pb-3 border-b border-gray-100">
               <div className="flex items-center gap-2">
