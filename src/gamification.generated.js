@@ -20,6 +20,7 @@ export function emptyProgress() {
     practiceDays: [],
     totalCorrect: 0,
     bestAnswerStreak: 0,
+    sentencesAnalyzed: 0,       // Desgramatizador
     tenses: {},                 // { [tenseId]: { attempts, correct, days: [ISO] } }
     appsUsed: {},               // { grammaster:true, ... }
     badges: {}                  // { [badgeId]: unlockedISO }  (perTense → `${id}:${tenseId}`)
@@ -42,11 +43,9 @@ export function saveProgress(storage, p) {
 
 /* Registra UN intento de práctica calificado. Muta y devuelve `p`.
    `answerStreak` (opcional) = racha de aciertos actual de la actividad local. */
-export function recordAttempt(p, { app, tenseId, correct, answerStreak } = {}) {
+/* Marca "practiqué hoy" y actualiza la racha de días. Devuelve la fecha de hoy. */
+function markDay(p) {
   const today = todayISO();
-  if (app) p.appsUsed[app] = true;
-
-  // Racha de días: cualquier práctica cuenta como "practiqué hoy".
   if (p.dayStreak.lastDay !== today) {
     const gap = p.dayStreak.lastDay ? dayGap(p.dayStreak.lastDay, today) : null;
     p.dayStreak.count = gap === 1 ? p.dayStreak.count + 1 : 1;
@@ -54,6 +53,12 @@ export function recordAttempt(p, { app, tenseId, correct, answerStreak } = {}) {
     p.dayStreak.best = Math.max(p.dayStreak.best, p.dayStreak.count);
     if (!p.practiceDays.includes(today)) p.practiceDays.push(today);
   }
+  return today;
+}
+
+export function recordAttempt(p, { app, tenseId, correct, answerStreak } = {}) {
+  if (app) p.appsUsed[app] = true;
+  const today = markDay(p);
 
   if (correct) p.totalCorrect += 1;
   if (typeof answerStreak === 'number') p.bestAnswerStreak = Math.max(p.bestAnswerStreak, answerStreak);
@@ -67,6 +72,15 @@ export function recordAttempt(p, { app, tenseId, correct, answerStreak } = {}) {
   return p;
 }
 
+/* Registra UN análisis de oración (Desgramatizador): cuenta para racha de días,
+   apps usadas y el contador de oraciones analizadas. */
+export function recordAnalysis(p, { app } = {}) {
+  if (app) p.appsUsed[app] = true;
+  markDay(p);
+  p.sentencesAnalyzed = (p.sentencesAnalyzed || 0) + 1;
+  return p;
+}
+
 function meets(p, criteria, tenseId) {
   const c = criteria;
   switch (c.type) {
@@ -74,6 +88,7 @@ function meets(p, criteria, tenseId) {
     case 'totalCorrect':     return p.totalCorrect >= c.gte;
     case 'bestAnswerStreak': return p.bestAnswerStreak >= c.gte;
     case 'appsUsed':         return Object.values(p.appsUsed).filter(Boolean).length >= c.gte;
+    case 'sentencesAnalyzed':return (p.sentencesAnalyzed || 0) >= c.gte;
     case 'tenseFamiliar': {
       const t = p.tenses[tenseId];
       return !!t && t.correct >= c.correctGte;
@@ -105,4 +120,4 @@ export function evaluateBadges(p, badges, tenseIds) {
   return { newly, all: Object.keys(p.badges) };
 }
 
-export const BADGES = [{"id":"streak-3","category":"habito","icon":"🔥","scope":"suite","name":{"es":"En marcha","en":"On a roll"},"desc":{"es":"3 días seguidos","en":"3-day streak"},"criteria":{"type":"dayStreak","gte":3}},{"id":"streak-7","category":"habito","icon":"🔥","scope":"suite","name":{"es":"Constante","en":"Consistent"},"desc":{"es":"7 días seguidos","en":"7-day streak"},"criteria":{"type":"dayStreak","gte":7}},{"id":"streak-30","category":"habito","icon":"🏆","scope":"suite","name":{"es":"Imparable","en":"Unstoppable"},"desc":{"es":"30 días seguidos","en":"30-day streak"},"criteria":{"type":"dayStreak","gte":30}},{"id":"correct-10","category":"volumen","icon":"✅","scope":"suite","name":{"es":"Primeros pasos","en":"First steps"},"desc":{"es":"10 respuestas correctas","en":"10 correct answers"},"criteria":{"type":"totalCorrect","gte":10}},{"id":"correct-100","category":"volumen","icon":"💯","scope":"suite","name":{"es":"Centenario","en":"Centurion"},"desc":{"es":"100 respuestas correctas","en":"100 correct answers"},"criteria":{"type":"totalCorrect","gte":100}},{"id":"precision-5","category":"precision","icon":"🎯","scope":"activity","name":{"es":"Puntería","en":"Sharp aim"},"desc":{"es":"5 aciertos seguidos","en":"5 in a row"},"criteria":{"type":"bestAnswerStreak","gte":5}},{"id":"tense-familiar","category":"maestria","icon":"🌱","scope":"suite","perTense":true,"name":{"es":"Familiarizado con {tense}","en":"Familiar with {tense}"},"desc":{"es":"~10 aciertos en ese tiempo","en":"~10 correct in that tense"},"criteria":{"type":"tenseFamiliar","correctGte":10}},{"id":"tense-mastery","category":"maestria","icon":"⭐","scope":"suite","perTense":true,"name":{"es":"Dominas {tense}","en":"You've mastered {tense}"},"desc":{"es":"≥90% en ≥12 intentos, en ≥2 días distintos","en":"≥90% over ≥12 attempts, on ≥2 different days"},"criteria":{"type":"tenseMastery","accuracyGte":0.9,"attemptsGte":12,"daysGte":2}},{"id":"explorer","category":"suite","icon":"🧩","scope":"suite","name":{"es":"Explorador del Hub","en":"Hub explorer"},"desc":{"es":"Usaste las 3 apps","en":"Used all 3 apps"},"criteria":{"type":"appsUsed","gte":3}}];
+export const BADGES = [{"id":"streak-3","category":"habito","icon":"🔥","scope":"suite","name":{"es":"En marcha","en":"On a roll"},"desc":{"es":"3 días seguidos","en":"3-day streak"},"criteria":{"type":"dayStreak","gte":3}},{"id":"streak-7","category":"habito","icon":"🔥","scope":"suite","name":{"es":"Constante","en":"Consistent"},"desc":{"es":"7 días seguidos","en":"7-day streak"},"criteria":{"type":"dayStreak","gte":7}},{"id":"streak-30","category":"habito","icon":"🏆","scope":"suite","name":{"es":"Imparable","en":"Unstoppable"},"desc":{"es":"30 días seguidos","en":"30-day streak"},"criteria":{"type":"dayStreak","gte":30}},{"id":"correct-10","category":"volumen","icon":"✅","scope":"suite","name":{"es":"Primeros pasos","en":"First steps"},"desc":{"es":"10 respuestas correctas","en":"10 correct answers"},"criteria":{"type":"totalCorrect","gte":10}},{"id":"correct-100","category":"volumen","icon":"💯","scope":"suite","name":{"es":"Centenario","en":"Centurion"},"desc":{"es":"100 respuestas correctas","en":"100 correct answers"},"criteria":{"type":"totalCorrect","gte":100}},{"id":"analyst","category":"volumen","icon":"🔍","scope":"suite","name":{"es":"Analista","en":"Analyst"},"desc":{"es":"50 oraciones analizadas","en":"50 sentences analyzed"},"criteria":{"type":"sentencesAnalyzed","gte":50}},{"id":"precision-5","category":"precision","icon":"🎯","scope":"activity","name":{"es":"Puntería","en":"Sharp aim"},"desc":{"es":"5 aciertos seguidos","en":"5 in a row"},"criteria":{"type":"bestAnswerStreak","gte":5}},{"id":"tense-familiar","category":"maestria","icon":"🌱","scope":"suite","perTense":true,"name":{"es":"Familiarizado con {tense}","en":"Familiar with {tense}"},"desc":{"es":"~10 aciertos en ese tiempo","en":"~10 correct in that tense"},"criteria":{"type":"tenseFamiliar","correctGte":10}},{"id":"tense-mastery","category":"maestria","icon":"⭐","scope":"suite","perTense":true,"name":{"es":"Dominas {tense}","en":"You've mastered {tense}"},"desc":{"es":"≥90% en ≥12 intentos, en ≥2 días distintos","en":"≥90% over ≥12 attempts, on ≥2 different days"},"criteria":{"type":"tenseMastery","accuracyGte":0.9,"attemptsGte":12,"daysGte":2}},{"id":"explorer","category":"suite","icon":"🧩","scope":"suite","name":{"es":"Explorador del Hub","en":"Hub explorer"},"desc":{"es":"Usaste las 3 apps","en":"Used all 3 apps"},"criteria":{"type":"appsUsed","gte":3}}];
