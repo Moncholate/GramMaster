@@ -40,6 +40,17 @@ import {
 } from './conjugation';
 import { useClipboard, useSpeechSynthesis, useLocalStorage, useSessionStats } from './hooks';
 import { ROLE_TW } from './tokens.generated.js';
+import { TENSE_FAMILIES, ASPECTS } from './tenseFamilies.generated.js';
+
+/* Familia de tiempo (tono = timeType, aspecto del id) para el acento del selector */
+const aspectOf = (id = '') => (/continuous/.test(id) && /perfect/.test(id)) ? 3 : /perfect/.test(id) ? 2 : /continuous/.test(id) ? 1 : 0;
+const tenseFam = (tenseId) => {
+  const tObj = tenses.find(t => t.id === tenseId);
+  const fam = tObj && TENSE_FAMILIES[tObj.timeType];
+  if (!fam) return null;
+  const asp = aspectOf(tObj.id);
+  return { color: fam.color.light, ink: fam.ink.light, bg: fam.bg.light[asp], icon: ASPECTS[asp].icon, label: fam.label };
+};
 
 const COMPLEMENT_CHIPS = {
   'simple-present':             ['every day', 'on Mondays', 'in the morning', 'at work', 'at home'],
@@ -1935,6 +1946,7 @@ const EnglishSentenceBuilder = () => {
                 value={selectedTense}
                 onChange={(e) => setSelectedTense(e.target.value)}
                 disabled={!!selectedModal}
+                style={tenseFam(selectedTense) && !selectedModal ? { borderLeftWidth: '4px', borderLeftColor: tenseFam(selectedTense).color } : undefined}
                 className={`flex-1 min-w-0 px-2 py-1.5 border border-gray-200 rounded-lg text-sm font-semibold text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300 cursor-pointer ${selectedModal ? 'opacity-40 cursor-not-allowed' : ''}`}
               >
                 <option value="">{language === 'es' ? 'Selecciona un tiempo/estructura...' : 'Select a tense/structure...'}</option>
@@ -1951,6 +1963,15 @@ const EnglishSentenceBuilder = () => {
                   );
                 })}
               </select>
+              {tenseFam(selectedTense) && !selectedModal && (
+                <span
+                  title={tenseFam(selectedTense).label}
+                  style={{ background: tenseFam(selectedTense).bg, color: tenseFam(selectedTense).ink, borderColor: tenseFam(selectedTense).color }}
+                  className="shrink-0 inline-flex items-center justify-center w-8 h-8 rounded-lg border text-base font-bold"
+                >
+                  {tenseFam(selectedTense).icon}
+                </span>
+              )}
               {selectedModal && (
                 <span className="text-xs text-purple-500 shrink-0">
                   {language === 'es' ? 'no aplica con modal' : 'not used with modal'}
