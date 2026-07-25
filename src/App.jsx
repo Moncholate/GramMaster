@@ -43,6 +43,36 @@ import { ROLE_TW } from './tokens.generated.js';
 import { TENSE_FAMILIES, ASPECTS } from './tenseFamilies.generated.js';
 import { loadProgress, saveProgress, recordAttempt, evaluateBadges, BADGES } from './gamification.generated.js';
 
+/* Toggle de tema de la suite (auto→claro→oscuro por SO; toggle binario que ofrece
+   el modo destino). Usa window.ghTheme, sincronizado same-origin entre las 4 apps. */
+function ThemeToggle({ lang = 'es' }) {
+  const [eff, setEff] = useState(() => (typeof window !== 'undefined' && window.ghTheme ? window.ghTheme.effective() : 'light'));
+  useEffect(() => {
+    if (!window.ghTheme) return;
+    const sync = () => setEff(window.ghTheme.effective());
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    mq.addEventListener ? mq.addEventListener('change', sync) : mq.addListener(sync);
+    const onStorage = (e) => { if (e.key === 'gh_theme') sync(); };
+    window.addEventListener('storage', onStorage);
+    return () => {
+      mq.removeEventListener ? mq.removeEventListener('change', sync) : mq.removeListener(sync);
+      window.removeEventListener('storage', onStorage);
+    };
+  }, []);
+  const target = eff === 'dark' ? 'light' : 'dark';
+  const name = { es: { light: 'claro', dark: 'oscuro' }, en: { light: 'light', dark: 'dark' } }[lang][target];
+  return (
+    <button
+      onClick={() => window.ghTheme && setEff(window.ghTheme.toggle())}
+      className="p-2 hover:bg-gray-100 rounded-lg transition-colors text-lg leading-none"
+      title={`${lang === 'es' ? 'Cambiar a modo' : 'Switch to'} ${name}`}
+      aria-label={`${lang === 'es' ? 'Cambiar a modo' : 'Switch to'} ${name}`}
+    >
+      {target === 'dark' ? '🌙' : '☀️'}
+    </button>
+  );
+}
+
 /* Familia de tiempo (tono = timeType, aspecto del id) para el acento del selector */
 const aspectOf = (id = '') => (/continuous/.test(id) && /perfect/.test(id)) ? 3 : /perfect/.test(id) ? 2 : /continuous/.test(id) ? 1 : 0;
 const tenseFam = (tenseId) => {
@@ -1963,6 +1993,9 @@ const EnglishSentenceBuilder = () => {
                 <button onClick={() => setLanguage('en')} aria-pressed={language === 'en'} className={`px-2 py-0.5 rounded text-xs font-bold transition-all ${language === 'en' ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-500 hover:text-slate-700'}`} title="English">EN</button>
               </div>
             </>}
+
+            {/* Toggle de tema de la suite — siempre visible */}
+            <ThemeToggle lang={language} />
 
             {/* Botones de acción — solo visibles en desktop */}
             <div className="hidden sm:flex items-center">
