@@ -1512,25 +1512,19 @@ const EnglishSentenceBuilder = () => {
         </div>
       )}
 
-      {/* Modal/Panel lateral */}
+      {/* Sección activa — vista inline (modelo de pestañas), no overlay */}
       {activePanel && (
-        <div className="fixed inset-0 z-40 flex justify-end">
-          <div className="absolute inset-0 bg-black/30" onClick={closePanel}></div>
-          <div className="relative w-full max-w-md bg-white shadow-2xl h-full overflow-y-auto">
-            <div className="sticky top-0 bg-white border-b p-4 flex justify-between items-center">
-              <h3 className="font-bold text-lg">
-                {activePanel === 'history' && t.history}
-                {activePanel === 'practice' && t.practiceMode}
-                {activePanel === 'timeGuide' && t.timeGuideTitle}
-                {activePanel === 'settings' && t.themes}
-                {activePanel === 'progress' && t.progressTitle}
-              </h3>
-              <button onClick={closePanel} className="p-2 hover:bg-gray-100 rounded-lg">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+        <div className="flex-1 overflow-y-auto py-4 px-4 sm:px-8 pb-24 sm:pb-6" style={{ order: 1 }}>
+          <div className="max-w-2xl mx-auto">
+            <h2 className="font-bold text-xl text-gray-800 mb-4">
+              {activePanel === 'history' && t.history}
+              {activePanel === 'practice' && t.practiceMode}
+              {activePanel === 'timeGuide' && t.timeGuideTitle}
+              {activePanel === 'settings' && t.themes}
+              {activePanel === 'progress' && t.progressTitle}
+            </h2>
 
-            <div className="p-4">
+            <div>
               {/* Panel de Historial */}
               {activePanel === 'history' && (
                 <div className="space-y-3">
@@ -2013,20 +2007,11 @@ const EnglishSentenceBuilder = () => {
             {/* Toggle de tema de la suite — siempre visible */}
             <ThemeToggle lang={language} />
 
-            {/* Botones de acción — solo visibles en desktop */}
-            <div className="hidden sm:flex items-center">
-              <button onClick={() => setActivePanel('timeGuide')} className="p-2 hover:bg-gray-100 rounded-lg transition-colors" title={t.timeGuideTitle} aria-label={t.timeGuideTitle}><Clock className="w-5 h-5 text-gray-600" /></button>
-              <button onClick={() => setActivePanel('practice')} className="p-2 hover:bg-gray-100 rounded-lg transition-colors" title={t.practiceMode} aria-label={t.practiceMode}><Award className="w-5 h-5 text-gray-600" /></button>
-              <button onClick={() => setActivePanel('progress')} className="p-2 hover:bg-gray-100 rounded-lg transition-colors" title={t.progressTitle} aria-label={t.progressTitle}><BarChart2 className="w-5 h-5 text-gray-600" /></button>
-              <button onClick={() => setActivePanel('history')} className="p-2 hover:bg-gray-100 rounded-lg transition-colors relative" title={t.history} aria-label={`${t.history}${totalAllTime > 0 ? ` (${totalAllTime})` : ''}`}>
-                <History className="w-5 h-5 text-gray-600" />
-                {totalAllTime > 0 && <span aria-hidden="true" className="absolute -top-1 -right-1 bg-indigo-500 text-white text-xs w-4 h-4 rounded-full flex items-center justify-center font-bold" style={{fontSize:'9px'}}>{totalAllTime > 99 ? '99+' : totalAllTime}</span>}
-              </button>
-            </div>
           </div>
         </header>
 
-        {/* Área principal scrollable */}
+        {/* Constructor (modo por defecto) — solo cuando no hay sección activa */}
+        {!activePanel && (
         <main className="flex-1 overflow-y-auto py-4 px-4 sm:px-8 pb-24 sm:pb-6">
         <div className="max-w-5xl mx-auto space-y-4">
 
@@ -2658,18 +2643,20 @@ const EnglishSentenceBuilder = () => {
 
         </div>
         </main>
+        )}
 
-      {/* Barra de navegación inferior — solo móvil */}
-      <nav className="sm:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-30">
-        <div className="flex items-stretch">
+      {/* Barra de navegación inferior — persistente (modelo de pestañas, como QL) */}
+      <nav className="flex-shrink-0 bg-white border-t border-gray-200 shadow-lg z-30" style={{ order: 2 }}>
+        <div className="flex items-stretch max-w-2xl mx-auto">
           {[
+            { panel: null,        icon: <Sparkles className="w-5 h-5" />, label: language === 'es' ? 'Construye' : 'Build' },
             { panel: 'timeGuide', icon: <Clock className="w-5 h-5" />, label: language === 'es' ? 'Guía' : 'Guide' },
             { panel: 'practice',  icon: <Award className="w-5 h-5" />, label: language === 'es' ? 'Práctica' : 'Practice' },
             { panel: 'progress',  icon: <BarChart2 className="w-5 h-5" />, label: language === 'es' ? 'Progreso' : 'Progress' },
             { panel: 'history',   icon: <History className="w-5 h-5" />,  label: language === 'es' ? 'Historial' : 'History', badge: totalAllTime > 0 ? (totalAllTime > 99 ? '99+' : totalAllTime) : null },
           ].map(({ panel, icon, label, badge }) => (
             <button
-              key={panel}
+              key={panel || 'home'}
               onClick={() => setActivePanel(panel)}
               aria-pressed={activePanel === panel}
               className={`flex-1 flex flex-col items-center justify-center gap-0.5 py-2.5 transition-colors relative ${
