@@ -243,6 +243,7 @@ const EnglishSentenceBuilder = () => {
   const [practiceQuestion, setPracticeQuestion] = useState(null);
   const [practiceAnswer, setPracticeAnswer] = useState('');
   const [practiceResult, setPracticeResult] = useState(null);
+  const [answerStreak, setAnswerStreak] = useState(0);   // racha de aciertos consecutivos (inline)
   const [badgeToasts, setBadgeToasts] = useState([]);   // gamificación de suite
   const [identifyTenseAnswer, setIdentifyTenseAnswer] = useState('');
   const [identifyModeAnswer, setIdentifyModeAnswer] = useState('');
@@ -633,6 +634,7 @@ const EnglishSentenceBuilder = () => {
     setIdentifyTenseAnswer('');
     setIdentifyModeAnswer('');
     setShowHint(false);
+    setAnswerStreak(0);   // nueva actividad → racha desde cero
   };
 
   // SRS: actualizar datos tras verificar respuesta
@@ -751,6 +753,7 @@ const EnglishSentenceBuilder = () => {
       const modeOk = identifyModeAnswer === practiceQuestion.mode;
       const isCorrect = tenseOk && modeOk;
       recordGameAttempt(practiceQuestion.tense?.id, isCorrect);
+      setAnswerStreak(s => isCorrect ? s + 1 : 0);
       setPracticeResult({
         correct: isCorrect,
         tenseOk,
@@ -766,6 +769,7 @@ const EnglishSentenceBuilder = () => {
     const isCorrect = accepted.some(a => a.replace(/\.$/, '') === userAns);
     updateSRS(practiceQuestion.tense?.id, practiceQuestion.mode, isCorrect);
     recordGameAttempt(practiceQuestion.tense?.id, isCorrect);
+    setAnswerStreak(s => isCorrect ? s + 1 : 0);
 
     let hint = null;
     if (!isCorrect) {
@@ -1615,6 +1619,14 @@ const EnglishSentenceBuilder = () => {
                     </div>
                   ) : (
                     <div className="space-y-4">
+                      {/* Racha de aciertos consecutivos (inline) */}
+                      {answerStreak > 0 && (
+                        <div className="flex justify-end">
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-bold text-white bg-gradient-to-br from-rose-500 to-amber-400 shadow-sm shadow-rose-500/25">
+                            🔥 {language === 'es' ? 'Racha' : 'Streak'}: {answerStreak}
+                          </span>
+                        </div>
+                      )}
                       {/* Tarjeta de pregunta */}
                       <div className={`p-4 rounded-xl border ${practiceQuestion.type === 'identify' ? 'bg-purple-50 border-purple-200' : practiceQuestion.type === 'correct' ? 'bg-orange-50 border-orange-200' : practiceQuestion.type === 'review' ? 'bg-amber-50 border-amber-200' : 'bg-blue-50 border-blue-200'}`}>
                         {(practiceQuestion.type === 'fill' || practiceQuestion.type === 'review') && (
