@@ -730,20 +730,23 @@ const EnglishSentenceBuilder = () => {
 
   // FASE 2: Verificar respuesta de práctica
   // Gamificación de suite: registra un intento en gh_progress + toasts de logro
+  // Cada toast lleva su id y su propio temporizador (3.8s = duración de la
+  // animación de ciclo de vida entra→mantiene→sale), así el timing calza aunque
+  // se apilen varios.
+  const pushBadgeToasts = (keys) => {
+    const items = keys.map(k => ({ id: `${Date.now()}-${Math.random().toString(36).slice(2)}`, key: k }));
+    setBadgeToasts(prev => [...prev, ...items]);
+    items.forEach(it => setTimeout(() => setBadgeToasts(prev => prev.filter(x => x.id !== it.id)), 3800));
+  };
   const recordGameAttempt = (tenseId, isCorrect) => {
     try {
       const p = loadProgress(window.localStorage);
       recordAttempt(p, { app: 'grammaster', tenseId, correct: !!isCorrect });
       const { newly } = evaluateBadges(p, BADGES, tenseId ? [tenseId] : []);
       saveProgress(window.localStorage, p);
-      if (newly.length) setBadgeToasts(prev => [...prev, ...newly]);
+      if (newly.length) pushBadgeToasts(newly);
     } catch (e) {}
   };
-  useEffect(() => {
-    if (!badgeToasts.length) return;
-    const timer = setTimeout(() => setBadgeToasts(prev => prev.slice(1)), 3800);
-    return () => clearTimeout(timer);
-  }, [badgeToasts]);
 
   const checkPracticeAnswer = () => {
     if (!practiceQuestion) return;
@@ -1480,13 +1483,13 @@ const EnglishSentenceBuilder = () => {
     <div className="flex flex-col h-screen overflow-hidden bg-[#f5f6fb]">
       {badgeToasts.length > 0 && (
         <div className="fixed left-0 right-0 bottom-4 z-50 flex flex-col items-center gap-2 px-4 pointer-events-none" aria-live="polite">
-          {badgeToasts.map((key, i) => {
+          {badgeToasts.map(({ id, key }) => {
             const ci = key.indexOf(':'); const bid = ci < 0 ? key : key.slice(0, ci); const tid = ci < 0 ? null : key.slice(ci + 1);
             const b = BADGES.find(x => x.id === bid); if (!b) return null;
             let name = language === 'es' ? b.name.es : b.name.en;
             if (tid) { const o = tenses.find(x => x.id === tid); name = name.replace('{tense}', o ? (language === 'es' ? o.nameEs : o.nameEn) : tid); }
             return (
-              <div key={key + i} role="status" className="gtoast-in pointer-events-auto flex items-center gap-2.5 max-w-sm px-3.5 py-2.5 rounded-xl text-white shadow-lg bg-gradient-to-br from-rose-500 to-amber-400">
+              <div key={id} role="status" className="gtoast-in pointer-events-auto flex items-center gap-2.5 max-w-sm px-3.5 py-2.5 rounded-xl text-white shadow-lg bg-gradient-to-br from-rose-500 to-amber-500">
                 <span className="text-2xl leading-none">{b.icon}</span>
                 <span className="flex flex-col leading-tight">
                   <b className="text-[0.68rem] uppercase tracking-wide opacity-90 font-extrabold">{language === 'es' ? '¡Logro!' : 'Achievement!'}</b>
@@ -1622,7 +1625,7 @@ const EnglishSentenceBuilder = () => {
                       {/* Racha de aciertos consecutivos (inline) */}
                       {answerStreak > 0 && (
                         <div className="flex justify-end">
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-bold text-white bg-gradient-to-br from-rose-500 to-amber-400 shadow-sm shadow-rose-500/25">
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-bold text-white bg-gradient-to-br from-rose-500 to-amber-500 shadow-sm shadow-rose-500/25">
                             🔥 {language === 'es' ? 'Racha' : 'Streak'}: {answerStreak}
                           </span>
                         </div>
@@ -1858,7 +1861,7 @@ const EnglishSentenceBuilder = () => {
                     ) : (
                       <>
                         {/* 1. RACHA */}
-                        <div className={`rounded-xl p-4 flex items-center gap-4 ${streak > 0 ? 'bg-gradient-to-br from-rose-500 to-amber-400 shadow-lg shadow-rose-500/25' : 'bg-gray-50 border border-gray-200'}`}>
+                        <div className={`rounded-xl p-4 flex items-center gap-4 ${streak > 0 ? 'bg-gradient-to-br from-rose-500 to-amber-500 shadow-lg shadow-rose-500/25' : 'bg-gray-50 border border-gray-200'}`}>
                           <span className="text-4xl">{streak > 0 ? '🔥' : '💤'}</span>
                           <div>
                             {streak > 0 ? (
