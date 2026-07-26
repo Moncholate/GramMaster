@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { BookOpen, Volume2, VolumeX, Award, AlertTriangle, CheckCircle, XCircle, HelpCircle, Sparkles, X, History, Copy, Check, Trash2, Clock, Play, Info, ExternalLink, BarChart2 } from 'lucide-react';
+import { BookOpen, Volume2, VolumeX, Award, AlertTriangle, CheckCircle, XCircle, HelpCircle, Sparkles, X, History, Copy, Check, Trash2, Clock, Play, Info, BarChart2 } from 'lucide-react';
 import {
   translations,
   commonVerbs,
@@ -2591,16 +2591,6 @@ const EnglishSentenceBuilder = () => {
                   <option value="1.2">{t.fast}</option>
                 </select>
               </div>
-              {/* Analizar en Desgramatizador — ancho completo */}
-              <a
-                href={`https://moncholate.github.io/Desgramatizador/?texto=${encodeURIComponent(generatedSentence)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="w-full px-4 py-2 rounded-lg flex items-center justify-center gap-2 text-sm font-medium bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-all border border-emerald-100"
-              >
-                <ExternalLink className="w-4 h-4" />
-                {language === 'es' ? 'Analizar en Desgramatizador' : 'Analyze in Desgramatizador'}
-              </a>
             </div>
 
             {/* Los 3 modos */}
