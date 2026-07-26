@@ -1,6 +1,6 @@
 export const translations = {
   es: {
-    title: 'GramMaster',
+    title: 'Grammaster',
     subtitle: 'Aprende inglés construyendo oraciones perfectas',
     practiceMode: 'Modo Práctica',
     subject: 'Sujeto',
@@ -122,7 +122,7 @@ export const translations = {
     sentences: 'oraciones',
   },
   en: {
-    title: 'GramMaster',
+    title: 'Grammaster',
     subtitle: 'Learn English by building perfect sentences',
     practiceMode: 'Practice Mode',
     subject: 'Subject',

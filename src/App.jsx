@@ -1972,7 +1972,7 @@ const EnglishSentenceBuilder = () => {
       {/* Header full-width */}
       <header className="flex-shrink-0 bg-white border-b border-gray-200 shadow-sm z-10 px-4 sm:px-8 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <img src="/GramMaster/favicon.svg" alt="GramMaster" className="w-9 h-9 sm:w-10 sm:h-10 shrink-0 rounded-[22%]" />
+            <img src="/GramMaster/favicon.svg" alt="Grammaster" className="w-9 h-9 sm:w-10 sm:h-10 shrink-0 rounded-[22%]" />
             <div>
               <h1 className="text-lg sm:text-xl font-bold text-gray-800">{t.title}</h1>
               <p className="text-xs text-gray-500 hidden sm:block">{language === 'es' ? 'Los tiempos en la palma de tu mano.' : 'English tenses at your fingertips.'}</p>
