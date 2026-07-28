@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { BookOpen, Volume2, VolumeX, Award, AlertTriangle, CheckCircle, XCircle, HelpCircle, Sparkles, X, History, Copy, Check, Trash2, Clock, Play, Info, BarChart2, ChevronDown } from 'lucide-react';
+import { BookOpen, Volume2, VolumeX, Award, AlertTriangle, CheckCircle, XCircle, HelpCircle, Sparkles, X, History, Copy, Check, Trash2, Play, Info, BarChart2, ChevronDown } from 'lucide-react';
 import {
   translations,
   commonVerbs,
@@ -12,7 +12,6 @@ import {
   whSuggestions,
   frequencyAdverbs,
   timeMarkers,
-  getFlattenedMarkers,
   uncountableNouns,
   countableNouns,
   englishDictionary,
@@ -220,6 +219,145 @@ function TensePicker({ value, onChange, disabled, language, cefrLevel, highlight
   );
 }
 
+/**
+ * Guía de uso de la app. Reemplaza a la antigua "Guía de Marcadores Temporales":
+ * esos marcadores ya viven junto al campo Complemento (chips por tiempo), que es
+ * un lugar más contextual, y la sección prometía ayuda de la app pero entregaba
+ * una lista de expresiones.
+ */
+function UsageGuide({ language }) {
+  const es = language === 'es';
+  const v = themeVariant();
+
+  const Section = ({ title, children }) => (
+    <section className="mb-5">
+      <h3 className="text-sm font-bold text-gray-800 mb-2">{title}</h3>
+      {children}
+    </section>
+  );
+
+  const steps = es
+    ? [['Elige el tiempo verbal y el modo', 'Arriba del todo. El tiempo define la forma del verbo; el modo, si la oración afirma, niega o pregunta.'],
+       ['Completa las piezas', 'Sujeto y verbo son obligatorios; el complemento es opcional. El verbo va en forma base (work, no worked): la app lo conjuga.'],
+       ['Toca Generar', 'Verás la oración armada y, debajo, cada parte pintada con su color.']]
+    : [['Choose the tense and the mode', 'At the very top. The tense sets the verb form; the mode decides whether the sentence states, denies or asks.'],
+       ['Fill in the pieces', 'Subject and verb are required; the complement is optional. Type the verb in base form (work, not worked): the app conjugates it.'],
+       ['Hit Generate', "You'll see the finished sentence and, below it, each part painted in its colour."]];
+
+  const roles = [
+    { dot: 'bg-indigo-600', k: 'S', es: 'Sujeto', en: 'Subject', dEs: 'quién realiza la acción', dEn: 'who performs the action' },
+    { dot: 'bg-rose-600', k: 'V', es: 'Verbo', en: 'Verb', dEs: 'la acción o el estado', dEn: 'the action or state' },
+    { dot: 'bg-emerald-600', k: 'C', es: 'Complemento', en: 'Complement', dEs: 'el resto de la información', dEn: 'the rest of the information' },
+    { dot: 'bg-teal-600', k: 'WH', es: 'Palabra WH', en: 'WH word', dEs: 'abre una pregunta abierta', dEn: 'opens an open question' },
+    { dot: 'bg-amber-500', k: 'A', es: 'Adverbio', en: 'Adverb', dEs: 'frecuencia: always, never…', dEn: 'frequency: always, never…' },
+  ];
+
+  const activities = es
+    ? [['📝', 'Completa la oración', 'Escribe la frase verbal que falta.'],
+       ['✏️', 'Corrige el error', 'La oración trae una falla: encuéntrala y arréglala.'],
+       ['🔍', 'Identifica la estructura', 'Reconoce qué tiempo verbal y qué modo tiene.'],
+       ['🔄', 'Modo repaso', 'Vuelve sobre lo que más te cuesta, espaciado en el tiempo.']]
+    : [['📝', 'Fill in the sentence', 'Type the missing verb phrase.'],
+       ['✏️', 'Correct the error', 'The sentence has a flaw: find it and fix it.'],
+       ['🔍', 'Identify the structure', 'Recognise which tense and which mode it uses.'],
+       ['🔄', 'Review mode', 'Come back to what you find hardest, spaced over time.']];
+
+  return (
+    <div className="text-sm">
+      <Section title={es ? '¿Cómo se arma una oración?' : 'How do you build a sentence?'}>
+        <ol className="space-y-2">
+          {steps.map(([head, body], i) => (
+            <li key={i} className="flex gap-2.5">
+              <span className="shrink-0 w-5 h-5 rounded-full bg-indigo-600 text-white text-[11px] font-bold flex items-center justify-center">{i + 1}</span>
+              <span className="min-w-0">
+                <b className="text-gray-800">{head}.</b>{' '}
+                <span className="text-gray-600">{body}</span>
+              </span>
+            </li>
+          ))}
+        </ol>
+      </Section>
+
+      <Section title={es ? 'Los colores del análisis' : 'The analysis colours'}>
+        <p className="text-gray-600 mb-2">
+          {es ? 'Al generar, cada parte de la oración queda pintada con su color. Son los mismos en toda la suite.'
+              : 'Once generated, each part of the sentence is painted in its colour. They are the same across the whole suite.'}
+        </p>
+        <ul className="grid sm:grid-cols-2 gap-1.5">
+          {roles.map(r => (
+            <li key={r.k} className="flex items-center gap-2">
+              <span className={`shrink-0 w-6 text-center text-[10px] font-bold text-white rounded ${r.dot}`}>{r.k}</span>
+              <span className="text-gray-800 font-medium">{es ? r.es : r.en}</span>
+              <span className="text-gray-500 text-xs truncate">— {es ? r.dEs : r.dEn}</span>
+            </li>
+          ))}
+        </ul>
+      </Section>
+
+      <Section title={es ? 'Cómo leer el selector de tiempos' : 'How to read the tense picker'}>
+        <p className="text-gray-600 mb-2">
+          {es ? 'El color dice CUÁNDO ocurre y el ícono dice CÓMO se presenta la acción.'
+              : 'The colour tells you WHEN it happens and the icon tells you HOW the action is presented.'}
+        </p>
+        <div className="flex flex-wrap gap-2 mb-3">
+          {['present', 'past', 'future'].map(tt => {
+            const fam = TENSE_FAMILIES[tt];
+            return (
+              <span key={tt} className="inline-flex items-center gap-1.5 text-xs font-semibold px-2 py-1 rounded-lg" style={{ background: fam.bg[v][0], color: 'inherit' }}>
+                <span className="w-2.5 h-2.5 rounded-full inline-block" style={{ background: fam.color[v] }} aria-hidden="true" />
+                <span className="text-gray-800">{fam.label}</span>
+              </span>
+            );
+          })}
+        </div>
+        <ul className="space-y-1.5">
+          {ASPECTS.map((a, i) => {
+            const step = TENSE_FAMILIES.present.bg[v][i];
+            return (
+              <li key={a.id} className="flex items-center gap-2">
+                <span className="shrink-0 inline-flex items-center justify-center w-5 h-5 rounded text-[11px] font-bold"
+                      style={{ background: step, color: readableInk(step) }} aria-hidden="true">{a.icon}</span>
+                <b className="text-gray-800">{a.label}</b>
+                <span className="text-gray-500 text-xs">
+                  {es
+                    ? ['— un solo verbo: works, played', '— en curso: is working', '— con have/has/had: has worked', '— ambas cosas: has been working'][i]
+                    : ['— a single verb: works, played', '— in progress: is working', '— with have/has/had: has worked', '— both at once: has been working'][i]}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      </Section>
+
+      <Section title={es ? 'Los tres modos' : 'The three modes'}>
+        <ul className="space-y-1.5 text-gray-600">
+          <li><b className="text-gray-800">{es ? 'Afirmativa' : 'Affirmative'}</b> — <i>She works here.</i></li>
+          <li><b className="text-gray-800">{es ? 'Negativa' : 'Negative'}</b> — <i>She doesn't work here.</i></li>
+          <li><b className="text-gray-800">{es ? 'Interrogativa' : 'Interrogative'}</b> — <i>Does she work here?</i> {es ? 'Al elegirla aparecen las palabras WH para preguntas abiertas.' : 'Choosing it reveals the WH words for open questions.'}</li>
+        </ul>
+      </Section>
+
+      <Section title={es ? 'Verbos modales' : 'Modal verbs'}>
+        <p className="text-gray-600">
+          {es ? 'Son opcionales y reemplazan al tiempo verbal: can, must, should… Al elegir uno, el selector de tiempos se desactiva, porque el modal ya define la forma del verbo (siempre en base: she can work).'
+              : 'They are optional and replace the tense: can, must, should… Picking one disables the tense selector, because the modal already sets the verb form (always base: she can work).'}
+        </p>
+      </Section>
+
+      <Section title={es ? 'La sección Práctica' : 'The Practice section'}>
+        <ul className="space-y-1.5">
+          {activities.map(([icon, head, body]) => (
+            <li key={head} className="flex gap-2">
+              <span className="shrink-0">{icon}</span>
+              <span><b className="text-gray-800">{head}</b> <span className="text-gray-600">— {body}</span></span>
+            </li>
+          ))}
+        </ul>
+      </Section>
+    </div>
+  );
+}
+
 const COMPLEMENT_CHIPS = {
   'simple-present':             ['every day', 'on Mondays', 'in the morning', 'at work', 'at home'],
   'present-continuous':         ['right now', 'at the moment', 'this week', 'today'],
@@ -409,7 +547,7 @@ const EnglishSentenceBuilder = () => {
   const [reviewUpToDate, setReviewUpToDate] = useState(false);
 
   // UI simplificada
-  const [activePanel, setActivePanel] = useState(null); // 'history', 'practice', 'timeGuide', 'settings', 'progress'
+  const [activePanel, setActivePanel] = useState(null); // 'history', 'practice', 'guide', 'settings', 'progress'
 
   // Análisis gramatical visual
   const [sentenceAnalysis, setSentenceAnalysis] = useState(null);
@@ -1437,25 +1575,6 @@ const EnglishSentenceBuilder = () => {
   };
 
   // NUEVA FUNCIÓN: Aplicar marcador temporal al hacer click
-  const applyTimeMarker = (marker, suggestedTense) => {
-    // Autocompletar en el campo complemento
-    setComplement(marker);
-    
-    // Sugerir tiempo verbal compatible si no hay uno seleccionado o si es diferente
-    if (!selectedTense || selectedTense !== suggestedTense) {
-      setSelectedTense(suggestedTense);
-    }
-    
-    // Scroll suave hacia el campo de complemento
-    setTimeout(() => {
-      const complementField = document.querySelector('input[placeholder*="at home"]');
-      if (complementField) {
-        complementField.focus();
-        complementField.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
-    }, 100);
-  };
-
   useEffect(() => {
     const warning = validateWhExtension(whExtension);
     setWhWarning(warning);
@@ -1630,7 +1749,6 @@ const EnglishSentenceBuilder = () => {
 
 
   // Cerrar panel activo
-  const closePanel = () => setActivePanel(null);
 
   // Avanzar a la siguiente pregunta de práctica (botón "Siguiente" y tecla Enter)
   const nextPractice = () => {
@@ -1700,7 +1818,7 @@ const EnglishSentenceBuilder = () => {
             <h2 className="font-bold text-xl text-gray-800 mb-4">
               {activePanel === 'history' && t.history}
               {activePanel === 'practice' && t.practiceMode}
-              {activePanel === 'timeGuide' && t.timeGuideTitle}
+              {activePanel === 'guide' && t.timeGuideTitle}
               {activePanel === 'settings' && t.themes}
               {activePanel === 'progress' && t.progressTitle}
             </h2>
@@ -1983,34 +2101,8 @@ const EnglishSentenceBuilder = () => {
                 </div>
               )}
 
-              {/* Panel de Time Guide */}
-              {activePanel === 'timeGuide' && (
-                <div className="space-y-4">
-                  <p className="text-sm text-gray-600 mb-4">{language === 'es' ? 'Haz click en un marcador para agregarlo a tu oración' : 'Click a marker to add it to your sentence'}</p>
-                  {['past', 'present', 'future'].map(category => (
-                    <div key={category} className={`p-4 rounded-xl ${category === 'past' ? 'bg-rose-50' : category === 'present' ? 'bg-blue-50' : 'bg-emerald-50'}`}>
-                      <h4 className={`font-semibold text-sm mb-3 ${category === 'past' ? 'text-rose-700' : category === 'present' ? 'text-blue-700' : 'text-emerald-700'}`}>
-                        {category === 'past' ? t.timeGuidePast : category === 'present' ? t.timeGuidePresent : t.timeGuideFuture}
-                      </h4>
-                      <div className="flex flex-wrap gap-2">
-                        {getFlattenedMarkers(category).map(marker => (
-                          <button
-                            key={marker.text}
-                            onClick={() => { applyTimeMarker(marker.text, marker.tense); closePanel(); }}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                              complement.toLowerCase().includes(marker.text.toLowerCase())
-                                ? category === 'past' ? 'bg-rose-600 text-white' : category === 'present' ? 'bg-blue-600 text-white' : 'bg-emerald-600 text-white'
-                                : 'bg-white border hover:shadow-sm'
-                            }`}
-                          >
-                            {marker.text}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
+              {/* Panel de Guía de uso */}
+              {activePanel === 'guide' && <UsageGuide language={language} />}
 
               {/* Panel de Progreso */}
               {activePanel === 'progress' && (() => {
@@ -2818,7 +2910,7 @@ const EnglishSentenceBuilder = () => {
         <div className="flex items-stretch max-w-2xl mx-auto">
           {[
             { panel: null,        icon: <Sparkles className="w-5 h-5" />, label: language === 'es' ? 'Construye' : 'Build' },
-            { panel: 'timeGuide', icon: <Clock className="w-5 h-5" />, label: language === 'es' ? 'Guía' : 'Guide' },
+            { panel: 'guide', icon: <BookOpen className="w-5 h-5" />, label: language === 'es' ? 'Guía' : 'Guide' },
             { panel: 'practice',  icon: <Award className="w-5 h-5" />, label: language === 'es' ? 'Práctica' : 'Practice' },
             { panel: 'progress',  icon: <BarChart2 className="w-5 h-5" />, label: language === 'es' ? 'Progreso' : 'Progress' },
             { panel: 'history',   icon: <History className="w-5 h-5" />,  label: language === 'es' ? 'Historial' : 'History', badge: totalAllTime > 0 ? (totalAllTime > 99 ? '99+' : totalAllTime) : null },
