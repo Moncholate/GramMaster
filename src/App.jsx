@@ -161,8 +161,11 @@ function TensePicker({ value, onChange, disabled, language, cefrLevel, highlight
         <ChevronDown className={`w-4 h-4 ml-auto shrink-0 text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
 
+      {/* En escritorio el panel NO hereda el ancho del disparador: ahí comparte
+          fila con la etiqueta y los botones de modo, y con dos columnas los
+          nombres largos ("Presente Perfecto Continuo") no cabían. */}
       {open && (
-        <div role="listbox" className="absolute z-20 mt-1 left-0 right-0 max-h-80 overflow-y-auto bg-white border border-gray-200 rounded-xl shadow-lg p-2">
+        <div role="listbox" className="absolute z-20 mt-1 left-0 w-full sm:w-[34rem] max-w-[calc(100vw-2rem)] max-h-80 overflow-y-auto bg-white border border-gray-200 rounded-xl shadow-lg p-2">
           {groups.map(g => (
             <div key={g.tt} className="mb-2 last:mb-0">
               <p className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-1 flex items-center gap-1.5" style={{ color: g.fam.color[v] }}>
@@ -181,7 +184,7 @@ function TensePicker({ value, onChange, disabled, language, cefrLevel, highlight
                       role="option"
                       aria-selected={selected}
                       onClick={() => { onChange(tn.id); setOpen(false); }}
-                      title={`${g.fam.label} · ${ASPECTS[asp].label}`}
+                      title={`${language === 'es' ? tn.nameEs : tn.nameEn} — ${g.fam.label} · ${ASPECTS[asp].label}`}
                       /* Fondo SIEMPRE el paso más pálido: da el tono (=tiempo)
                          sin comprometer la lectura. La intensidad (=aspecto) se
                          mudó a la pastilla del icono, donde la tinta se calcula. */
@@ -198,7 +201,10 @@ function TensePicker({ value, onChange, disabled, language, cefrLevel, highlight
                       >
                         {ASPECTS[asp].icon}
                       </span>
-                      <span className="min-w-0 truncate text-gray-800">{language === 'es' ? tn.nameEs : tn.nameEn}</span>
+                      {/* Sin truncate: si el ancho aprieta, el nombre envuelve
+                          en vez de cortarse. El riel es self-stretch, así que
+                          acompaña la altura de las filas de dos líneas. */}
+                      <span className="min-w-0 leading-tight text-gray-800">{language === 'es' ? tn.nameEs : tn.nameEn}</span>
                       {selected && <Check className="w-3.5 h-3.5 ml-auto shrink-0 text-gray-800" />}
                     </button>
                   );
