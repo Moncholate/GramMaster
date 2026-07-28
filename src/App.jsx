@@ -78,6 +78,27 @@ function ThemeToggle({ lang = 'es' }) {
    Lee el tema actual en cada llamada para elegir la variante light/dark. */
 const aspectOf = (id = '') => (/continuous/.test(id) && /perfect/.test(id)) ? 3 : /perfect/.test(id) ? 2 : /continuous/.test(id) ? 1 : 0;
 const themeVariant = () => document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+
+/* Tinta legible sobre un fondo dado. Se usa en la pastilla del aspecto, único
+   sitio donde queda texto sobre la rampa: sus pasos van de un tinte pálido al
+   tono puro, así que la tinta no puede ser fija.
+   Elige la que MAXIMIZA el contraste en vez de partir por un umbral: con tonos
+   de luminancia media (emerald-600, violet-300) el umbral se equivoca y deja
+   ratios de 2.7:1. */
+const relLum = (hex) => {
+  const c = hex.replace('#', '');
+  const [r, g, b] = [0, 2, 4].map(i => {
+    const v = parseInt(c.slice(i, i + 2), 16) / 255;
+    return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+};
+const readableInk = (hex) => {
+  const L = relLum(hex);
+  const vsWhite = 1.05 / (L + 0.05);
+  const vsDark = (L + 0.05) / (relLum('#0f172a') + 0.05);
+  return vsDark >= vsWhite ? '#0f172a' : '#ffffff';
+};
 const tenseFam = (tenseId) => {
   const tObj = tenses.find(t => t.id === tenseId);
   const fam = tObj && TENSE_FAMILIES[tObj.timeType];
@@ -152,6 +173,7 @@ function TensePicker({ value, onChange, disabled, language, cefrLevel, highlight
                 {g.items.map(tn => {
                   const asp = aspectOf(tn.id);
                   const selected = tn.id === value;
+                  const step = g.fam.bg[v][asp];
                   return (
                     <button
                       key={tn.id}
@@ -159,12 +181,25 @@ function TensePicker({ value, onChange, disabled, language, cefrLevel, highlight
                       role="option"
                       aria-selected={selected}
                       onClick={() => { onChange(tn.id); setOpen(false); }}
-                      style={{ background: g.fam.bg[v][asp], color: g.fam.ink[v], boxShadow: selected ? `inset 0 0 0 2px ${g.fam.color[v]}` : undefined }}
-                      className="flex items-center gap-2 px-2.5 py-2 rounded-lg text-left text-sm font-medium transition-transform hover:scale-[1.01]"
+                      title={`${g.fam.label} · ${ASPECTS[asp].label}`}
+                      /* Fondo SIEMPRE el paso más pálido: da el tono (=tiempo)
+                         sin comprometer la lectura. La intensidad (=aspecto) se
+                         mudó a la pastilla del icono, donde la tinta se calcula. */
+                      style={{ background: g.fam.bg[v][0], boxShadow: selected ? `inset 0 0 0 2px ${g.fam.color[v]}` : undefined }}
+                      className="flex items-center gap-2 pr-2.5 py-2 rounded-lg text-left text-sm font-medium transition-transform hover:scale-[1.01] overflow-hidden"
                     >
-                      <span className="text-sm leading-none shrink-0" aria-hidden="true">{ASPECTS[asp].icon}</span>
-                      <span className="min-w-0 truncate">{language === 'es' ? tn.nameEs : tn.nameEn}</span>
-                      {selected && <Check className="w-3.5 h-3.5 ml-auto shrink-0" />}
+                      {/* Riel: el tono a plena saturación, siempre visible */}
+                      <span className="self-stretch w-1 rounded-full shrink-0" style={{ background: g.fam.color[v] }} aria-hidden="true" />
+                      {/* Pastilla de aspecto: aquí sí vive la rampa de intensidad */}
+                      <span
+                        className="shrink-0 inline-flex items-center justify-center w-5 h-5 rounded text-[11px] font-bold"
+                        style={{ background: step, color: readableInk(step) }}
+                        aria-hidden="true"
+                      >
+                        {ASPECTS[asp].icon}
+                      </span>
+                      <span className="min-w-0 truncate text-gray-800">{language === 'es' ? tn.nameEs : tn.nameEn}</span>
+                      {selected && <Check className="w-3.5 h-3.5 ml-auto shrink-0 text-gray-800" />}
                     </button>
                   );
                 })}
