@@ -35,10 +35,13 @@ export const tenses = [
   { id: 'past-perfect',               nameEn: 'Past Perfect',               nameEs: 'Pasado Perfecto',             example: 'I had worked',        timeType: 'past',    cefr: 'intermedio2', descEn: 'Actions before another past action',               descEs: 'Acciones antes de otra acción pasada' },
   { id: 'used-to',                    nameEn: 'Used to',                    nameEs: 'Used to',                     example: 'I used to work',      timeType: 'past',    cefr: 'intermedio2', descEn: 'Past habits that no longer exist',                 descEs: 'Hábitos pasados que ya no existen' },
   { id: 'present-perfect-continuous', nameEn: 'Present Perfect Continuous', nameEs: 'Presente Perfecto Continuo', example: 'I have been working', timeType: 'present', cefr: 'avanzado',    descEn: 'Actions that started in the past and continue',    descEs: 'Acciones que empezaron en el pasado y continúan' },
-  { id: 'would-past',                 nameEn: 'Would (past habit)',         nameEs: 'Would (hábito pasado)',       example: 'I would work',        timeType: 'past',    cefr: 'avanzado',    descEn: 'Repeated actions in the past',                     descEs: 'Acciones repetidas en el pasado' },
-  { id: 'future-perfect',             nameEn: 'Future Perfect',             nameEs: 'Futuro Perfecto',             example: 'I will have worked',  timeType: 'future',  cefr: 'avanzado',    descEn: 'Actions completed before a future time',           descEs: 'Acciones completadas antes de un tiempo futuro' },
-  { id: 'past-perfect-continuous',    nameEn: 'Past Perfect Continuous',    nameEs: 'Pasado Perfecto Continuo',   example: 'I had been working',  timeType: 'past',    cefr: 'avanzado',    descEn: 'Continuous actions before a past moment',          descEs: 'Acciones continuas antes de un momento pasado' },
 ];
+// Contrastados contra syllabus-aef.md (temario real de los cursos). Se quitaron:
+//   would-past  → no es un tiempo (would + base = misma forma que un modal), el
+//                 temario solo nombra `would` para la 2ª condicional y el hábito
+//                 pasado ya lo cubre `used to`. Vive como modal.
+//   future-perfect y past-perfect-continuous → no se enseñan en ningún curso
+//                 (confirmado con el profesor: tampoco en Practical English).
 
 // Verbos modales con información semántica completa
 export const modals = [
@@ -55,26 +58,29 @@ export const modals = [
     fullDescEn: 'Expresses ability or possibility in the present. Does not need an additional tense.'
   },
   {
+    // Elemental II por Practical English (pedir algo). Como gramática de
+    // habilidad pasada llega en AEF 3 4B, pero el alumno ya lo usa antes.
     id: 'could',
     name: 'Could',
     category: 'ability',
     cefr: 'elemental2',
-    descEs: 'Habilidad pasada / Cortesía',
-    descEn: 'Past ability / Politeness',
+    descEs: 'Pedir algo / Cortesía',
+    descEn: 'Requests / Politeness',
     timeContext: 'past',
-    fullDescEs: 'Expresa habilidad en el pasado, posibilidad remota o cortesía. Ya tiene su propia referencia temporal.',
-    fullDescEn: 'Expresses past ability, remote possibility, or politeness. Already has its own time reference.'
+    fullDescEs: 'Sirve para pedir algo con cortesía (Could I have…? / Could you help me?). Más adelante se estudia también como habilidad en el pasado.',
+    fullDescEn: 'Used to ask for things politely (Could I have…? / Could you help me?). Later it is also studied as past ability.'
   },
   {
+    // No tiene unidad propia: se nombra junto a `might`, así que va a su nivel.
     id: 'may',
     name: 'May',
     category: 'ability',
-    cefr: 'avanzado',
+    cefr: 'intermedio2',
     descEs: 'Permiso / Posibilidad',
     descEn: 'Permission / Possibility',
     timeContext: 'present',
-    fullDescEs: 'Expresa permiso formal o posibilidad. Se usa principalmente para el presente o futuro.',
-    fullDescEn: 'Expresses formal permission or possibility. Mainly used for present or future.'
+    fullDescEs: 'Expresa permiso formal o posibilidad. Alternativa más formal de "might".',
+    fullDescEn: 'Expresses formal permission or possibility. A more formal alternative to "might".'
   },
   {
     id: 'might',
@@ -121,26 +127,43 @@ export const modals = [
     fullDescEn: 'Expresses future, predictions, or willingness. Already indicates future time by itself.'
   },
   {
+    // Elemental I por Practical English (invitar/ofrecer). Su uso condicional
+    // llega en Intermedio II 9A, pero eso es la 2ª condicional: una estructura
+    // completa (If + pasado, would + base), no el modal suelto.
     id: 'would',
     name: 'Would',
     category: 'future',
     cefr: 'elemental1',
-    descEs: 'Ofrecimientos / Condicional',
-    descEn: 'Offers / Conditional',
+    descEs: 'Invitar / Ofrecer',
+    descEn: 'Invitations / Offers',
     timeContext: 'conditional',
-    fullDescEs: 'Expresa ofrecimientos e invitaciones (Would you like…?), situaciones condicionales y cortesía. El tiempo verbal seleccionado no afectará la estructura.',
-    fullDescEn: 'Expresses offers and invitations (Would you like…?), conditional situations, and politeness. The selected tense will not affect the structure.'
+    fullDescEs: 'Sirve para invitar y ofrecer con cortesía (Would you like…?). Más adelante aparece en la segunda condicional. El tiempo verbal seleccionado no afectará la estructura.',
+    fullDescEn: 'Used to invite and offer politely (Would you like…?). Later it appears in the second conditional. The selected tense will not affect the structure.'
   },
   {
+    // No tiene unidad propia: se nombra junto a `should`, así que va a su nivel.
     id: 'shall',
     name: 'Shall',
     category: 'future',
-    cefr: 'avanzado',
+    cefr: 'intermedio2',
     descEs: 'Sugerencia / Ofrecimiento',
     descEn: 'Suggestion / Offer',
     timeContext: 'future',
-    fullDescEs: 'Usado para sugerencias u ofrecimientos formales. Implica tiempo futuro.',
-    fullDescEn: 'Used for suggestions or formal offers. Implies future time.'
+    fullDescEs: 'Usado para sugerencias u ofrecimientos formales (Shall we…?). Alternativa más formal de "should".',
+    fullDescEn: 'Used for suggestions or formal offers (Shall we…?). A more formal alternative to "should".'
+  },
+  {
+    // Intermedio II 7C, junto a `must`. Es el único "modal" que se conjuga
+    // (has to / doesn't have to), así que el conjugador lo trata aparte.
+    id: 'have-to',
+    name: 'Have to',
+    category: 'obligation',
+    cefr: 'intermedio2',
+    descEs: 'Obligación externa',
+    descEn: 'External obligation',
+    timeContext: 'present',
+    fullDescEs: 'Expresa una obligación que viene de fuera: una regla, un horario, otra persona. Se conjuga (he has to) y se niega con do/does (she doesn\'t have to). Contrasta con "must", que nace de quien habla.',
+    fullDescEn: 'Expresses an obligation coming from outside: a rule, a schedule, someone else. It conjugates (he has to) and is negated with do/does (she doesn\'t have to). Contrasts with "must", which comes from the speaker.'
   },
 ];
 
@@ -265,10 +288,7 @@ export const extraTimeMarkers = {
   'past-continuous':           ['when I arrived', 'at that moment', 'all morning', 'while she slept', 'at 8 pm'],
   'past-perfect':              ['before I left', 'by then', 'already', 'when she arrived', 'never before'],
   'used-to':                   ['as a child', 'when I was young', 'every summer', 'in the past', 'years ago'],
-  'would-past':                ['every Sunday', 'as a child', 'often', 'when I was young', 'in those days'],
   'present-perfect-continuous':['for hours', 'since this morning', 'lately', 'recently', 'all week'],
-  'future-perfect':            ['by tomorrow', 'by next year', 'by then', 'by the time you arrive'],
-  'past-perfect-continuous':   ['for hours', 'since morning', 'before the meeting', 'when he called', 'all night'],
 };
 
 // Retorna chips de marcador de tiempo para un tiempo verbal dado

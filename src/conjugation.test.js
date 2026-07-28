@@ -126,10 +126,6 @@ describe('buildSentenceText — casos críticos de la revisión', () => {
       .toBe('Does Maria work?');
   });
 
-  it('C1: orden correcto en interrogativa de futuro perfecto', () => {
-    expect(s({ mode: 'interrogative', subject: 'she', verb: 'work', complement: 'by then', tense: 'future-perfect' }))
-      .toBe('Will she have worked by then?');
-  });
   it('C1: orden correcto en interrogativa "going to"', () => {
     expect(s({ mode: 'interrogative', subject: 'she', verb: 'travel', complement: 'tomorrow', tense: 'future-going-to' }))
       .toBe('Is she going to travel tomorrow?');
@@ -141,10 +137,6 @@ describe('buildSentenceText — casos críticos de la revisión', () => {
   it('C1: orden correcto en used-to interrogativo', () => {
     expect(s({ mode: 'interrogative', subject: 'she', verb: 'work', complement: '', tense: 'used-to' }))
       .toBe('Did she use to work?');
-  });
-  it('C1: orden correcto en pasado perfecto continuo interrogativo', () => {
-    expect(s({ mode: 'interrogative', subject: 'they', verb: 'study', complement: '', tense: 'past-perfect-continuous' }))
-      .toBe('Had they been studying?');
   });
 
   it('adverbio con "be" como verbo principal: afirmativa', () => {
@@ -212,15 +204,51 @@ describe('buildVerbPhrase — modo práctica', () => {
 });
 
 describe('getAuxAndVerbForm — usado por el desglose visual', () => {
-  it('futuro perfecto interrogativo separa "will" de "have"', () => {
-    const { auxiliary, verbForm } = getAuxAndVerbForm('she', 'work', 'future-perfect', '', 'interrogative');
-    expect(auxiliary).toBe('will have');
-    expect(verbForm).toBe('worked');
-  });
   it('going-to interrogativo', () => {
     const { auxiliary, verbForm } = getAuxAndVerbForm('she', 'travel', 'future-going-to', '', 'interrogative');
     expect(auxiliary).toBe('is going to');
     expect(verbForm).toBe('travel');
+  });
+  it('have to: se conjuga en 3ª persona', () => {
+    expect(getAuxAndVerbForm('she', 'work', '', 'have-to', 'affirmative').auxiliary).toBe('has to');
+    expect(getAuxAndVerbForm('they', 'work', '', 'have-to', 'affirmative').auxiliary).toBe('have to');
+  });
+  it('have to: niega con do/does, no con "not"', () => {
+    expect(getAuxAndVerbForm('she', 'work', '', 'have-to', 'negative').auxiliary).toBe("doesn't have to");
+    expect(getAuxAndVerbForm('i', 'work', '', 'have-to', 'negative').auxiliary).toBe("don't have to");
+  });
+  it('have to interrogativo: solo "does" se antepone al sujeto', () => {
+    expect(getAuxAndVerbForm('she', 'work', '', 'have-to', 'interrogative').auxiliary).toBe('does have to');
+  });
+});
+
+/* `have to` es el único "modal" de la lista que se conjuga y usa do/does.
+   Se cubren las tres formas porque cada una toma una rama distinta. */
+describe('have to — modal que se comporta como verbo', () => {
+  const s = (cfg) => buildSentenceText(cfg);
+  it('afirmativa: has to en 3ª persona', () => {
+    expect(s({ mode: 'affirmative', subject: 'she', verb: 'work', complement: 'on Sundays', modal: 'have-to' }))
+      .toBe('She has to work on Sundays.');
+  });
+  it('afirmativa: have to en el resto', () => {
+    expect(s({ mode: 'affirmative', subject: 'they', verb: 'study', complement: '', modal: 'have-to' }))
+      .toBe('They have to study.');
+  });
+  it('negativa: doesn\'t have to (no "have to not")', () => {
+    expect(s({ mode: 'negative', subject: 'she', verb: 'work', complement: '', modal: 'have-to' }))
+      .toBe("She doesn't have to work.");
+  });
+  it('negativa: don\'t have to en el resto', () => {
+    expect(s({ mode: 'negative', subject: 'I', verb: 'go', complement: '', modal: 'have-to' }))
+      .toBe("I don't have to go.");
+  });
+  it('interrogativa: Does + sujeto + have to', () => {
+    expect(s({ mode: 'interrogative', subject: 'she', verb: 'work', complement: 'today', modal: 'have-to' }))
+      .toBe('Does she have to work today?');
+  });
+  it('interrogativa con WH', () => {
+    expect(s({ mode: 'interrogative', subject: 'they', verb: 'go', complement: '', modal: 'have-to', whWord: 'when' }))
+      .toBe('When do they have to go?');
   });
 });
 

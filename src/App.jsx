@@ -108,12 +108,18 @@ const tenseFam = (tenseId) => {
 };
 
 /**
- * Picker de tiempos verbales. Reemplaza al <select> nativo, cuyas opciones no se
- * pueden colorear: aquí cada tiempo muestra su familia (tono = presente/pasado/
- * futuro) con la intensidad y el icono de su aspecto (● ◐ ◆ ◈) — la elección del
- * tiempo pasa a enseñar el sistema en vez de esconderlo.
+ * Selector de tiempos Y modales. Reemplaza al <select> nativo, cuyas opciones no
+ * se pueden colorear: aquí cada tiempo muestra su familia (tono = presente/
+ * pasado/futuro) con la intensidad y el icono de su aspecto (● ◐ ◆ ◈).
+ *
+ * Los modales viven aquí como cuarto grupo y no en un control aparte, porque
+ * ocupan la MISMA ranura gramatical: lo que determina la forma del verbo. La app
+ * ya los trataba como excluyentes (elegir modal desactivaba el selector de
+ * tiempos, con un "no aplica con modal" de disculpa); ahora esa exclusión se ve
+ * en vez de explicarse. Van en su propio grupo, con el color de la familia
+ * `modal` del sistema de diseño, porque un modal NO es un tiempo.
  */
-function TensePicker({ value, onChange, disabled, language, cefrLevel, highlight }) {
+function TensePicker({ value, modalValue, onSelectTense, onSelectModal, language, cefrLevel, highlight }) {
   const [open, setOpen] = useState(false);
   const boxRef = useRef(null);
 
@@ -129,33 +135,43 @@ function TensePicker({ value, onChange, disabled, language, cefrLevel, highlight
   const v = themeVariant();
   const sel = tenses.find(t => t.id === value);
   const fam = tenseFam(value);
+  const selModal = modals.find(m => m.id && m.id === modalValue);
+  const modalFam = TENSE_FAMILIES.modal;
   const groups = ['present', 'past', 'future'].map(tt => ({
     tt,
     label: tt === 'present' ? (language === 'es' ? 'Presente' : 'Present') : tt === 'past' ? (language === 'es' ? 'Pasado' : 'Past') : (language === 'es' ? 'Futuro' : 'Future'),
     fam: TENSE_FAMILIES[tt],
     items: tenses.filter(t => t.timeType === tt && COURSE_ORDER.indexOf(t.cefr) <= COURSE_ORDER.indexOf(cefrLevel)),
   })).filter(g => g.items.length > 0);
+  const modalItems = modals.filter(m => m.id && COURSE_ORDER.indexOf(m.cefr) <= COURSE_ORDER.indexOf(cefrLevel));
 
   return (
     <div ref={boxRef} className="relative w-full sm:w-auto sm:flex-1 min-w-0">
       <button
         type="button"
         onClick={() => setOpen(o => !o)}
-        disabled={disabled}
         aria-expanded={open}
         aria-haspopup="listbox"
-        style={fam && !disabled ? { borderLeftWidth: '4px', borderLeftColor: fam.color } : undefined}
+        style={(fam || selModal) ? { borderLeftWidth: '4px', borderLeftColor: selModal ? modalFam.color[v] : fam.color } : undefined}
         className={`w-full flex items-center gap-2 px-2.5 py-2 sm:py-1.5 rounded-lg text-sm font-semibold text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300 cursor-pointer text-left ${
           highlight ? 'border-2 border-indigo-400 ring-2 ring-indigo-200' : 'border border-gray-200'
-        } ${disabled ? 'opacity-40 cursor-not-allowed' : ''}`}
+        }`}
       >
-        {sel && fam ? (
+        {selModal ? (
+          <>
+            <span className="text-base leading-none shrink-0" style={{ color: modalFam.color[v] }} aria-hidden="true">{modalFam.icon}</span>
+            <span className="truncate">{selModal.name}</span>
+            <span className="text-xs font-normal text-gray-400 truncate hidden sm:inline">
+              {language === 'es' ? selModal.descEs : selModal.descEn}
+            </span>
+          </>
+        ) : sel && fam ? (
           <>
             <span className="text-base leading-none shrink-0" style={{ color: fam.color }} aria-hidden="true">{fam.icon}</span>
             <span className="truncate">{language === 'es' ? sel.nameEs : sel.nameEn}</span>
           </>
         ) : (
-          <span className="text-gray-400 font-medium truncate">{language === 'es' ? 'Selecciona un tiempo/estructura...' : 'Select a tense/structure...'}</span>
+          <span className="text-gray-400 font-medium truncate">{language === 'es' ? 'Selecciona un tiempo o modal...' : 'Select a tense or modal...'}</span>
         )}
         <ChevronDown className={`w-4 h-4 ml-auto shrink-0 text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
@@ -182,7 +198,7 @@ function TensePicker({ value, onChange, disabled, language, cefrLevel, highlight
                       type="button"
                       role="option"
                       aria-selected={selected}
-                      onClick={() => { onChange(tn.id); setOpen(false); }}
+                      onClick={() => { onSelectTense(tn.id); setOpen(false); }}
                       /* Sin title: el nombre del tiempo ya está a la vista y la
                          familia/aspecto los dice ese mismo nombre. El title solo
                          servía cuando el texto se truncaba, y ya no se trunca. */
@@ -213,6 +229,43 @@ function TensePicker({ value, onChange, disabled, language, cefrLevel, highlight
               </div>
             </div>
           ))}
+
+          {/* Cuarto grupo: modales. Separado y con su propio color porque un
+              modal NO es un tiempo — pero va en el mismo selector porque compite
+              por la misma decisión. Sin pastilla de aspecto: no tienen aspecto. */}
+          {modalItems.length > 0 && (
+            <div className="pt-2 mt-2 border-t border-gray-200">
+              <p className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-1 flex items-center gap-1.5" style={{ color: modalFam.color[v] }}>
+                <span className="w-2 h-2 rounded-full inline-block" style={{ background: modalFam.color[v] }} aria-hidden="true" />
+                {modalFam.label}
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
+                {modalItems.map(m => {
+                  const selected = m.id === modalValue;
+                  return (
+                    <button
+                      key={m.id}
+                      type="button"
+                      role="option"
+                      aria-selected={selected}
+                      onClick={() => { onSelectModal(m.id); setOpen(false); }}
+                      style={{ background: modalFam.bg[v][0], boxShadow: selected ? `inset 0 0 0 2px ${modalFam.color[v]}` : undefined }}
+                      className="flex items-center gap-2 pr-2.5 py-2 rounded-lg text-left text-sm font-medium transition-transform hover:scale-[1.01] overflow-hidden"
+                    >
+                      <span className="self-stretch w-1 rounded-full shrink-0" style={{ background: modalFam.color[v] }} aria-hidden="true" />
+                      <span className="min-w-0 leading-tight">
+                        <span className="text-gray-800 font-semibold">{m.name}</span>
+                        <span className="block text-[11px] text-gray-500 leading-tight">
+                          {language === 'es' ? m.descEs : m.descEn}
+                        </span>
+                      </span>
+                      {selected && <Check className="w-3.5 h-3.5 ml-auto shrink-0 text-gray-800" />}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -369,9 +422,6 @@ const COMPLEMENT_CHIPS = {
   'past-perfect':               ['before she arrived', 'already', 'by then', 'when I called'],
   'used-to':                    ['when I was a child', 'years ago', 'as a kid', 'in those days'],
   'present-perfect-continuous': ['for two hours', 'since this morning', 'all day', 'since Monday'],
-  'would-past':                 ['when I was young', 'as a child', 'every summer', 'in those days'],
-  'future-perfect':             ['by tomorrow', 'by next week', 'by then', 'by the time'],
-  'past-perfect-continuous':    ['for an hour', 'since morning', 'all day', 'for years'],
 };
 
 // Adverbios de sentido negativo: combinados con el modo negativo producen
@@ -414,11 +464,8 @@ const TENSE_FORMULAS = {
   'future-going-to':            { aff: 'S + am/is/are + going to + V + C',         neg: 'S + am/is/are + not + going to + V + C',      int: 'Am/Is/Are + S + going to + V + C?' },
   'present-perfect':            { aff: 'S + have/has + V(pp) + C',                 neg: 'S + have/has + not + V(pp) + C',              int: 'Have/Has + S + V(pp) + C?' },
   'past-perfect':               { aff: 'S + had + V(pp) + C',                      neg: 'S + had + not + V(pp) + C',                   int: 'Had + S + V(pp) + C?' },
-  'future-perfect':             { aff: 'S + will + have + V(pp) + C',              neg: 'S + will + not + have + V(pp) + C',           int: 'Will + S + have + V(pp) + C?' },
   'present-perfect-continuous': { aff: 'S + have/has + been + V(ing) + C',         neg: 'S + have/has + not + been + V(ing) + C',      int: 'Have/Has + S + been + V(ing) + C?' },
-  'past-perfect-continuous':    { aff: 'S + had + been + V(ing) + C',              neg: 'S + had + not + been + V(ing) + C',           int: 'Had + S + been + V(ing) + C?' },
   'used-to':                    { aff: 'S + used to + V + C',                      neg: 'S + did not + use to + V + C',                int: 'Did + S + use to + V + C?' },
-  'would-past':                 { aff: 'S + would + V + C',                        neg: 'S + would not + V + C',                       int: 'Would + S + V + C?' },
 };
 
 // Explicaciones (ES/EN) de cada parte de la oración, usadas en el desglose visual.
@@ -501,7 +548,6 @@ const EnglishSentenceBuilder = () => {
   const [selectedTense, setSelectedTense] = useState('');
   const [selectedMode, setSelectedMode] = useState('affirmative');
   const [selectedModal, setSelectedModal] = useState('');
-  const [showModalPicker, setShowModalPicker] = useState(false);
   const [whWord, setWhWord] = useState('');
   const [whExtension, setWhExtension] = useState('');
   const [whWarning, setWhWarning] = useState('');
@@ -1209,42 +1255,6 @@ const EnglishSentenceBuilder = () => {
         else if (!hasHaveHas)
           hint = h("El Presente Perfecto Continuo necesita have/has + been + verbo-ing. Ejemplo: She has been working.",
                    "Present Perfect Continuous needs have/has + been + verb-ing. Example: She has been working.");
-      }
-
-      else if (tenseId === 'would-past') {
-        if (hasUsedTo)
-          hint = h("'Used to' y 'would' expresan hábitos pasados, pero aquí se pide 'would'. Estructura: would + verbo base.",
-                   "'Used to' and 'would' both express past habits, but here 'would' is required. Structure: would + base verb.");
-        else if (!hasWould)
-          hint = h("'Would' para hábitos pasados: would + verbo base. Ejemplo: She would work every day.",
-                   "'Would' for past habits: would + base verb. Example: She would work every day.");
-        else if (mode === 'negative' && !hasNegAux)
-          hint = h("Negativo: wouldn't + verbo base. Ejemplo: She wouldn't work.",
-                   "Negative: wouldn't + base verb. Example: She wouldn't work.");
-      }
-
-      else if (tenseId === 'future-perfect') {
-        if (hasWill && !hasHaveHas && !hasBeen)
-          hint = h("Eso es Simple Future. El Futuro Perfecto necesita will + have + participio. Ejemplo: She will have worked.",
-                   "That's Simple Future. Future Perfect needs will + have + past participle. Example: She will have worked.");
-        else if (hasWill && hasHaveHas && hasIngForm)
-          hint = h("Futuro Perfecto usa participio pasado, no verbo-ing. Ejemplo: will have worked (no 'will have working').",
-                   "Future Perfect uses past participle, not verb-ing. Example: will have worked (not 'will have working').");
-        else if (!hasWill || !hasHaveHas)
-          hint = h("El Futuro Perfecto necesita will + have + participio pasado. Ejemplo: She will have worked.",
-                   "Future Perfect needs will + have + past participle. Example: She will have worked.");
-      }
-
-      else if (tenseId === 'past-perfect-continuous') {
-        if (hasWaWere && hasIngForm && !hasHad)
-          hint = h("Eso es Past Continuous. El Pasado Perfecto Continuo necesita had + been + verbo-ing.",
-                   "That's Past Continuous. Past Perfect Continuous needs had + been + verb-ing.");
-        else if (hasHad && !hasBeen)
-          hint = h("Falta 'been'. Estructura completa: had + been + verbo-ing. Ejemplo: She had been working.",
-                   "Missing 'been'. Full structure: had + been + verb-ing. Example: She had been working.");
-        else if (!hasHad)
-          hint = h("El Pasado Perfecto Continuo necesita had + been + verbo-ing. Ejemplo: She had been working.",
-                   "Past Perfect Continuous needs had + been + verb-ing. Example: She had been working.");
       }
 
       // Fallback: negativo sin auxiliar (para tiempos no cubiertos arriba)
@@ -2315,21 +2325,18 @@ const EnglishSentenceBuilder = () => {
             <div className="flex flex-wrap items-center gap-2">
 
               <label className={`text-xs font-semibold tracking-wide uppercase shrink-0 ${!selectedTense && !selectedModal ? 'text-indigo-600' : 'text-gray-500'}`}>
-                {t.tense} {!selectedModal && <span className="text-red-500">*</span>}
+                {language === 'es' ? 'Tiempo o modal' : 'Tense or modal'} <span className="text-red-500">*</span>
               </label>
+              {/* Tiempo y modal son excluyentes: elegir uno limpia el otro. */}
               <TensePicker
                 value={selectedTense}
-                onChange={setSelectedTense}
-                disabled={!!selectedModal}
+                modalValue={selectedModal}
+                onSelectTense={(id) => { setSelectedTense(id); setSelectedModal(''); }}
+                onSelectModal={(id) => { setSelectedModal(id); setSelectedTense(''); }}
                 language={language}
                 cefrLevel={cefrLevel}
                 highlight={!selectedTense && !selectedModal}
               />
-              {selectedModal && (
-                <span className="text-xs text-purple-500 shrink-0">
-                  {language === 'es' ? 'no aplica con modal' : 'not used with modal'}
-                </span>
-              )}
 
               <div className="hidden sm:block w-px h-5 bg-gray-200 shrink-0" />
 
@@ -2619,99 +2626,6 @@ const EnglishSentenceBuilder = () => {
                 </div>
               )}
             </div>
-          </div>
-
-          {/* Verbo modal */}
-          <div>
-            {/* Estado colapsado: badge si hay selección, botón trigger si no */}
-            {!showModalPicker && (
-              <div className="flex items-center gap-2">
-                {selectedModal ? (() => {
-                  const activeModal = modals.find(m => m.id === selectedModal);
-                  return (
-                    <>
-                      <button
-                        onClick={() => setShowModalPicker(true)}
-                        className="flex items-center gap-2 px-3 py-1.5 bg-purple-50 border border-purple-200 rounded-lg hover:bg-purple-100 transition-all"
-                      >
-                        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{t.modalVerb}</span>
-                        <span className="font-bold text-sm text-purple-700">{activeModal?.name}</span>
-                        <span className="text-xs text-purple-500">{language === 'es' ? activeModal?.descEs : activeModal?.descEn}</span>
-                      </button>
-                      <button
-                        onClick={() => { setSelectedModal(''); setShowModalPicker(false); }}
-                        className="p-1 text-gray-400 hover:text-red-500 transition-colors"
-                        title={language === 'es' ? 'Quitar modal' : 'Remove modal'}
-                      >
-                        <X className="w-3.5 h-3.5" />
-                      </button>
-                    </>
-                  );
-                })() : (
-                  <button
-                    onClick={() => setShowModalPicker(true)}
-                    disabled={modals.filter(m => m.id !== '' && COURSE_ORDER.indexOf(m.cefr) <= COURSE_ORDER.indexOf(cefrLevel)).length === 0}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-gray-400 border border-dashed border-gray-300 rounded-lg hover:border-purple-300 hover:text-purple-500 transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:border-gray-300 disabled:hover:text-gray-400"
-                  >
-                    <span className="text-base leading-none">+</span>
-                    {language === 'es' ? 'Agregar verbo modal' : 'Add modal verb'}
-                    <span className="text-gray-300">
-                      {modals.filter(m => m.id !== '' && COURSE_ORDER.indexOf(m.cefr) <= COURSE_ORDER.indexOf(cefrLevel)).length === 0
-                        ? (language === 'es' ? '— disponible desde Básico II' : '— available from Basic II')
-                        : `(${language === 'es' ? 'opcional' : 'optional'})`}
-                    </span>
-                  </button>
-                )}
-              </div>
-            )}
-
-            {/* Estado expandido: picker completo */}
-            {showModalPicker && (
-              <div className="border border-purple-100 rounded-xl p-3 bg-purple-50/40">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{t.modalVerb}</span>
-                  <button onClick={() => setShowModalPicker(false)} className="text-gray-400 hover:text-gray-600">
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-                <div className="space-y-3">
-                  {[
-                    { id: 'ability',    labelEs: 'Posibilidad / Habilidad', labelEn: 'Ability / Possibility', dotColor: 'bg-blue-400' },
-                    { id: 'obligation', labelEs: 'Obligación / Consejo',    labelEn: 'Obligation / Advice',   dotColor: 'bg-amber-400' },
-                    { id: 'future',     labelEs: 'Futuro / Condicional',    labelEn: 'Future / Conditional',  dotColor: 'bg-purple-400' },
-                  ].map(group => {
-                    const groupModals = modals.filter(m => m.id !== '' && m.category === group.id && COURSE_ORDER.indexOf(m.cefr) <= COURSE_ORDER.indexOf(cefrLevel));
-                    if (groupModals.length === 0) return null;
-                    return (
-                      <div key={group.id}>
-                        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5 flex items-center gap-1.5">
-                          <span className={`w-2 h-2 rounded-full inline-block ${group.dotColor}`}></span>
-                          {language === 'es' ? group.labelEs : group.labelEn}
-                        </p>
-                        <div className="flex flex-wrap gap-2">
-                          {groupModals.map(modal => (
-                            <button
-                              key={modal.id}
-                              onClick={() => { setSelectedModal(modal.id); setShowModalPicker(false); }}
-                              className={`flex flex-col items-center px-3 py-2 rounded-xl text-xs font-medium transition-all border ${
-                                selectedModal === modal.id
-                                  ? 'bg-purple-600 text-white border-purple-600 shadow-md'
-                                  : 'bg-white text-gray-700 border-gray-200 hover:border-purple-300 hover:bg-purple-50'
-                              }`}
-                            >
-                              <span className="font-bold text-sm">{modal.name}</span>
-                              <span className={`text-[10px] mt-0.5 leading-tight text-center ${selectedModal === modal.id ? 'text-purple-200' : 'text-gray-400'}`}>
-                                {language === 'es' ? modal.descEs : modal.descEn}
-                              </span>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Botón Generar */}

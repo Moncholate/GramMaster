@@ -14,9 +14,7 @@ import { buildSentenceText, getAuxAndVerbForm, smartCaseSubject } from './conjug
 const TENSES = [
   'simple-present', 'present-continuous', 'simple-past', 'past-continuous',
   'simple-future', 'future-going-to', 'present-perfect', 'past-perfect',
-  'future-perfect', 'present-perfect-continuous', 'past-perfect-continuous',
-  'used-to', 'would-past',
-];
+  'present-perfect-continuous', 'used-to', ];
 const MODES = ['affirmative', 'negative', 'interrogative'];
 const SUBJECTS = ['I', 'you', 'she', 'maria', 'the dogs', 'Tom and Ana'];
 const VERBS = ['work', 'study', 'go', 'have'];

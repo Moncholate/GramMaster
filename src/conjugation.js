@@ -176,6 +176,12 @@ const MODAL_NEGATIONS = {
 
 export const negateModal = (modal) => MODAL_NEGATIONS[modal] || modal + ' not';
 
+/* `have to` es el único de la lista que no se comporta como modal: se conjuga
+   (he has to) y se niega/pregunta con do/does, igual que un verbo normal. Se
+   trata aparte en las tres formas para no romper el resto. */
+export const isHaveTo = (modal) => modal === 'have-to';
+export const haveToForm = (subj) => isThirdPersonSingular(subj) ? 'has to' : 'have to';
+
 // ---------------------------------------------------------------------------
 // Auxiliar + forma verbal por tiempo/modo (para el análisis visual)
 // ---------------------------------------------------------------------------
@@ -196,6 +202,13 @@ export const getAuxAndVerbForm = (subj, v, tenseId, modal, mode) => {
   const int = mode === 'interrogative';
 
   if (modal) {
+    if (isHaveTo(modal)) {
+      // En interrogativa solo el primer token se antepone al sujeto, así que
+      // "does have to" se parte en "Does … have to" solo.
+      if (int) return { auxiliary: (is3p ? 'does' : 'do') + ' have to', verbForm: vLower };
+      if (neg) return { auxiliary: (is3p ? "doesn't" : "don't") + ' have to', verbForm: vLower };
+      return { auxiliary: haveToForm(subj), verbForm: vLower };
+    }
     return { auxiliary: neg ? negateModal(modal) : modal, verbForm: vLower };
   }
 
@@ -222,16 +235,10 @@ export const getAuxAndVerbForm = (subj, v, tenseId, modal, mode) => {
       return { auxiliary: hasHave + (neg ? ' not' : ''), verbForm: pp };
     case 'past-perfect':
       return { auxiliary: 'had' + (neg ? ' not' : ''), verbForm: pp };
-    case 'future-perfect':
-      return { auxiliary: neg ? 'will not have' : 'will have', verbForm: pp };
     case 'present-perfect-continuous':
       return { auxiliary: hasHave + (neg ? ' not' : '') + ' been', verbForm: ing };
-    case 'past-perfect-continuous':
-      return { auxiliary: 'had' + (neg ? ' not' : '') + ' been', verbForm: ing };
     case 'used-to':
       return { auxiliary: neg ? "didn't use to" : int ? 'did use to' : 'used to', verbForm: vLower };
-    case 'would-past':
-      return { auxiliary: neg ? "wouldn't" : 'would', verbForm: vLower };
     default:
       return { auxiliary: '', verbForm: vLower };
   }
@@ -274,6 +281,7 @@ export const buildSentenceText = ({ mode, subject: subjRaw, verb: vRaw, compleme
   const isBeVerb = v === 'be';
 
   if (mode === 'affirmative') {
+    if (isHaveTo(modal))                    return cap(subj) + ' ' + haveToForm(subj) + advSp + v + compStr + '.';
     if (modal)                              return cap(subj) + ' ' + modal + advSp + v + compStr + '.';
     if (tense === 'simple-present') {
       if (isBeVerb)                         return cap(subj) + ' ' + beForm + advSp.trimEnd() + compStr + '.';
@@ -289,13 +297,11 @@ export const buildSentenceText = ({ mode, subject: subjRaw, verb: vRaw, compleme
     if (tense === 'future-going-to')        return cap(subj) + ' ' + beForm + advSp + 'going to ' + v + compStr + '.';
     if (tense === 'present-perfect')        return cap(subj) + ' ' + hasHave + advSp + pp + compStr + '.';
     if (tense === 'past-perfect')           return cap(subj) + ' had' + advSp + pp + compStr + '.';
-    if (tense === 'future-perfect')         return cap(subj) + ' will' + advSp + 'have ' + pp + compStr + '.';
     if (tense === 'present-perfect-continuous') return cap(subj) + ' ' + hasHave + advSp + 'been ' + presentParticiple(v) + compStr + '.';
-    if (tense === 'past-perfect-continuous')    return cap(subj) + ' had' + advSp + 'been ' + presentParticiple(v) + compStr + '.';
     if (tense === 'used-to')                return cap(subj) + advSp + 'used to ' + v + compStr + '.';
-    if (tense === 'would-past')             return cap(subj) + ' would' + advSp + v + compStr + '.';
   }
   if (mode === 'negative') {
+    if (isHaveTo(modal))                    return cap(subj) + ' ' + (is3p ? "doesn't" : "don't") + ' have to' + advSp + v + compStr + '.';
     if (modal)                              return cap(subj) + ' ' + negateModal(modal) + advSp + v + compStr + '.';
     if (tense === 'simple-present') {
       if (isBeVerb)                         return cap(subj) + ' ' + beForm + ' not' + advAfter + compStr + '.';
@@ -311,11 +317,8 @@ export const buildSentenceText = ({ mode, subject: subjRaw, verb: vRaw, compleme
     if (tense === 'future-going-to')        return cap(subj) + ' ' + beForm + ' not' + advSp + 'going to ' + v + compStr + '.';
     if (tense === 'present-perfect')        return cap(subj) + ' ' + hasHave + ' not' + advSp + pp + compStr + '.';
     if (tense === 'past-perfect')           return cap(subj) + ' had not' + advSp + pp + compStr + '.';
-    if (tense === 'future-perfect')         return cap(subj) + ' will not' + advSp + 'have ' + pp + compStr + '.';
     if (tense === 'present-perfect-continuous') return cap(subj) + ' ' + hasHave + ' not' + advSp + 'been ' + presentParticiple(v) + compStr + '.';
-    if (tense === 'past-perfect-continuous')    return cap(subj) + ' had not' + advSp + 'been ' + presentParticiple(v) + compStr + '.';
     if (tense === 'used-to')                return cap(subj) + " didn't" + advSp + 'use to ' + v + compStr + '.';
-    if (tense === 'would-past')             return cap(subj) + " wouldn't" + advSp + v + compStr + '.';
   }
   if (mode === 'interrogative') {
     // LIMITACIÓN CONOCIDA: no se soportan preguntas sobre el sujeto
@@ -327,6 +330,7 @@ export const buildSentenceText = ({ mode, subject: subjRaw, verb: vRaw, compleme
     const prefix = fullWh ? cap(fullWh) + ' ' : '';
     // Con palabra WH delante, el auxiliar va en minúscula (What does she…?)
     const first = (aux) => prefix + (fullWh ? aux : cap(aux));
+    if (isHaveTo(modal))                    return first(is3p ? 'does' : 'do') + ' ' + subj + advAfter + ' have to ' + v + compStr + '?';
     if (modal)                              return first(modal) + ' ' + subj + advAfter + ' ' + v + compStr + '?';
     if (tense === 'simple-present') {
       if (isBeVerb)                         return first(beForm) + ' ' + subj + advAfter + compStr + '?';
@@ -342,11 +346,8 @@ export const buildSentenceText = ({ mode, subject: subjRaw, verb: vRaw, compleme
     if (tense === 'future-going-to')        return first(beForm) + ' ' + subj + advAfter + ' going to ' + v + compStr + '?';
     if (tense === 'present-perfect')        return first(hasHave) + ' ' + subj + advAfter + ' ' + pp + compStr + '?';
     if (tense === 'past-perfect')           return first('had') + ' ' + subj + advAfter + ' ' + pp + compStr + '?';
-    if (tense === 'future-perfect')         return first('will') + ' ' + subj + advAfter + ' have ' + pp + compStr + '?';
     if (tense === 'present-perfect-continuous') return first(hasHave) + ' ' + subj + advAfter + ' been ' + presentParticiple(v) + compStr + '?';
-    if (tense === 'past-perfect-continuous')    return first('had') + ' ' + subj + advAfter + ' been ' + presentParticiple(v) + compStr + '?';
     if (tense === 'used-to')                return first('did') + ' ' + subj + advAfter + ' use to ' + v + compStr + '?';
-    if (tense === 'would-past')             return first('would') + ' ' + subj + advAfter + ' ' + v + compStr + '?';
   }
   return '';
 };
