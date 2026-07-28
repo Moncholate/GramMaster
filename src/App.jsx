@@ -184,7 +184,9 @@ function TensePicker({ value, onChange, disabled, language, cefrLevel, highlight
                       role="option"
                       aria-selected={selected}
                       onClick={() => { onChange(tn.id); setOpen(false); }}
-                      title={`${language === 'es' ? tn.nameEs : tn.nameEn} — ${g.fam.label} · ${ASPECTS[asp].label}`}
+                      /* Sin title: el nombre del tiempo ya está a la vista y la
+                         familia/aspecto los dice ese mismo nombre. El title solo
+                         servía cuando el texto se truncaba, y ya no se trunca. */
                       /* Fondo SIEMPRE el paso más pálido: da el tono (=tiempo)
                          sin comprometer la lectura. La intensidad (=aspecto) se
                          mudó a la pastilla del icono, donde la tinta se calcula. */
