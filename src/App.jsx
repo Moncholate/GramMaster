@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { BookOpen, Volume2, VolumeX, Award, AlertTriangle, CheckCircle, XCircle, HelpCircle, Sparkles, X, History, Copy, Check, Trash2, Clock, Play, Info, BarChart2 } from 'lucide-react';
+import { BookOpen, Volume2, VolumeX, Award, AlertTriangle, CheckCircle, XCircle, HelpCircle, Sparkles, X, History, Copy, Check, Trash2, Clock, Play, Info, BarChart2, ChevronDown } from 'lucide-react';
 import {
   translations,
   commonVerbs,
@@ -74,15 +74,108 @@ function ThemeToggle({ lang = 'es' }) {
   );
 }
 
-/* Familia de tiempo (tono = timeType, aspecto del id) para el acento del selector */
+/* Familia de tiempo (tono = timeType, aspecto del id) para el acento del selector.
+   Lee el tema actual en cada llamada para elegir la variante light/dark. */
 const aspectOf = (id = '') => (/continuous/.test(id) && /perfect/.test(id)) ? 3 : /perfect/.test(id) ? 2 : /continuous/.test(id) ? 1 : 0;
+const themeVariant = () => document.documentElement.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
 const tenseFam = (tenseId) => {
   const tObj = tenses.find(t => t.id === tenseId);
   const fam = tObj && TENSE_FAMILIES[tObj.timeType];
   if (!fam) return null;
+  const v = themeVariant();
   const asp = aspectOf(tObj.id);
-  return { color: fam.color.light, ink: fam.ink.light, bg: fam.bg.light[asp], icon: ASPECTS[asp].icon, label: fam.label };
+  return { color: fam.color[v], ink: fam.ink[v], bg: fam.bg[v][asp], icon: ASPECTS[asp].icon, label: fam.label };
 };
+
+/**
+ * Picker de tiempos verbales. Reemplaza al <select> nativo, cuyas opciones no se
+ * pueden colorear: aquí cada tiempo muestra su familia (tono = presente/pasado/
+ * futuro) con la intensidad y el icono de su aspecto (● ◐ ◆ ◈) — la elección del
+ * tiempo pasa a enseñar el sistema en vez de esconderlo.
+ */
+function TensePicker({ value, onChange, disabled, language, cefrLevel, highlight }) {
+  const [open, setOpen] = useState(false);
+  const boxRef = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e) => { if (boxRef.current && !boxRef.current.contains(e.target)) setOpen(false); };
+    const onKey = (e) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('mousedown', onDoc);
+    document.addEventListener('keydown', onKey);
+    return () => { document.removeEventListener('mousedown', onDoc); document.removeEventListener('keydown', onKey); };
+  }, [open]);
+
+  const v = themeVariant();
+  const sel = tenses.find(t => t.id === value);
+  const fam = tenseFam(value);
+  const groups = ['present', 'past', 'future'].map(tt => ({
+    tt,
+    label: tt === 'present' ? (language === 'es' ? 'Presente' : 'Present') : tt === 'past' ? (language === 'es' ? 'Pasado' : 'Past') : (language === 'es' ? 'Futuro' : 'Future'),
+    fam: TENSE_FAMILIES[tt],
+    items: tenses.filter(t => t.timeType === tt && COURSE_ORDER.indexOf(t.cefr) <= COURSE_ORDER.indexOf(cefrLevel)),
+  })).filter(g => g.items.length > 0);
+
+  return (
+    <div ref={boxRef} className="relative w-full sm:w-auto sm:flex-1 min-w-0">
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        disabled={disabled}
+        aria-expanded={open}
+        aria-haspopup="listbox"
+        style={fam && !disabled ? { borderLeftWidth: '4px', borderLeftColor: fam.color } : undefined}
+        className={`w-full flex items-center gap-2 px-2.5 py-2 sm:py-1.5 rounded-lg text-sm font-semibold text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300 cursor-pointer text-left ${
+          highlight ? 'border-2 border-indigo-400 ring-2 ring-indigo-200' : 'border border-gray-200'
+        } ${disabled ? 'opacity-40 cursor-not-allowed' : ''}`}
+      >
+        {sel && fam ? (
+          <>
+            <span className="text-base leading-none shrink-0" style={{ color: fam.color }} aria-hidden="true">{fam.icon}</span>
+            <span className="truncate">{language === 'es' ? sel.nameEs : sel.nameEn}</span>
+          </>
+        ) : (
+          <span className="text-gray-400 font-medium truncate">{language === 'es' ? 'Selecciona un tiempo/estructura...' : 'Select a tense/structure...'}</span>
+        )}
+        <ChevronDown className={`w-4 h-4 ml-auto shrink-0 text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+
+      {open && (
+        <div role="listbox" className="absolute z-20 mt-1 left-0 right-0 max-h-80 overflow-y-auto bg-white border border-gray-200 rounded-xl shadow-lg p-2">
+          {groups.map(g => (
+            <div key={g.tt} className="mb-2 last:mb-0">
+              <p className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-1 flex items-center gap-1.5" style={{ color: g.fam.color[v] }}>
+                <span className="w-2 h-2 rounded-full inline-block" style={{ background: g.fam.color[v] }} aria-hidden="true" />
+                {g.label}
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
+                {g.items.map(tn => {
+                  const asp = aspectOf(tn.id);
+                  const selected = tn.id === value;
+                  return (
+                    <button
+                      key={tn.id}
+                      type="button"
+                      role="option"
+                      aria-selected={selected}
+                      onClick={() => { onChange(tn.id); setOpen(false); }}
+                      style={{ background: g.fam.bg[v][asp], color: g.fam.ink[v], boxShadow: selected ? `inset 0 0 0 2px ${g.fam.color[v]}` : undefined }}
+                      className="flex items-center gap-2 px-2.5 py-2 rounded-lg text-left text-sm font-medium transition-transform hover:scale-[1.01]"
+                    >
+                      <span className="text-sm leading-none shrink-0" aria-hidden="true">{ASPECTS[asp].icon}</span>
+                      <span className="min-w-0 truncate">{language === 'es' ? tn.nameEs : tn.nameEn}</span>
+                      {selected && <Check className="w-3.5 h-3.5 ml-auto shrink-0" />}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 const COMPLEMENT_CHIPS = {
   'simple-present':             ['every day', 'on Mondays', 'in the morning', 'at work', 'at home'],
@@ -202,9 +295,25 @@ const SENTENCE_PART_EXPLANATIONS = {
   }
 };
 
+/* Nivel e idioma compartidos con la suite (mismo origen => mismo localStorage).
+   El Hub escribe gh_level; standalone, Grammaster los recuerda igual en vez de
+   arrancar siempre en 'es'/'basico1'. Se valida lo leído por si quedó un valor
+   de otra versión. */
+const GH_LEVELS = ['basico1', 'basico2', 'elemental1', 'elemental2', 'intermedio1', 'intermedio2', 'avanzado'];
+const readShared = (key, valid, fallback) => {
+  try {
+    const v = localStorage.getItem(key);
+    return valid.includes(v) ? v : fallback;
+  } catch { return fallback; }
+};
+const writeShared = (key, v) => {
+  try { localStorage.setItem(key, v); } catch { /* modo privado */ }
+};
+
 const EnglishSentenceBuilder = () => {
-  const [language, setLanguage] = useState('es');
+  const [language, setLanguageState] = useState(() => readShared('gh_lang', ['es', 'en'], 'es'));
   const [fromHub, setFromHub] = useState(() => window.self !== window.top);
+  const setLanguage = (v) => { setLanguageState(v); writeShared('gh_lang', v); };
   const [subject, setSubject] = useState('');
   const [verb, setVerb] = useState('');
   const [complement, setComplement] = useState('');
@@ -248,7 +357,8 @@ const EnglishSentenceBuilder = () => {
   const [identifyTenseAnswer, setIdentifyTenseAnswer] = useState('');
   const [identifyModeAnswer, setIdentifyModeAnswer] = useState('');
   const [showHint, setShowHint] = useState(false);
-  const [cefrLevel, setCefrLevel] = useState('basico1');
+  const [cefrLevel, setCefrLevelState] = useState(() => readShared('gh_level', GH_LEVELS, 'basico1'));
+  const setCefrLevel = (v) => { setCefrLevelState(v); writeShared('gh_level', v); };
   const [notification, setNotification] = useState(null); // { type: 'error' | 'success', message: string }
 
   const [practiceDays, setPracticeDays] = useLocalStorage('practiceDays', []); // array of 'YYYY-MM-DD' strings
@@ -335,7 +445,7 @@ const EnglishSentenceBuilder = () => {
 
   // Grammar HUB: escuchar cambio de idioma y nivel vía postMessage
   useEffect(() => {
-    const validLevels = ['basico1','basico2','elemental1','elemental2','intermedio1','intermedio2','avanzado'];
+    const validLevels = GH_LEVELS;
     const handler = (e) => {
       if (e.data?.type === 'GRAMMAR_HUB_LANG' && (e.data.lang === 'es' || e.data.lang === 'en')) {
         setLanguage(e.data.lang);
@@ -1479,6 +1589,34 @@ const EnglishSentenceBuilder = () => {
   // Cerrar panel activo
   const closePanel = () => setActivePanel(null);
 
+  // Avanzar a la siguiente pregunta de práctica (botón "Siguiente" y tecla Enter)
+  const nextPractice = () => {
+    if (practiceType === 'review') {
+      startReview();
+    } else {
+      setPracticeQuestion(generatePracticeQuestion(practiceType));
+      setPracticeAnswer('');
+      setPracticeResult(null);
+      setIdentifyTenseAnswer('');
+      setIdentifyModeAnswer('');
+      setShowHint(false);
+    }
+  };
+
+  // Con el resultado a la vista, Enter avanza. Sin esto el flujo de teclado se
+  // corta: el input queda disabled tras responder y hay que ir al mouse.
+  useEffect(() => {
+    if (!practiceResult) return;
+    const onKey = (e) => {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      nextPractice();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [practiceResult, practiceType]);
+
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-[#f5f6fb]">
       {badgeToasts.length > 0 && (
@@ -1625,18 +1763,20 @@ const EnglishSentenceBuilder = () => {
                         </div>
                       )}
                       {/* Tarjeta de pregunta */}
-                      <div className={`p-4 rounded-xl border ${practiceQuestion.type === 'identify' ? 'bg-purple-50 border-purple-200' : practiceQuestion.type === 'correct' ? 'bg-orange-50 border-orange-200' : practiceQuestion.type === 'review' ? 'bg-amber-50 border-amber-200' : 'bg-blue-50 border-blue-200'}`}>
+                      {/* Colores por actividad, del sistema de la suite:
+                          completar=índigo · corregir=coral · identificar=teal · repaso=ámbar */}
+                      <div className={`p-4 rounded-xl border ${practiceQuestion.type === 'identify' ? 'bg-teal-50 border-teal-200' : practiceQuestion.type === 'correct' ? 'bg-rose-50 border-rose-200' : practiceQuestion.type === 'review' ? 'bg-amber-50 border-amber-200' : 'bg-indigo-50 border-indigo-200'}`}>
                         {(practiceQuestion.type === 'fill' || practiceQuestion.type === 'review') && (
                           <>
-                            <p className={`text-xs font-medium mb-2 uppercase tracking-wide ${practiceQuestion.type === 'review' ? 'text-amber-600' : 'text-blue-500'}`}>
+                            <p className={`text-xs font-medium mb-2 uppercase tracking-wide ${practiceQuestion.type === 'review' ? 'text-amber-600' : 'text-indigo-500'}`}>
                               {practiceQuestion.type === 'review'
                                 ? (language === 'es' ? '🔄 Repaso espaciado' : '🔄 Spaced review')
                                 : (language === 'es' ? 'Completa el verbo' : 'Fill in the verb')}
                             </p>
                             <p className="text-lg font-medium mb-1">
                               <span className="text-gray-800">{practiceQuestion.subject}</span>
-                              <span className="mx-2 px-3 py-0.5 bg-white border-2 border-blue-400 rounded text-blue-600 font-bold">____</span>
-                              <span className="text-blue-400 text-sm font-normal">({practiceQuestion.verb})</span>
+                              <span className="mx-2 px-3 py-0.5 bg-white border-2 border-indigo-400 rounded text-indigo-600 font-bold">____</span>
+                              <span className="text-indigo-400 text-sm font-normal">({practiceQuestion.verb})</span>
                               <span className="text-gray-800 ml-1">{practiceQuestion.complement}.</span>
                             </p>
                             <div className="flex gap-2 text-xs mt-1">
@@ -1647,14 +1787,14 @@ const EnglishSentenceBuilder = () => {
                               type="text" value={practiceAnswer} onChange={(e) => setPracticeAnswer(e.target.value)}
                               onKeyDown={(e) => e.key === 'Enter' && !practiceResult && checkPracticeAnswer()}
                               placeholder={language === 'es' ? 'Escribe la frase verbal...' : 'Type the verb phrase...'}
-                              className={`w-full mt-3 px-4 py-2 border-2 rounded-lg focus:outline-none ${practiceQuestion.type === 'review' ? 'border-amber-300 focus:border-amber-500' : 'border-blue-300 focus:border-blue-500'}`}
+                              className={`w-full mt-3 px-4 py-2 border-2 rounded-lg focus:outline-none ${practiceQuestion.type === 'review' ? 'border-amber-300 focus:border-amber-500' : 'border-indigo-300 focus:border-indigo-500'}`}
                               disabled={!!practiceResult}
                             />
                           </>
                         )}
                         {practiceQuestion.type === 'correct' && (
                           <>
-                            <p className="text-xs text-orange-500 font-medium mb-2 uppercase tracking-wide">{language === 'es' ? 'Corrige el error' : 'Correct the error'}</p>
+                            <p className="text-xs text-rose-500 font-medium mb-2 uppercase tracking-wide">{language === 'es' ? 'Corrige el error' : 'Correct the error'}</p>
                             <p className="text-lg font-medium mb-1">
                               {showHint && practiceQuestion.wrongPart
                                 ? practiceQuestion.wrongSentence.split(practiceQuestion.wrongPart).map((part, i, arr) => (
@@ -1681,14 +1821,14 @@ const EnglishSentenceBuilder = () => {
                               type="text" value={practiceAnswer} onChange={(e) => setPracticeAnswer(e.target.value)}
                               onKeyDown={(e) => e.key === 'Enter' && !practiceResult && checkPracticeAnswer()}
                               placeholder={language === 'es' ? 'Escribe la parte correcta...' : 'Write the correct part...'}
-                              className="w-full px-4 py-2 border-2 border-orange-300 rounded-lg focus:border-orange-500 focus:outline-none"
+                              className="w-full px-4 py-2 border-2 border-rose-300 rounded-lg focus:border-rose-500 focus:outline-none"
                               disabled={!!practiceResult}
                             />
                           </>
                         )}
                         {practiceQuestion.type === 'identify' && (
                           <>
-                            <p className="text-xs text-purple-500 font-medium mb-2 uppercase tracking-wide">
+                            <p className="text-xs text-teal-600 font-medium mb-2 uppercase tracking-wide">
                               {practiceQuestion.askTense
                                 ? (language === 'es' ? '¿Qué tiempo/estructura verbal y modo es?' : 'What tense/structure and mode is this?')
                                 : (language === 'es' ? '¿Qué modo tiene esta oración?' : 'What mode is this sentence?')}
@@ -1711,10 +1851,13 @@ const EnglishSentenceBuilder = () => {
                                               ? 'bg-red-100 border-red-300 text-red-600'
                                               : 'bg-gray-100 border-gray-200 text-gray-400'
                                           : identifyTenseAnswer === opt.id
-                                            ? 'bg-purple-100 border-purple-400 text-purple-700'
-                                            : 'bg-white border-gray-200 text-gray-600 hover:border-purple-300'
+                                            ? 'bg-teal-100 border-teal-400 text-teal-700'
+                                            : 'bg-white border-gray-200 text-gray-600 hover:border-teal-300'
                                       }`}
                                     >
+                                      {/* refuerzo no cromático del resultado (DUA) */}
+                                      {practiceResult && opt.id === practiceQuestion.tense.id && <span aria-hidden="true">✓ </span>}
+                                      {practiceResult && identifyTenseAnswer === opt.id && opt.id !== practiceQuestion.tense.id && <span aria-hidden="true">✗ </span>}
                                       {language === 'es' ? opt.nameEs : opt.nameEn}
                                     </button>
                                   ))}
@@ -1740,10 +1883,12 @@ const EnglishSentenceBuilder = () => {
                                           ? 'bg-red-100 border-red-300 text-red-600'
                                           : 'bg-gray-100 border-gray-200 text-gray-400'
                                       : identifyModeAnswer === m.id
-                                        ? 'bg-purple-100 border-purple-400 text-purple-700'
-                                        : 'bg-white border-gray-200 text-gray-600 hover:border-purple-300'
+                                        ? 'bg-teal-100 border-teal-400 text-teal-700'
+                                        : 'bg-white border-gray-200 text-gray-600 hover:border-teal-300'
                                   }`}
                                 >
+                                  {practiceResult && m.id === practiceQuestion.mode && <span aria-hidden="true">✓ </span>}
+                                  {practiceResult && identifyModeAnswer === m.id && m.id !== practiceQuestion.mode && <span aria-hidden="true">✗ </span>}
                                   {m.label}
                                 </button>
                               ))}
@@ -1784,7 +1929,9 @@ const EnglishSentenceBuilder = () => {
                             className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg font-medium disabled:opacity-40 disabled:cursor-not-allowed"
                           >{t.checkAnswer}</button>
                         ) : (
-                          <button onClick={() => { if (practiceType === 'review') { startReview(); } else { setPracticeQuestion(generatePracticeQuestion(practiceType)); setPracticeAnswer(''); setPracticeResult(null); setIdentifyTenseAnswer(''); setIdentifyModeAnswer(''); setShowHint(false); } }} className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium">{t.nextQuestion}</button>
+                          <button onClick={nextPractice} className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium">
+                            {t.nextQuestion} <span className="opacity-60 font-normal hidden sm:inline">(Enter)</span>
+                          </button>
                         )}
                         <button onClick={() => { setPracticeQuestion(null); setPracticeAnswer(''); setPracticeResult(null); setIdentifyTenseAnswer(''); setIdentifyModeAnswer(''); setReviewUpToDate(false); }} className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium">{t.exitPractice}</button>
                       </div>
@@ -1827,6 +1974,10 @@ const EnglishSentenceBuilder = () => {
                 const streak = computeStreak(practiceDays);
                 const tenseStats = computeTenseStats();
                 const hasData = totalAllTime > 0;
+                // Racha de TODA la suite (gh_progress, cualquier app cuenta) —
+                // puede diferir de la local y confundir si no se distingue.
+                let suiteStreak = 0;
+                try { suiteStreak = loadProgress(window.localStorage)?.dayStreak?.count || 0; } catch { /* sin datos */ }
 
                 // Últimos 30 días para el calendario
                 const last30 = Array.from({ length: 30 }, (_, i) => {
@@ -1861,12 +2012,18 @@ const EnglishSentenceBuilder = () => {
                             {streak > 0 ? (
                               <>
                                 <p className="text-2xl font-bold text-white">{streak} {streak === 1 ? t.dayStreakSingle : t.dayStreak}</p>
-                                <p className="text-xs text-white/90">{t.streakSubtitle}</p>
+                                <p className="text-xs text-white/90">{language === 'es' ? 'Practicando en Grammaster' : 'Practicing in Grammaster'}</p>
+                                {suiteStreak !== streak && suiteStreak > 0 && (
+                                  <p className="text-xs text-white/75 mt-0.5">🧩 {language === 'es' ? `Toda la suite: ${suiteStreak} días` : `Whole suite: ${suiteStreak} days`}</p>
+                                )}
                               </>
                             ) : (
                               <>
                                 <p className="text-lg font-bold text-gray-500">0 {t.dayStreak}</p>
                                 <p className="text-xs text-gray-400">{t.noStreakYet}</p>
+                                {suiteStreak > 0 && (
+                                  <p className="text-xs text-gray-400 mt-0.5">🧩 {language === 'es' ? `Toda la suite: ${suiteStreak} días` : `Whole suite: ${suiteStreak} days`}</p>
+                                )}
                               </>
                             )}
                           </div>
@@ -2025,36 +2182,14 @@ const EnglishSentenceBuilder = () => {
               <label className={`text-xs font-semibold tracking-wide uppercase shrink-0 ${!selectedTense && !selectedModal ? 'text-indigo-600' : 'text-gray-500'}`}>
                 {t.tense} {!selectedModal && <span className="text-red-500">*</span>}
               </label>
-              <select
+              <TensePicker
                 value={selectedTense}
-                onChange={(e) => setSelectedTense(e.target.value)}
+                onChange={setSelectedTense}
                 disabled={!!selectedModal}
-                style={tenseFam(selectedTense) && !selectedModal ? { borderLeftWidth: '4px', borderLeftColor: tenseFam(selectedTense).color } : undefined}
-                className={`w-full sm:w-auto sm:flex-1 min-w-0 px-2 py-2 sm:py-1.5 rounded-lg text-sm font-semibold text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300 cursor-pointer ${!selectedTense && !selectedModal ? 'border-2 border-indigo-400 ring-2 ring-indigo-200' : 'border border-gray-200'} ${selectedModal ? 'opacity-40 cursor-not-allowed' : ''}`}
-              >
-                <option value="">{language === 'es' ? 'Selecciona un tiempo/estructura...' : 'Select a tense/structure...'}</option>
-                {['present', 'past', 'future'].map(timeType => {
-                  const filtered = tenses.filter(t => t.timeType === timeType && COURSE_ORDER.indexOf(t.cefr) <= COURSE_ORDER.indexOf(cefrLevel));
-                  if (filtered.length === 0) return null;
-                  const groupLabel = timeType === 'present' ? (language === 'es' ? 'Presente' : 'Present') : timeType === 'past' ? (language === 'es' ? 'Pasado' : 'Past') : (language === 'es' ? 'Futuro' : 'Future');
-                  return (
-                    <optgroup key={timeType} label={groupLabel}>
-                      {filtered.map(tense => (
-                        <option key={tense.id} value={tense.id}>{language === 'es' ? tense.nameEs : tense.nameEn}</option>
-                      ))}
-                    </optgroup>
-                  );
-                })}
-              </select>
-              {tenseFam(selectedTense) && !selectedModal && (
-                <span
-                  title={tenseFam(selectedTense).label}
-                  style={{ background: tenseFam(selectedTense).bg, color: tenseFam(selectedTense).ink, borderColor: tenseFam(selectedTense).color }}
-                  className="shrink-0 hidden sm:inline-flex items-center justify-center w-8 h-8 rounded-lg border text-base font-bold"
-                >
-                  {tenseFam(selectedTense).icon}
-                </span>
-              )}
+                language={language}
+                cefrLevel={cefrLevel}
+                highlight={!selectedTense && !selectedModal}
+              />
               {selectedModal && (
                 <span className="text-xs text-purple-500 shrink-0">
                   {language === 'es' ? 'no aplica con modal' : 'not used with modal'}
@@ -2447,7 +2582,7 @@ const EnglishSentenceBuilder = () => {
           {/* Botón Generar */}
           <button
             onClick={generateSentence}
-            className="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold hover:shadow-lg transition-all flex items-center justify-center gap-2"
+            className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold hover:shadow-lg transition-all flex items-center justify-center gap-2"
           >
             <Play className="w-5 h-5" />
             {t.generate}
