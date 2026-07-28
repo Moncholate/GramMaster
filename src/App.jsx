@@ -1708,6 +1708,21 @@ const EnglishSentenceBuilder = () => {
 
   // Llevar la vista a la oración generada al pulsar "Generar" (queda escondida en móvil)
   const sentenceRef = useRef(null);
+
+  /* Enter avanza al siguiente campo. Sin esto había que tocar fuera del cuadro
+     para salir, y en el verbo era peor: la lista de sugerencias tapa el campo de
+     complemento en móvil (los campos se apilan), así que el toque caía sobre una
+     sugerencia en vez de sobre el campo. */
+  const subjectRef = useRef(null);
+  const verbRef = useRef(null);
+  const complementRef = useRef(null);
+  const advanceOnEnter = (e, nextRef) => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    setShowVerbSuggestions(false);
+    if (nextRef) nextRef.current?.focus();
+    else { e.currentTarget.blur(); generateSentence(); }
+  };
   const [genTick, setGenTick] = useState(0);
   useEffect(() => {
     if (!genTick || !sentenceRef.current) return;
@@ -2456,9 +2471,17 @@ const EnglishSentenceBuilder = () => {
                 <span className="text-red-500 text-xs">*</span>
               </label>
               <input
+                ref={subjectRef}
                 type="text"
                 value={subject}
                 onChange={(e) => setSubject(e.target.value)}
+                onKeyDown={(e) => advanceOnEnter(e, verbRef)}
+                /* El teclado móvil capitaliza la primera letra de cada campo y
+                   eso llega a la oración final. Se apaga aquí (el alumno decide
+                   cuándo va mayúscula) y smartCase lo corrige al generar. */
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck="false"
                 placeholder="I, you, he, she, we..."
                 className={`w-full px-4 py-2.5 border-y border-r rounded-lg border-l-4 focus:ring-2 focus:ring-indigo-500 outline-none transition-all ${
                   !subjectValidation.valid ? 'border-red-400 bg-red-50' :
@@ -2521,11 +2544,21 @@ const EnglishSentenceBuilder = () => {
                 <span className="text-red-500 text-xs">*</span>
               </label>
               <input
+                ref={verbRef}
                 type="text"
                 value={verb}
                 onChange={(e) => { setVerb(e.target.value); setShowVerbSuggestions(e.target.value.length > 0); }}
                 onFocus={() => setShowVerbSuggestions(verb.length > 0)}
                 onBlur={() => setTimeout(() => setShowVerbSuggestions(false), 200)}
+                /* Enter cierra las sugerencias y salta al complemento; Escape
+                   solo las cierra, para poder seguir editando el verbo. */
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') { setShowVerbSuggestions(false); return; }
+                  advanceOnEnter(e, complementRef);
+                }}
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck="false"
                 placeholder="work, study, play..."
                 className={`w-full px-4 py-2.5 border-y border-r rounded-lg border-l-4 focus:ring-2 focus:ring-indigo-500 outline-none transition-all ${
                   verbBaseSuggestion || !verbValidation.valid ? 'border-red-400 bg-red-50' :
@@ -2587,9 +2620,15 @@ const EnglishSentenceBuilder = () => {
                 <span className="text-gray-400 text-xs">({t.optional})</span>
               </label>
               <input
+                ref={complementRef}
                 type="text"
                 value={complement}
                 onChange={(e) => setComplement(e.target.value)}
+                /* Último campo: Enter genera la oración directamente. */
+                onKeyDown={(e) => advanceOnEnter(e, null)}
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck="false"
                 placeholder="yesterday, at home..."
                 className={`w-full px-4 py-2.5 border-y border-r rounded-lg border-l-4 focus:ring-2 focus:ring-indigo-500 outline-none transition-all ${
                   !complementValidation.valid ? 'border-red-400 bg-red-50' :

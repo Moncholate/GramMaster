@@ -224,6 +224,38 @@ describe('getAuxAndVerbForm — usado por el desglose visual', () => {
 
 /* `have to` es el único "modal" de la lista que se conjuga y usa do/does.
    Se cubren las tres formas porque cada una toma una rama distinta. */
+/* El teclado del móvil capitaliza la primera letra de cada campo, y eso llegaba
+   a la oración final ("She works At home."). Al mismo tiempo el inglés SÍ
+   capitaliza días, meses e idiomas — que el español no, y es un error clásico. */
+describe('mayúsculas del complemento y del sujeto', () => {
+  const s = (cfg) => buildSentenceText(cfg);
+
+  it('baja la mayúscula automática del complemento', () => {
+    expect(s({ mode: 'affirmative', subject: 'she', verb: 'work', complement: 'At home', tense: 'simple-present' }))
+      .toBe('She works at home.');
+  });
+  it('conserva los nombres propios del complemento', () => {
+    expect(s({ mode: 'affirmative', subject: 'they', verb: 'live', complement: 'in Peru', tense: 'simple-present' }))
+      .toBe('They live in Peru.');
+  });
+  it('capitaliza los días aunque estén en el diccionario', () => {
+    expect(s({ mode: 'affirmative', subject: 'i', verb: 'study', complement: 'on monday', tense: 'simple-present' }))
+      .toBe('I study on Monday.');
+  });
+  it('capitaliza meses e idiomas', () => {
+    expect(s({ mode: 'affirmative', subject: 'we', verb: 'travel', complement: 'in january', tense: 'simple-past' }))
+      .toBe('We traveled in January.');
+    expect(s({ mode: 'affirmative', subject: 'he', verb: 'speak', complement: 'english', tense: 'simple-present' }))
+      .toBe('He speaks English.');
+  });
+  it('el sujeto sigue normalizando "i" y los nombres', () => {
+    expect(s({ mode: 'affirmative', subject: 'i', verb: 'work', complement: '', tense: 'simple-present' }))
+      .toBe('I work.');
+    expect(s({ mode: 'affirmative', subject: 'maria', verb: 'work', complement: '', tense: 'simple-present' }))
+      .toBe('Maria works.');
+  });
+});
+
 describe('have to — modal que se comporta como verbo', () => {
   const s = (cfg) => buildSentenceText(cfg);
   it('afirmativa: has to en 3ª persona', () => {

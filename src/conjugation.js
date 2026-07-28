@@ -10,21 +10,39 @@ import { validPronouns, validDeterminers, hispanicNames } from './data/validatio
 
 const stripAccents = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, ''); // quita tildes: josé → jose
 
+/* El inglés capitaliza días, meses, idiomas y nacionalidades; el español no, y
+   es un error sistemático de los hispanohablantes. Se fuerzan en mayúscula para
+   que la oración generada modele la regla en vez de reproducir el error.
+   Va ANTES del diccionario a propósito: monday, january y sunday están ahí y si
+   no, terminarían en minúscula ("on monday"). */
+const ALWAYS_CAPITAL = new Set([
+  'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday',
+  'january', 'february', 'march', 'april', 'may', 'june', 'july', 'august',
+  'september', 'october', 'november', 'december',
+  'english', 'spanish', 'french', 'german', 'italian', 'portuguese', 'chinese',
+  'japanese', 'korean', 'russian', 'arabic',
+  'chilean', 'american', 'british', 'mexican', 'argentinian', 'brazilian',
+  'colombian', 'peruvian', 'canadian', 'australian',
+]);
+
+const upperFirst = (w) => w.charAt(0).toUpperCase() + w.slice(1);
+
 // Normaliza el casing del sujeto sin destruir nombres propios:
 // - "i" siempre → "I"
 // - nombres hispanos conocidos → Capitalizados (maria → Maria)
 // - palabras comunes del diccionario → minúscula (corrige el autocapitalizado
 //   del teclado móvil: "The dog" → "the dog")
 // - todo lo demás se respeta tal como lo escribió el usuario
-export const smartCaseSubject = (raw) => {
+export const smartCase = (raw) => {
   return raw
     .trim()
     .split(/\s+/)
     .map((word) => {
       const lower = word.toLowerCase();
       if (lower === 'i') return 'I';
+      if (ALWAYS_CAPITAL.has(lower)) return upperFirst(lower);
       if (hispanicNames.includes(lower) || hispanicNames.includes(stripAccents(lower))) {
-        return word.charAt(0).toUpperCase() + lower.slice(1);
+        return upperFirst(lower);
       }
       if (
         englishDictionary.includes(lower) ||
@@ -37,6 +55,10 @@ export const smartCaseSubject = (raw) => {
     })
     .join(' ');
 };
+
+// Mismo tratamiento para sujeto y complemento: ambos pueden traer mayúsculas
+// que el teclado del móvil metió solo. Se conserva el nombre histórico.
+export const smartCaseSubject = smartCase;
 
 export const isThirdPersonSingular = (subjectText) => {
   const subj = subjectText.toLowerCase().trim();
@@ -262,11 +284,13 @@ export const buildVerbPhrase = (subj, v, tenseId, modal, mode) => {
 const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
 export const buildSentenceText = ({ mode, subject: subjRaw, verb: vRaw, complement: compRaw, tense, modal, whWord: wh, whExtension: whExt, adverb: adv }) => {
-  // El sujeto conserva nombres propios y normaliza "i" → "I"; el complemento
-  // se respeta tal como lo escribió el usuario ("in Peru", "with Maria").
-  const subj = smartCaseSubject(subjRaw);
+  // Sujeto y complemento pasan por el mismo normalizador: conserva nombres
+  // propios ("in Peru", "with Maria"), fuerza días/meses/idiomas en mayúscula
+  // ("on Monday") y baja las mayúsculas que el teclado del móvil mete sola al
+  // empezar cada campo ("At home" → "at home").
+  const subj = smartCase(subjRaw);
   const v = vRaw.toLowerCase().trim();
-  const comp = compRaw ? compRaw.trim() : '';
+  const comp = compRaw ? smartCase(compRaw) : '';
   const subjLower = subj.toLowerCase();
   const compStr = comp ? ' ' + comp : '';
   const pp = pastParticiple(v);
