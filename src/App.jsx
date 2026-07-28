@@ -561,6 +561,8 @@ const EnglishSentenceBuilder = () => {
 
   // FASE 1: Nuevos estados
   const [sentenceHistory, setSentenceHistory] = useLocalStorage('sentenceHistory', []);
+  const [confirmClear, setConfirmClear] = useState(false);   // "¿Seguro?" del historial
+  const confirmClearTimer = useRef(null);
   const [showHistory, setShowHistory] = useState(false);
   const { stats: sessionStats, totalAllTime, incrementStats } = useSessionStats();
   const [showVerbSuggestions, setShowVerbSuggestions] = useState(false);
@@ -694,11 +696,21 @@ const EnglishSentenceBuilder = () => {
     return commonVerbs.filter(v => v.startsWith(lowerVerb) && v !== lowerVerb).slice(0, 8);
   };
 
-  // FASE 1: Limpiar historial
+  /* Confirmación en la propia UI, no con window.confirm: dentro del iframe del
+     Hub los diálogos nativos están bloqueados y confirm() devuelve false al
+     instante, así que el botón no hacía nada. El primer toque arma, el segundo
+     borra; se desarma solo a los 4 s. */
   const clearHistory = () => {
-    if (window.confirm(language === 'es' ? '¿Seguro que quieres limpiar el historial?' : 'Are you sure you want to clear the history?')) {
-      setSentenceHistory([]); // useLocalStorage persiste el array vacío solo
+    if (!confirmClear) {
+      setConfirmClear(true);
+      clearTimeout(confirmClearTimer.current);
+      confirmClearTimer.current = setTimeout(() => setConfirmClear(false), 4000);
+      return;
     }
+    clearTimeout(confirmClearTimer.current);
+    setConfirmClear(false);
+    setSentenceHistory([]); // useLocalStorage persiste el array vacío solo
+    showNotification('success', language === 'es' ? 'Historial limpiado' : 'History cleared');
   };
 
   // FASE 1: Eliminar del historial
@@ -720,16 +732,24 @@ const EnglishSentenceBuilder = () => {
   };
 
   const exportHistory = () => {
+    if (sentenceHistory.length === 0) return;
     const lines = sentenceHistory.map((item, i) => {
       const tenseName = language === 'es' ? item.config.tense?.nameEs : item.config.tense?.nameEn;
       return `${i + 1}. ${item.sentence}\n   [${tenseName || item.config.modal || ''} · ${item.config.mode} · ${formatTimestamp(item.timestamp)}]`;
     });
-    const content = lines.join('\n\n');
-    const blob = new Blob([content], { type: 'text/plain' });
+    // BOM para que Excel/Notepad no rompan los acentos al abrir el .txt
+    const blob = new Blob(['﻿' + lines.join('\n\n')], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url;
-    a.download = 'grammaster-historial.txt'; a.click();
-    URL.revokeObjectURL(url);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'grammaster-historial.txt';
+    // Hay que ADJUNTARLO al documento: sin esto Firefox ignora el click.
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    // Revocar de inmediato puede abortar la descarga antes de que arranque.
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    showNotification('success', language === 'es' ? 'Historial exportado' : 'History exported');
   };
 
   // Registrar día de práctica en localStorage y estado
@@ -1863,8 +1883,18 @@ const EnglishSentenceBuilder = () => {
                         <button onClick={exportHistory} className="flex-1 px-4 py-2 bg-indigo-50 text-indigo-600 rounded-lg text-sm font-medium hover:bg-indigo-100 flex items-center justify-center gap-2">
                           <BookOpen className="w-4 h-4" /> {language === 'es' ? 'Exportar' : 'Export'}
                         </button>
-                        <button onClick={clearHistory} className="flex-1 px-4 py-2 bg-red-50 text-red-600 rounded-lg text-sm font-medium hover:bg-red-100 flex items-center justify-center gap-2">
-                          <Trash2 className="w-4 h-4" /> {t.clearHistory}
+                        <button
+                          onClick={clearHistory}
+                          className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition-colors ${
+                            confirmClear
+                              ? 'bg-red-600 text-white hover:bg-red-700'
+                              : 'bg-red-50 text-red-600 hover:bg-red-100'
+                          }`}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          {confirmClear
+                            ? (language === 'es' ? '¿Seguro? Toca de nuevo' : 'Sure? Tap again')
+                            : t.clearHistory}
                         </button>
                       </div>
                       {sentenceHistory.map((item, index) => {
