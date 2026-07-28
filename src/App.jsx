@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { BookOpen, Volume2, VolumeX, Award, AlertTriangle, CheckCircle, XCircle, HelpCircle, Sparkles, X, History, Copy, Check, Trash2, Play, Info, BarChart2, ChevronDown } from 'lucide-react';
+import { BookOpen, Volume2, VolumeX, AlertTriangle, CheckCircle, XCircle, HelpCircle, X, History, Copy, Check, Trash2, Play, Info, BarChart2, ChevronDown } from 'lucide-react';
 import {
   translations,
   commonVerbs,
@@ -2908,23 +2908,27 @@ const EnglishSentenceBuilder = () => {
       {/* Barra de navegación inferior — persistente (modelo de pestañas, como QL) */}
       <nav className="flex-shrink-0 bg-white border-t border-gray-200 shadow-lg z-30" style={{ order: 2 }}>
         <div className="flex items-stretch max-w-2xl mx-auto">
+          {/* Iconos emoji, iguales a Desgramatizador y Question Lab: 📖 Guía,
+              ✏️ Práctica y 📊 Progreso son los mismos en las tres apps. El de la
+              actividad principal sí cambia, porque cambia la actividad: aquí se
+              CONSTRUYE (🧱, como el logo) y allá se analiza (🔍). */}
           {[
-            { panel: null,        icon: <Sparkles className="w-5 h-5" />, label: language === 'es' ? 'Construye' : 'Build' },
-            { panel: 'guide', icon: <BookOpen className="w-5 h-5" />, label: language === 'es' ? 'Guía' : 'Guide' },
-            { panel: 'practice',  icon: <Award className="w-5 h-5" />, label: language === 'es' ? 'Práctica' : 'Practice' },
-            { panel: 'progress',  icon: <BarChart2 className="w-5 h-5" />, label: language === 'es' ? 'Progreso' : 'Progress' },
-            { panel: 'history',   icon: <History className="w-5 h-5" />,  label: language === 'es' ? 'Historial' : 'History', badge: totalAllTime > 0 ? (totalAllTime > 99 ? '99+' : totalAllTime) : null },
+            { panel: null,       icon: '🧱', label: language === 'es' ? 'Construye' : 'Build' },
+            { panel: 'guide',    icon: '📖', label: language === 'es' ? 'Guía' : 'Guide' },
+            { panel: 'practice', icon: '✏️', label: language === 'es' ? 'Práctica' : 'Practice' },
+            { panel: 'progress', icon: '📊', label: language === 'es' ? 'Progreso' : 'Progress' },
+            { panel: 'history',  icon: '🕘', label: language === 'es' ? 'Historial' : 'History', badge: totalAllTime > 0 ? (totalAllTime > 99 ? '99+' : totalAllTime) : null },
           ].map(({ panel, icon, label, badge }) => (
             <button
               key={panel || 'home'}
               onClick={() => setActivePanel(panel)}
               aria-pressed={activePanel === panel}
-              className={`flex-1 flex flex-col items-center justify-center gap-0.5 py-2.5 transition-colors relative ${
+              className={`flex-1 flex flex-col items-center justify-center gap-0.5 py-2 transition-colors relative ${
                 activePanel === panel ? 'text-indigo-600' : 'text-gray-400 hover:text-gray-600'
               }`}
             >
-              {icon}
-              <span className="text-[10px] font-medium leading-tight">{label}</span>
+              <span className="text-xl leading-none" aria-hidden="true">{icon}</span>
+              <span className="text-[10px] font-bold leading-tight">{label}</span>
               {badge && (
                 <span aria-hidden="true" className="absolute top-1.5 right-1/2 translate-x-3 bg-indigo-500 text-white font-bold rounded-full flex items-center justify-center" style={{fontSize:'9px', minWidth:'16px', height:'16px', padding:'0 3px'}}>
                   {badge}
