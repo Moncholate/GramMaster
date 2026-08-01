@@ -62,7 +62,7 @@ export const TENSE_FAMILIES = {
       "dark": "#34d399"
     },
     "ink": {
-      "light": "#046c4e",
+      "light": "#045138",
       "dark": "#6ee7b7"
     },
     "bg": {
