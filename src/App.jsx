@@ -40,7 +40,7 @@ import {
 import { useClipboard, useSpeechSynthesis, useLocalStorage, useSessionStats } from './hooks';
 import { ROLE_TW } from './tokens.generated.js';
 import { TENSE_FAMILIES, ASPECTS } from './tenseFamilies.generated.js';
-import { loadProgress, saveProgress, recordAttempt, evaluateBadges, BADGES } from './gamification.generated.js';
+import { loadProgress, saveProgress, recordAttempt, recordRound, evaluateBadges, BADGES } from './gamification.generated.js';
 
 /* Toggle de tema de la suite (auto→claro→oscuro por SO; toggle binario que ofrece
    el modo destino). Usa window.ghTheme, sincronizado same-origin entre las 4 apps. */
@@ -1114,6 +1114,22 @@ const EnglishSentenceBuilder = () => {
     } catch (e) {}
   };
 
+  /* Cierre de ronda → progreso compartido. Va en un efecto y no dentro de
+     sumaRonda porque ahí estaríamos con un side effect adentro de un updater de
+     estado, que React puede ejecutar dos veces. El efecto depende de
+     `ronda.hechos`, así que dispara UNA vez, justo cuando llega al total. */
+  useEffect(() => {
+    if (ronda.hechos !== RONDA) return;
+    try {
+      const p = loadProgress(window.localStorage);
+      recordRound(p, { app: 'grammaster', ok: ronda.ok, total: RONDA });
+      const { newly } = evaluateBadges(p, BADGES, []);
+      saveProgress(window.localStorage, p);
+      if (newly.length) pushBadgeToasts(newly);
+    } catch (e) {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ronda.hechos]);
+
   /* La racha se lee del valor que TENDRÁ tras este acierto: setAnswerStreak es
      asíncrono, así que leer answerStreak aquí daría el de la respuesta anterior. */
   const sumaRonda = (acerto) => setRonda(r => ({
@@ -2040,7 +2056,6 @@ const EnglishSentenceBuilder = () => {
                           )}
                         </div>
                       </div>
-                      )}
                       {/* Tarjeta de pregunta */}
                       {/* Colores por actividad, del sistema de la suite:
                           completar=índigo · corregir=coral · identificar=teal · repaso=ámbar */}
