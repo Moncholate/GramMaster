@@ -582,6 +582,14 @@ const EnglishSentenceBuilder = () => {
   const [practiceAnswer, setPracticeAnswer] = useState('');
   const [practiceResult, setPracticeResult] = useState(null);
   const [answerStreak, setAnswerStreak] = useState(0);   // racha de aciertos consecutivos (inline)
+  /* Rondas de práctica. Antes la sesión no terminaba nunca: nextPractice
+     generaba otro ejercicio indefinidamente, sin cuenta ni cierre, así que el
+     alumno no sabía si iba por la mitad o recién empezando y no tenía dónde
+     parar. Diez ejercicios son 3-5 minutos, la misma dosis que en Question Lab
+     y la que el banco de frases le predica al que estudia de noche. */
+  const RONDA = 10;
+  const [ronda, setRonda] = useState({ hechos: 0, ok: 0, mejor: 0 });
+  const rondaTerminada = ronda.hechos >= RONDA;
   const [badgeToasts, setBadgeToasts] = useState([]);   // gamificación de suite
   const [identifyTenseAnswer, setIdentifyTenseAnswer] = useState('');
   const [identifyModeAnswer, setIdentifyModeAnswer] = useState('');
@@ -992,6 +1000,7 @@ const EnglishSentenceBuilder = () => {
     setIdentifyModeAnswer('');
     setShowHint(false);
     setAnswerStreak(0);   // nueva actividad → racha desde cero
+    setRonda({ hechos: 0, ok: 0, mejor: 0 });
   };
 
   // SRS: actualizar datos tras verificar respuesta
@@ -1105,6 +1114,14 @@ const EnglishSentenceBuilder = () => {
     } catch (e) {}
   };
 
+  /* La racha se lee del valor que TENDRÁ tras este acierto: setAnswerStreak es
+     asíncrono, así que leer answerStreak aquí daría el de la respuesta anterior. */
+  const sumaRonda = (acerto) => setRonda(r => ({
+    hechos: r.hechos + 1,
+    ok: r.ok + (acerto ? 1 : 0),
+    mejor: Math.max(r.mejor, acerto ? answerStreak + 1 : 0),
+  }));
+
   const checkPracticeAnswer = () => {
     if (!practiceQuestion) return;
     recordPracticeDay();
@@ -1114,6 +1131,7 @@ const EnglishSentenceBuilder = () => {
       const isCorrect = tenseOk && modeOk;
       recordGameAttempt(practiceQuestion.tense?.id, isCorrect);
       setAnswerStreak(s => isCorrect ? s + 1 : 0);
+      sumaRonda(isCorrect);
       setPracticeResult({
         correct: isCorrect,
         tenseOk,
@@ -1130,6 +1148,7 @@ const EnglishSentenceBuilder = () => {
     updateSRS(practiceQuestion.tense?.id, practiceQuestion.mode, isCorrect);
     recordGameAttempt(practiceQuestion.tense?.id, isCorrect);
     setAnswerStreak(s => isCorrect ? s + 1 : 0);
+    sumaRonda(isCorrect);
 
     let hint = null;
     if (!isCorrect) {
@@ -1969,14 +1988,58 @@ const EnglishSentenceBuilder = () => {
                       )}
                     </div>
                   ) : (
-                    <div className="space-y-4">
-                      {/* Racha de aciertos consecutivos (inline) */}
-                      {answerStreak > 0 && (
-                        <div className="flex justify-end">
-                          <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-bold text-white bg-gradient-to-br from-rose-500 to-amber-500 shadow-sm shadow-rose-500/25">
-                            🔥 {language === 'es' ? 'Racha' : 'Streak'}: {answerStreak}
-                          </span>
+                    rondaTerminada ? (
+                      /* Cierre de ronda: mismo formato que Question Lab, para que
+                         practicar en una app y en otra se sienta igual. */
+                      <div className="text-center py-8 px-4">
+                        <p className="text-5xl font-extrabold text-indigo-600 leading-none">{ronda.ok} / {RONDA}</p>
+                        <p className="text-sm text-gray-500 mt-2">
+                          {language === 'es' ? 'Ronda terminada' : 'Round complete'}
+                        </p>
+                        {ronda.mejor > 1 && (
+                          <p className="text-sm mt-3">🔥 {language === 'es' ? 'Mejor racha' : 'Best streak'}: {ronda.mejor}</p>
+                        )}
+                        {ronda.ok === RONDA && (
+                          <p className="text-sm mt-1">⭐ {language === 'es' ? '¡Ronda perfecta!' : 'Perfect round!'}</p>
+                        )}
+                        <div className="flex gap-2 justify-center mt-6 flex-wrap">
+                          <button
+                            onClick={() => startPractice(practiceType)}
+                            className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold"
+                          >
+                            {language === 'es' ? 'Otra ronda' : 'Another round'}
+                          </button>
+                          <button
+                            onClick={() => { setPracticeMode(false); setRonda({ hechos: 0, ok: 0, mejor: 0 }); }}
+                            className="px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-semibold"
+                          >
+                            {language === 'es' ? 'Volver' : 'Back'}
+                          </button>
                         </div>
+                      </div>
+                    ) : (
+                    <div className="space-y-4">
+                      {/* Avance de la ronda: barra fina + cuenta. Sin una meta a la
+                          vista la sesión no terminaba nunca y el alumno no sabía
+                          cuánto le faltaba para poder parar. */}
+                      <div>
+                        <div className="h-1 rounded-full bg-gray-200 overflow-hidden">
+                          <div
+                            className="h-full bg-indigo-500 rounded-full transition-all duration-300 motion-reduce:transition-none"
+                            style={{ width: `${ronda.hechos / RONDA * 100}%` }}
+                          />
+                        </div>
+                        <div className="flex items-center justify-between mt-1.5">
+                          <span className="text-xs font-semibold text-gray-500">
+                            {language === 'es' ? 'Ejercicio' : 'Exercise'} {Math.min(ronda.hechos + 1, RONDA)} {language === 'es' ? 'de' : 'of'} {RONDA}
+                          </span>
+                          {answerStreak > 0 && (
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-bold text-white bg-gradient-to-br from-rose-500 to-amber-500 shadow-sm shadow-rose-500/25">
+                              🔥 {language === 'es' ? 'Racha' : 'Streak'}: {answerStreak}
+                            </span>
+                          )}
+                        </div>
+                      </div>
                       )}
                       {/* Tarjeta de pregunta */}
                       {/* Colores por actividad, del sistema de la suite:
@@ -2152,6 +2215,7 @@ const EnglishSentenceBuilder = () => {
                         <button onClick={() => { setPracticeQuestion(null); setPracticeAnswer(''); setPracticeResult(null); setIdentifyTenseAnswer(''); setIdentifyModeAnswer(''); setReviewUpToDate(false); }} className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium">{t.exitPractice}</button>
                       </div>
                     </div>
+                    )
                   )}
                 </div>
               )}
