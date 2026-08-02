@@ -589,7 +589,13 @@ const EnglishSentenceBuilder = () => {
      y la que el banco de frases le predica al que estudia de noche. */
   const RONDA = 10;
   const [ronda, setRonda] = useState({ hechos: 0, ok: 0, mejor: 0 });
-  const rondaTerminada = ronda.hechos >= RONDA;
+  /* `hechos` sube al verificar, así que mientras se muestra la corrección hay un
+     ejercicio contado que el alumno todavía tiene en pantalla. De ahí salen dos
+     cosas distintas: `rondaTerminada` espera a que pida el siguiente (si no, el
+     resumen se comía la corrección del ejercicio 10) y el rótulo nombra el
+     ejercicio visible, que antes saltaba al verificar y hacía parecer 11. */
+  const rondaTerminada = ronda.hechos >= RONDA && !practiceResult;
+  const rondaEnPantalla = Math.min(ronda.hechos + (practiceResult ? 0 : 1), RONDA);
   const [badgeToasts, setBadgeToasts] = useState([]);   // gamificación de suite
   const [identifyTenseAnswer, setIdentifyTenseAnswer] = useState('');
   const [identifyModeAnswer, setIdentifyModeAnswer] = useState('');
@@ -1065,9 +1071,13 @@ const EnglishSentenceBuilder = () => {
   };
 
   // SRS: iniciar modo repaso
-  const startReview = () => {
+  /* `nueva` distingue entrar al repaso desde el menú (ronda desde cero) de
+     encadenar el ejercicio siguiente dentro de la ronda en curso, que también
+     pasa por aquí. */
+  const startReview = (nueva = false) => {
     const pending = getPendingReviews();
     setPracticeType('review');
+    if (nueva) { setAnswerStreak(0); setRonda({ hechos: 0, ok: 0, mejor: 0 }); }
     setPracticeAnswer('');
     setPracticeResult(null);
     setIdentifyTenseAnswer('');
@@ -1832,6 +1842,9 @@ const EnglishSentenceBuilder = () => {
 
   // Avanzar a la siguiente pregunta de práctica (botón "Siguiente" y tecla Enter)
   const nextPractice = () => {
+    /* Décimo ejercicio ya corregido: "Siguiente" cierra la ronda en vez de
+       generar otro que nadie va a ver. */
+    if (ronda.hechos >= RONDA) { setPracticeResult(null); return; }
     if (practiceType === 'review') {
       startReview();
     } else {
@@ -1977,7 +1990,7 @@ const EnglishSentenceBuilder = () => {
                           {(() => {
                             const pendingCount = getPendingReviews().length;
                             return (
-                              <button onClick={startReview} className="w-full p-4 bg-gray-50 hover:bg-amber-50 rounded-xl border-2 border-transparent hover:border-amber-200 text-left transition-all relative">
+                              <button onClick={() => startReview(true)} className="w-full p-4 bg-gray-50 hover:bg-amber-50 rounded-xl border-2 border-transparent hover:border-amber-200 text-left transition-all relative">
                                 <span className="text-2xl mr-3">🔄</span>
                                 <span className="font-semibold">{language === 'es' ? 'Modo Repaso' : 'Review Mode'}</span>
                                 <p className="text-xs text-gray-500 mt-1 ml-9">{language === 'es' ? 'Repasa estructuras según repetición espaciada' : 'Review structures using spaced repetition'}</p>
@@ -2020,13 +2033,21 @@ const EnglishSentenceBuilder = () => {
                         )}
                         <div className="flex gap-2 justify-center mt-6 flex-wrap">
                           <button
-                            onClick={() => startPractice(practiceType)}
+                            onClick={() => practiceType === 'review' ? startReview(true) : startPractice(practiceType)}
                             className="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold"
                           >
                             {language === 'es' ? 'Otra ronda' : 'Another round'}
                           </button>
+                          {/* El menú es lo que se ve cuando no hay pregunta, así que
+                              volver es soltar la pregunta; con solo apagar
+                              practiceMode el alumno quedaba en el mismo ejercicio. */}
                           <button
-                            onClick={() => { setPracticeMode(false); setRonda({ hechos: 0, ok: 0, mejor: 0 }); }}
+                            onClick={() => {
+                              setPracticeMode(false);
+                              setPracticeQuestion(null);
+                              setPracticeResult(null);
+                              setRonda({ hechos: 0, ok: 0, mejor: 0 });
+                            }}
                             className="px-5 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-semibold"
                           >
                             {language === 'es' ? 'Volver' : 'Back'}
@@ -2047,7 +2068,7 @@ const EnglishSentenceBuilder = () => {
                         </div>
                         <div className="flex items-center justify-between mt-1.5">
                           <span className="text-xs font-semibold text-gray-500">
-                            {language === 'es' ? 'Ejercicio' : 'Exercise'} {Math.min(ronda.hechos + 1, RONDA)} {language === 'es' ? 'de' : 'of'} {RONDA}
+                            {language === 'es' ? 'Ejercicio' : 'Exercise'} {rondaEnPantalla} {language === 'es' ? 'de' : 'of'} {RONDA}
                           </span>
                           {answerStreak > 0 && (
                             <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-bold text-white bg-gradient-to-br from-rose-500 to-amber-500 shadow-sm shadow-rose-500/25">
