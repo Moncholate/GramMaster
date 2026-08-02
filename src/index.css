@@ -37,6 +37,17 @@ html, body { font-family: 'Lexend', system-ui, -apple-system, 'Segoe UI', Roboto
 :root[data-theme="dark"] .bg-amber-50 { background-color: #2e2410 !important; }
 :root[data-theme="dark"] .bg-emerald-50, :root[data-theme="dark"] .bg-green-50 { background-color: #123024 !important; }
 :root[data-theme="dark"] .bg-blue-50, :root[data-theme="dark"] .bg-indigo-50 { background-color: #1a2036 !important; }
+/* teal-50 y rose-50 FALTABAN, y eran las tarjetas de Identifica y Corrige del
+   modo práctica. El texto de adentro es `text-gray-800`, que esta misma capa
+   invierte a #eceff8: quedaba texto claro sobre fondo claro y la oración no se
+   podía leer, así que el ejercicio no se podía responder.
+   Los tintes -100 NO se tocan a propósito: cada uno lleva su propio texto
+   oscuro (`text-teal-700`, `text-rose-700`…) que esta capa no invierte, así que
+   se leen bien; oscurecer el fondo sin tocar el texto los rompería. */
+:root[data-theme="dark"] .bg-teal-50 { background-color: #0e2b2c !important; }
+:root[data-theme="dark"] .bg-rose-50 { background-color: #331520 !important; }
+:root[data-theme="dark"] .border-teal-200 { border-color: #1c4e4d !important; }
+:root[data-theme="dark"] .border-rose-200 { border-color: #572635 !important; }
 /* gradientes claros del modo activo (Afirm./Neg./Inter.) → tintes oscuros */
 :root[data-theme="dark"] .from-emerald-50 { --tw-gradient-from: #123024 !important; }
 :root[data-theme="dark"] .to-emerald-100 { --tw-gradient-to: #16432f !important; }
