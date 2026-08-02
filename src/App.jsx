@@ -2900,7 +2900,15 @@ const EnglishSentenceBuilder = () => {
             { panel: 'guide',    icon: '📖', label: language === 'es' ? 'Guía' : 'Guide' },
             { panel: 'practice', icon: '✏️', label: language === 'es' ? 'Práctica' : 'Practice' },
             { panel: 'progress', icon: '📊', label: language === 'es' ? 'Progreso' : 'Progress' },
-            { panel: 'history',  icon: '🕘', label: language === 'es' ? 'Historial' : 'History', badge: totalAllTime > 0 ? (totalAllTime > 99 ? '99+' : totalAllTime) : null },
+            /* El contador va sobre `sentenceHistory.length`, NO sobre
+               `totalAllTime`. Un número sobre un icono promete cuántas cosas hay
+               ahí adentro, y totalAllTime es el total histórico de oraciones
+               generadas: no bajaba nunca. El historial guarda las últimas 20 y
+               el botón Limpiar lo vacía, así que la insignia decía 32 sobre un
+               panel con 20 elementos, o sobre uno vacío después de limpiar.
+               El total histórico no se pierde: sigue en el panel de Progreso,
+               que es donde un acumulado tiene sentido. */
+            { panel: 'history',  icon: '🕘', label: language === 'es' ? 'Historial' : 'History', badge: sentenceHistory.length || null },
           ].map(({ panel, icon, label, badge }) => (
             <button
               key={panel || 'home'}
