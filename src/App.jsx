@@ -2915,7 +2915,10 @@ const EnglishSentenceBuilder = () => {
               onClick={() => setActivePanel(panel)}
               aria-pressed={activePanel === panel}
               className={`flex-1 flex flex-col items-center justify-center gap-0.5 py-2 transition-colors relative ${
-                activePanel === panel ? 'text-indigo-600' : 'text-gray-400 hover:text-gray-600'
+                /* hover:text-gray-800 y no -600: QL salta de gris apagado a
+                   texto pleno y por eso se nota. El salto a -600 era tan chico
+                   que parecía que no pasaba nada. */
+                activePanel === panel ? 'text-indigo-600' : 'text-gray-400 hover:text-gray-800'
               }`}
             >
               <span className="text-xl leading-none" aria-hidden="true">{icon}</span>
