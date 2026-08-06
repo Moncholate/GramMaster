@@ -2713,7 +2713,7 @@ const EnglishSentenceBuilder = () => {
                 <div className="w-full px-4 py-2.5 border-y border-r rounded-lg border-l-4 border-teal-300 border-l-teal-400 bg-teal-50 text-teal-800 text-sm flex items-center gap-2">
                   <UserCircle className="w-4 h-4 shrink-0" />
                   <span className="font-semibold">{whWords.find(w => w.id === whWord)?.name || 'Who'}{whExtUsable ? ' ' + whExtUsable : ''}</span>
-                  <span className="text-teal-600 text-xs">· {t.subjectNotNeeded}</span>
+                  <span className="text-teal-700 text-xs">· {t.subjectNotNeeded}</span>
                 </div>
               ) : (
               <input
