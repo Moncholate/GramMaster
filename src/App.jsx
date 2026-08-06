@@ -61,6 +61,11 @@ function ThemeToggle({ lang = 'es' }) {
       window.removeEventListener('storage', onStorage);
     };
   }, []);
+  /* Embebida en el Hub: el tema se maneja desde la barra del Hub, no desde
+     aqui — en celular esta cabecera queda cargada y el boton compite con el
+     titulo. Standalone / PWA es el unico que hay, asi que se mantiene.
+     El corte va DESPUES de los hooks: si no, serian hooks condicionales. */
+  if (typeof window !== 'undefined' && window.self !== window.top) return null;
   const target = eff === 'dark' ? 'light' : 'dark';
   const name = { es: { light: 'Claro', dark: 'Oscuro' }, en: { light: 'Light', dark: 'Dark' } }[lang][target];
   return (
@@ -1973,13 +1978,26 @@ const EnglishSentenceBuilder = () => {
       {activePanel && (
         <div className="flex-1 overflow-y-auto py-4 px-4 sm:px-8 pb-24 sm:pb-6" style={{ order: 1 }}>
           <div className="max-w-2xl mx-auto">
-            <h2 className="font-bold text-xl text-gray-800 mb-4">
-              {activePanel === 'history' && t.history}
-              {activePanel === 'practice' && t.practiceMode}
-              {activePanel === 'guide' && t.timeGuideTitle}
-              {activePanel === 'settings' && t.themes}
-              {activePanel === 'progress' && t.progressTitle}
-            </h2>
+            {/* Salir de la sección al constructor. Antes solo se podía por la
+                barra de abajo, así que el único «atrás» a la vista era el del
+                Hub —arriba a la izquierda, donde uno mira— y se llevaba los
+                clics que iban dirigidos aquí. Nombra el destino, igual que el
+                del Hub nombra el suyo. */}
+            <div className="flex items-center gap-2 mb-4">
+              <button
+                onClick={() => setActivePanel(null)}
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold text-gray-500 bg-gray-100 hover:bg-gray-200 hover:text-gray-700 transition-colors shrink-0"
+              >
+                ← {t.builderShort}
+              </button>
+              <h2 className="font-bold text-xl text-gray-800">
+                {activePanel === 'history' && t.history}
+                {activePanel === 'practice' && t.practiceMode}
+                {activePanel === 'guide' && t.timeGuideTitle}
+                {activePanel === 'settings' && t.themes}
+                {activePanel === 'progress' && t.progressTitle}
+              </h2>
+            </div>
 
             <div>
               {/* Panel de Historial */}
