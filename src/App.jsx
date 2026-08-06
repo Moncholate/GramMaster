@@ -10,6 +10,8 @@ import {
   modals,
   whWords,
   whSuggestions,
+  whAsks,
+  whExtPideSustantivo,
   frequencyAdverbs,
   timeMarkers,
   uncountableNouns,
@@ -551,6 +553,11 @@ const EnglishSentenceBuilder = () => {
   const [whWord, setWhWord] = useState('');
   const [whExtension, setWhExtension] = useState('');
   const [whWarning, setWhWarning] = useState('');
+  /* Mientras falte el sustantivo, la extensión no entra en la oración: se arma
+     «What does she like?», que sí es correcta, y el selector pide lo que falta.
+     La regla vive en data/grammar.js, junto a las sugerencias que la disparan. */
+  const whExtIncompleta = whExtPideSustantivo(whExtension);
+  const whExtUsable = whExtIncompleta ? '' : whExtension.trim();
   const [selectedAdverb, setSelectedAdverb] = useState('');
   const [generatedSentence, setGeneratedSentence] = useState('');
   const [semanticWarning, setSemanticWarning] = useState(null);
@@ -1742,8 +1749,9 @@ const EnglishSentenceBuilder = () => {
   // pulsar "Generar". Retorna la oración construida.
   const computeSentenceDisplay = () => {
     const adverb = selectedAdverb || '';
-    const fullWhWord = whWord && whExtension.trim() ? whWord + ' ' + whExtension.trim() : whWord;
-    const params = { subject, verb, complement, tense: selectedTense, modal: selectedModal, whWord, whExtension, adverb };
+    const fullWhWord = whWord && whExtUsable ? whWord + ' ' + whExtUsable : whWord;
+    const params = { subject, verb, complement, tense: selectedTense, modal: selectedModal,
+      whWord, whExtension: whExtUsable, adverb };
 
     const sentence = buildSentenceText({ mode: selectedMode, ...params });
     setGeneratedSentence(sentence);
@@ -2542,21 +2550,44 @@ const EnglishSentenceBuilder = () => {
               {/* Fila de chips base */}
               <div className="flex flex-wrap items-center gap-1.5">
                 <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide shrink-0 w-6">WH</span>
-                {whWords.filter(wh => wh.id !== '').map(wh => (
-                  <button
-                    key={wh.id}
-                    type="button"
-                    onClick={() => { setWhWord(whWord === wh.id ? '' : wh.id); setWhExtension(''); }}
-                    className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all ${
-                      whWord === wh.id
-                        ? 'bg-teal-600 text-white border-teal-600'
-                        : 'bg-white text-gray-600 border-gray-300 hover:border-teal-400 hover:text-teal-700'
-                    }`}
-                  >
-                    {wh.name}
-                  </button>
-                ))}
+                {whWords.filter(wh => wh.id !== '').map(wh => {
+                  const pide = whAsks[wh.id];
+                  const elegida = whWord === wh.id;
+                  return (
+                    <button
+                      key={wh.id}
+                      type="button"
+                      aria-pressed={elegida}
+                      // En escritorio el dato aparece al pasar el mouse; en
+                      // móvil, al elegir la wh (la línea de abajo).
+                      title={pide ? `${wh.name} → ${language === 'es' ? pide.es : pide.en}` : undefined}
+                      onClick={() => { setWhWord(elegida ? '' : wh.id); setWhExtension(''); }}
+                      className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all ${
+                        elegida
+                          ? 'bg-teal-600 text-white border-teal-600'
+                          : 'bg-white text-gray-600 border-gray-300 hover:border-teal-400 hover:text-teal-700'
+                      }`}
+                    >
+                      {wh.name}
+                    </button>
+                  );
+                })}
               </div>
+              {/* Qué dato pide la wh elegida. La compuesta manda sobre la base:
+                  «how many» pide una cantidad, no «una manera». */}
+              {whWord && (() => {
+                const nombre = whWords.find(w => w.id === whWord)?.name || whWord;
+                const clave = `${whWord} ${whExtension.trim()}`.trim().toLowerCase().replace(/\s+of$/, '');
+                const pide = whAsks[clave] || whAsks[whWord];
+                if (!pide) return null;
+                return (
+                  <p className="pl-8 text-xs text-gray-500">
+                    <span className="font-semibold text-teal-700">{nombre}{whExtension.trim() ? ' ' + whExtension.trim() : ''}</span>
+                    {' '}{language === 'es' ? 'pide' : 'asks for'}{' '}
+                    <span className="font-medium text-gray-700">{language === 'es' ? pide.es : pide.en}</span>
+                  </p>
+                );
+              })()}
               {/* Extensión: solo para WH compuestas (What, Which, How) */}
               {whWord && whSuggestions[whWord] && (
                 <div className="flex flex-wrap items-center gap-1.5 pl-8">
@@ -2572,21 +2603,25 @@ const EnglishSentenceBuilder = () => {
                       }`}
                     >
                       {whWords.find(w => w.id === whWord)?.name} {ext}
+                      {/\bof$/i.test(ext) && <span className="opacity-50"> …</span>}
                     </button>
                   ))}
                   <input
                     type="text"
                     value={whExtension}
                     onChange={(e) => setWhExtension(e.target.value)}
-                    placeholder={`${whWords.find(w => w.id === whWord)?.name} kind of...`}
-                    className="flex-1 min-w-32 px-3 py-1 text-xs border border-gray-200 rounded-full focus:outline-none focus:ring-1 focus:ring-teal-400 focus:border-teal-400 placeholder-gray-300"
+                    placeholder={language === 'es' ? 'o escribe otra…' : 'or type another…'}
+                    className="flex-1 min-w-32 px-3 py-1 text-xs border border-gray-200 rounded-full focus:outline-none focus:ring-1 focus:ring-teal-400 focus:border-teal-400 placeholder-gray-400"
                   />
-                  {whExtension && (
-                    <span className="text-xs text-teal-700 font-medium bg-teal-50 px-2.5 py-1 rounded-full border border-teal-100">
-                      "{whWords.find(w => w.id === whWord)?.name} {whExtension}..."
-                    </span>
-                  )}
                 </div>
+              )}
+              {/* Extensión a medias: se explica en vez de armar inglés roto */}
+              {whWord && whExtIncompleta && (
+                <p className="pl-8 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5">
+                  {language === 'es'
+                    ? <>«<b>{whWords.find(w => w.id === whWord)?.name} {whExtension.trim()}</b>» necesita un sustantivo detrás: <b>{whWords.find(w => w.id === whWord)?.name} {whExtension.trim()} music…</b> Escríbelo arriba; mientras tanto la oración se arma sin la extensión.</>
+                    : <>“<b>{whWords.find(w => w.id === whWord)?.name} {whExtension.trim()}</b>” needs a noun after it: <b>{whWords.find(w => w.id === whWord)?.name} {whExtension.trim()} music…</b> Type it above; meanwhile the sentence is built without the extension.</>}
+                </p>
               )}
             </div>
           )}

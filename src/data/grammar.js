@@ -186,6 +186,41 @@ export const whSuggestions = {
   'how': ['much', 'many', 'often', 'long', 'far', 'old'],
 };
 
+/* «What kind of» y «What type of» no se sostienen solas: piden un sustantivo
+   detrás. Como el selector las ofrece con un clic, salía «What kind of does she
+   like music?». La señal es la preposición al final, así que también cubre lo
+   que el alumno escriba a mano. */
+export const whExtPideSustantivo = (ext) => /\bof$/i.test((ext || '').trim());
+
+/* Qué tipo de dato pide cada wh. Mismo vocabulario que Question Lab (WH_HINTS)
+   a propósito: es la misma explicación en las dos apps, y en QL es justamente
+   lo que la actividad «Responde» enseña a distinguir.
+   Las claves compuestas ganan sobre la base: «how many» pide una cantidad, no
+   «una manera». */
+export const whAsks = {
+  what:         { es: 'una cosa o idea 💡',       en: 'a thing or idea 💡' },
+  where:        { es: 'un lugar 📍',              en: 'a place 📍' },
+  when:         { es: 'un momento 🕐',            en: 'a time 🕐' },
+  why:          { es: 'because + una razón 💬',   en: 'because + a reason 💬' },
+  who:          { es: 'una persona 🧑',           en: 'a person 🧑' },
+  which:        { es: 'una opción ✅',            en: 'an option ✅' },
+  how:          { es: 'una manera ✨',            en: 'a way ✨' },
+  'how many':   { es: 'una cantidad 🔢',          en: 'a quantity 🔢' },
+  'how much':   { es: 'una cantidad o precio 💰', en: 'an amount or price 💰' },
+  'how often':  { es: 'una frecuencia 🔁',        en: 'a frequency 🔁' },
+  'how long':   { es: 'una duración ⏳',          en: 'a duration ⏳' },
+  'how far':    { es: 'una distancia 🗺️',         en: 'a distance 🗺️' },
+  'how old':    { es: 'una edad 🎂',              en: 'an age 🎂' },
+  'what time':  { es: 'una hora 🕒',              en: 'a clock time 🕒' },
+  'what color': { es: 'un color 🎨',              en: 'a colour 🎨' },
+  'what size':  { es: 'una talla 📏',             en: 'a size 📏' },
+  'what kind':  { es: 'un tipo 🏷️',               en: 'a kind 🏷️' },
+  'what type':  { es: 'un tipo 🏷️',               en: 'a type 🏷️' },
+  'which one':  { es: 'una opción ✅',            en: 'an option ✅' },
+  'which ones': { es: 'varias opciones ✅',       en: 'several options ✅' },
+  'which type': { es: 'un tipo 🏷️',               en: 'a type 🏷️' },
+};
+
 // Adverbios de frecuencia (van entre sujeto y verbo)
 export const frequencyAdverbs = [
   { id: '', name: '—', descEs: 'Sin adverbio', descEn: 'No adverb' },

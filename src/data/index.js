@@ -8,6 +8,8 @@ export {
   modals,
   whWords,
   whSuggestions,
+  whAsks,
+  whExtPideSustantivo,
   frequencyAdverbs,
   timeMarkers,
   getFlattenedMarkers,
