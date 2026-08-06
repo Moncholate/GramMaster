@@ -13,8 +13,14 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 concurrency:
+  # Un solo despliegue a la vez, pero NO se cancela el que esta en curso.
+  # Con `true`, empujar varios commits seguidos cancelaba el deploy a medio
+  # camino y dejaba un despliegue colgado en la API de Pages; el siguiente run
+  # se quedaba 10 minutos esperandolo y abortaba con "Timeout reached".
+  # Es lo que dice la plantilla oficial de Pages, y por eso el arreglo de los
+  # ojos nunca llego a publicarse.
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build:
