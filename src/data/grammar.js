@@ -18,7 +18,23 @@ export const modes = [
     activeClasses: 'border-amber-500 bg-gradient-to-br from-amber-50 to-amber-100 shadow-md scale-105',
     textClass: 'text-amber-700'
   },
+  {
+    /* Pregunta de sujeto — AEF Intermedio II 12C, «questions without
+       auxiliaries». Va como modo aparte y no como una variante de la
+       interrogativa porque cambia la estructura entera: sin auxiliar, sin
+       inversión y sin campo Sujeto, que lo ocupa la wh-word.
+       `cefr` la mantiene oculta hasta el curso donde se enseña. */
+    id: 'subject-question',
+    emoji: '👤',
+    cefr: 'intermedio2',
+    activeClasses: 'border-teal-500 bg-gradient-to-br from-teal-50 to-teal-100 shadow-md scale-105',
+    textClass: 'text-teal-700'
+  },
 ];
+
+/* Solo estas pueden ser sujeto. «Where lives here?» no existe: un lugar no
+   ejecuta la acción. */
+export const whSubjectWords = ['who', 'what', 'which', 'how'];
 
 // Tiempos verbales
 // Orden de cursos para el filtro acumulativo de tiempos verbales

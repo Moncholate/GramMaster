@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { BookOpen, Volume2, VolumeX, AlertTriangle, CheckCircle, XCircle, HelpCircle, X, History, Copy, Check, Trash2, Play, Info, BarChart2, ChevronDown } from 'lucide-react';
+import { BookOpen, Volume2, VolumeX, AlertTriangle, CheckCircle, XCircle, HelpCircle, X, History, Copy, Check, Trash2, Play, Info, BarChart2, ChevronDown, UserCircle } from 'lucide-react';
 import {
   translations,
   commonVerbs,
@@ -12,6 +12,7 @@ import {
   whSuggestions,
   whAsks,
   whExtPideSustantivo,
+  whSubjectWords,
   frequencyAdverbs,
   timeMarkers,
   uncountableNouns,
@@ -558,6 +559,10 @@ const EnglishSentenceBuilder = () => {
      La regla vive en data/grammar.js, junto a las sugerencias que la disparan. */
   const whExtIncompleta = whExtPideSustantivo(whExtension);
   const whExtUsable = whExtIncompleta ? '' : whExtension.trim();
+  const esPregSujeto = selectedMode === 'subject-question';
+  // En la pregunta de sujeto la wh manda: solo las que pueden ejecutar la acción.
+  const whDisponibles = whWords.filter(wh => wh.id &&
+    (!esPregSujeto || whSubjectWords.includes(wh.id)));
   const [selectedAdverb, setSelectedAdverb] = useState('');
   const [generatedSentence, setGeneratedSentence] = useState('');
   const [semanticWarning, setSemanticWarning] = useState(null);
@@ -830,6 +835,24 @@ const EnglishSentenceBuilder = () => {
   useEffect(() => {
     setSelectedTense('');
   }, [cefrLevel]);
+
+  /* La pregunta de sujeto solo existe desde el curso donde se enseña (AEF
+     Intermedio II 12C). Si el alumno baja de nivel con ese modo puesto, hay que
+     sacarlo: si no, queda seleccionado un modo que ya no está en la barra. */
+  const modosVisibles = modes.filter(m =>
+    !m.cefr || COURSE_ORDER.indexOf(m.cefr) <= COURSE_ORDER.indexOf(cefrLevel));
+  useEffect(() => {
+    if (!modosVisibles.some(m => m.id === selectedMode)) setSelectedMode('affirmative');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cefrLevel]);
+
+  /* En la pregunta de sujeto la wh es obligatoria y no cualquiera sirve: al
+     entrar al modo con «Where» puesta, se cambia por «Who». */
+  useEffect(() => {
+    if (!esPregSujeto) return;
+    if (!whWord || !whSubjectWords.includes(whWord)) { setWhWord('who'); setWhExtension(''); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [esPregSujeto]);
 
   // Limpiar adverbio cuando el tiempo verbal no es compatible
   useEffect(() => {
@@ -1460,7 +1483,32 @@ const EnglishSentenceBuilder = () => {
     const showAdverb = !!adverbPart;
 
     // Construir partes según el modo
-    if (isInterrogative) {
+    if (mode === 'subject-question') {
+      /* La wh ocupa la casilla del sujeto, así que el orden es el de una
+         afirmación y no hay inversión. Se pinta como UNA pieza en el lugar
+         donde iría el sujeto: verla ahí es lo que enseña la estructura. */
+      const whTxt = whWordText || 'who';
+      parts.push({
+        text: whTxt.charAt(0).toUpperCase() + whTxt.slice(1),
+        type: 'wh-subject',
+        color: 'teal',
+        explanation: language === 'es'
+          ? 'La palabra WH es el SUJETO de la pregunta: por eso no hay auxiliar prestado ni inversión, el orden es el mismo de una afirmación.'
+          : 'The WH word is the SUBJECT of the question: that is why there is no borrowed auxiliary and no inversion — the order is the same as a statement.',
+        original: whTxt,
+        changed: false
+      });
+      if (showAdverb && auxUnits.length === 0) parts.push(adverbPart);
+      auxUnits.forEach(aux => parts.push(makeAuxPart(aux, false)));
+      if (showAdverb && auxUnits.length > 0) parts.push(adverbPart);
+      if (!isBeMainVerb) parts.push(verbPart);
+      if (complementPart) parts.push(complementPart);
+      parts.push({
+        text: '?', type: 'punctuation', color: 'gray',
+        explanation: language === 'es' ? 'Signo de interrogación' : 'Question mark',
+        original: '?', changed: false
+      });
+    } else if (isInterrogative) {
       // Orden interrogativo: [WH] + PRIMER auxiliar + Sujeto + [Adverbio] + resto
       // del auxiliar + Verbo + Complemento + ?  →  "Will she have worked?"
       if (whWordText) {
@@ -1756,16 +1804,24 @@ const EnglishSentenceBuilder = () => {
     const sentence = buildSentenceText({ mode: selectedMode, ...params });
     setGeneratedSentence(sentence);
 
-    setAllModeSentences({
+    /* «Ver los 3 modos» compara afirmativa / negativa / interrogativa de una
+       oración con sujeto conocido. La pregunta de sujeto no tiene ese trío: sin
+       campo Sujeto saldría « calls you.» y «Does  call you?». */
+    setAllModeSentences(esPregSujeto ? null : {
       aff: buildSentenceText({ mode: 'affirmative',   ...params }),
       neg: buildSentenceText({ mode: 'negative',      ...params }),
       int: buildSentenceText({ mode: 'interrogative', ...params }),
     });
 
-    // El análisis usa el MISMO motor que el texto (auxiliar + forma verbal)
-    const { auxiliary, verbForm } = getAuxAndVerbForm(subject, verb, selectedTense, selectedModal, selectedMode);
+    /* El análisis usa el MISMO motor que el texto (auxiliar + forma verbal).
+       En la pregunta de sujeto la concordancia sale de la wh, no del campo
+       Sujeto, que está vacío: «Who has called?» pero «How many people have
+       called?». Y como ese modo no es negativo ni interrogativo, el motor cae
+       en la rama afirmativa, que es justo el orden que necesita. */
+    const sujetoConcordancia = esPregSujeto ? (fullWhWord || 'who') : subject;
+    const { auxiliary, verbForm } = getAuxAndVerbForm(sujetoConcordancia, verb, selectedTense, selectedModal, selectedMode);
     setSentenceAnalysis(generateSentenceAnalysis({
-      subjectText: subject,
+      subjectText: esPregSujeto ? (fullWhWord || 'who') : subject,
       verbText: verb,
       complementText: complement,
       auxiliary,
@@ -1805,7 +1861,8 @@ const EnglishSentenceBuilder = () => {
 
   const generateSentence = () => {
     // Si hay modal, no se requiere tiempo. Si no hay modal, sí se requiere tiempo.
-    if (!subject || !verb || (!selectedModal && !selectedTense)) {
+    // En la pregunta de sujeto no hay campo Sujeto: lo ocupa la wh.
+    if ((!subject && !esPregSujeto) || !verb || (!selectedModal && !selectedTense)) {
       showNotification('error', language === 'es' ? 'Por favor completa todos los campos' : 'Please complete all fields');
       return;
     }
@@ -1838,7 +1895,7 @@ const EnglishSentenceBuilder = () => {
   // tiempo, modo o entradas actualiza la vista al instante (sin tocar historial)
   useEffect(() => {
     if (!generatedSentence) return;
-    if (!subject || !verb || (!selectedModal && !selectedTense)) return;
+    if ((!subject && !esPregSujeto) || !verb || (!selectedModal && !selectedTense)) return;
     computeSentenceDisplay();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [subject, verb, complement, selectedTense, selectedMode, selectedModal, whWord, whExtension, selectedAdverb, language]);
@@ -2495,21 +2552,29 @@ const EnglishSentenceBuilder = () => {
 
               <div className="flex w-full sm:w-auto sm:ml-auto items-center gap-2">
                 <div className="flex flex-1 sm:flex-none rounded-lg border border-gray-200 overflow-hidden shrink-0">
-                  {modes.map((mode) => (
+                  {modosVisibles.map((mode) => (
                     <button
                       key={mode.id}
                       onClick={() => setSelectedMode(mode.id)}
                       aria-pressed={selectedMode === mode.id}
+                      title={mode.id === 'subject-question' ? t.subjectQuestionHelp : undefined}
                       className={`flex flex-1 sm:flex-none items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-all border-r last:border-r-0 border-gray-200 ${
                         selectedMode === mode.id ? mode.activeClasses : 'bg-white text-gray-500 hover:bg-gray-50'
                       }`}
                     >
-                      {mode.id === 'affirmative' ? <CheckCircle className="w-3.5 h-3.5 shrink-0" /> : mode.id === 'negative' ? <XCircle className="w-3.5 h-3.5 shrink-0" /> : <HelpCircle className="w-3.5 h-3.5 shrink-0" />}
+                      {mode.id === 'affirmative' ? <CheckCircle className="w-3.5 h-3.5 shrink-0" />
+                        : mode.id === 'negative' ? <XCircle className="w-3.5 h-3.5 shrink-0" />
+                        : mode.id === 'subject-question' ? <UserCircle className="w-3.5 h-3.5 shrink-0" />
+                        : <HelpCircle className="w-3.5 h-3.5 shrink-0" />}
                       <span className="hidden sm:inline">
-                        {mode.id === 'affirmative' ? t.affirmative : mode.id === 'negative' ? t.negative : t.interrogative}
+                        {mode.id === 'affirmative' ? t.affirmative : mode.id === 'negative' ? t.negative
+                          : mode.id === 'subject-question' ? t.subjectQuestion : t.interrogative}
                       </span>
                       <span className="sm:hidden">
-                        {mode.id === 'affirmative' ? (language === 'es' ? 'Afirm.' : 'Affirm.') : mode.id === 'negative' ? (language === 'es' ? 'Neg.' : 'Neg.') : (language === 'es' ? 'Inter.' : 'Inter.')}
+                        {mode.id === 'affirmative' ? (language === 'es' ? 'Afirm.' : 'Affirm.')
+                          : mode.id === 'negative' ? (language === 'es' ? 'Neg.' : 'Neg.')
+                          : mode.id === 'subject-question' ? t.subjectQuestionShort
+                          : (language === 'es' ? 'Inter.' : 'Inter.')}
                       </span>
                     </button>
                   ))}
@@ -2545,12 +2610,18 @@ const EnglishSentenceBuilder = () => {
           </div>
 
           {/* WH Questions */}
-          {selectedMode === 'interrogative' && (
+          {(selectedMode === 'interrogative' || esPregSujeto) && (
             <div className="space-y-2">
+              {/* En la pregunta de sujeto la wh no es opcional: es el sujeto. */}
+              {esPregSujeto && (
+                <p className="text-xs text-teal-800 bg-teal-50 border border-teal-200 rounded-lg px-2.5 py-1.5">
+                  {t.subjectQuestionHelp}
+                </p>
+              )}
               {/* Fila de chips base */}
               <div className="flex flex-wrap items-center gap-1.5">
                 <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide shrink-0 w-6">WH</span>
-                {whWords.filter(wh => wh.id !== '').map(wh => {
+                {whDisponibles.map(wh => {
                   const pide = whAsks[wh.id];
                   const elegida = whWord === wh.id;
                   return (
@@ -2561,7 +2632,8 @@ const EnglishSentenceBuilder = () => {
                       // En escritorio el dato aparece al pasar el mouse; en
                       // móvil, al elegir la wh (la línea de abajo).
                       title={pide ? `${wh.name} → ${language === 'es' ? pide.es : pide.en}` : undefined}
-                      onClick={() => { setWhWord(elegida ? '' : wh.id); setWhExtension(''); }}
+                      // En la pregunta de sujeto no se puede quedar sin wh: es el sujeto.
+                      onClick={() => { if (!(elegida && esPregSujeto)) { setWhWord(elegida ? '' : wh.id); setWhExtension(''); } }}
                       className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all ${
                         elegida
                           ? 'bg-teal-600 text-white border-teal-600'
@@ -2628,13 +2700,22 @@ const EnglishSentenceBuilder = () => {
 
           {/* Campos principales */}
           <div className={`grid grid-cols-1 gap-4 ${(selectedTense === 'simple-present' || selectedTense === 'simple-past') && !selectedModal ? 'md:grid-cols-[2fr_1.5fr_2fr_2.5fr]' : 'md:grid-cols-[2fr_2fr_3fr]'}`}>
-            {/* Sujeto */}
+            {/* Sujeto — en la pregunta de sujeto lo ocupa la wh, así que el
+                campo se apaga en vez de desaparecer: que se vea QUÉ casilla
+                está llenando la wh-word es justamente la lección. */}
             <div>
               <label className="flex items-center gap-1.5 mb-1.5">
-                <span className="text-[10px] font-bold bg-indigo-100 text-indigo-600 px-1.5 py-0.5 rounded">S</span>
-                <span className="text-sm font-medium text-indigo-600">{t.subject}</span>
-                <span className="text-red-500 text-xs">*</span>
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${esPregSujeto ? 'bg-teal-100 text-teal-700' : 'bg-indigo-100 text-indigo-600'}`}>S</span>
+                <span className={`text-sm font-medium ${esPregSujeto ? 'text-teal-700' : 'text-indigo-600'}`}>{t.subject}</span>
+                {!esPregSujeto && <span className="text-red-500 text-xs">*</span>}
               </label>
+              {esPregSujeto ? (
+                <div className="w-full px-4 py-2.5 border-y border-r rounded-lg border-l-4 border-teal-300 border-l-teal-400 bg-teal-50 text-teal-800 text-sm flex items-center gap-2">
+                  <UserCircle className="w-4 h-4 shrink-0" />
+                  <span className="font-semibold">{whWords.find(w => w.id === whWord)?.name || 'Who'}{whExtUsable ? ' ' + whExtUsable : ''}</span>
+                  <span className="text-teal-600 text-xs">· {t.subjectNotNeeded}</span>
+                </div>
+              ) : (
               <input
                 ref={subjectRef}
                 type="text"
@@ -2654,7 +2735,8 @@ const EnglishSentenceBuilder = () => {
                   'border-gray-300 border-l-indigo-400 focus:border-indigo-500'
                 }`}
               />
-              {!subjectValidation.valid && subjectValidation.warning && (
+              )}
+              {!esPregSujeto && !subjectValidation.valid && subjectValidation.warning && (
                 <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
                   <AlertTriangle className="w-3 h-3" /> {subjectValidation.warning}
                 </p>
@@ -2854,7 +2936,7 @@ const EnglishSentenceBuilder = () => {
               {/* Leyenda de colores — solo las partes presentes en la oración */}
               {sentenceAnalysis && (
                 <div className="flex items-center gap-1.5 text-xs text-gray-500 shrink-0">
-                  {sentenceAnalysis.parts.some(p => p.type === 'wh-word') && (
+                  {sentenceAnalysis.parts.some(p => p.type === 'wh-word' || p.type === 'wh-subject') && (
                     <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-teal-600 inline-block"></span>WH</span>
                   )}
                   <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-indigo-600 inline-block"></span>S</span>
@@ -2882,6 +2964,7 @@ const EnglishSentenceBuilder = () => {
                 <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-xl sm:text-2xl md:text-3xl font-bold font-['Atkinson_Hyperlegible']">
                   {sentenceAnalysis.parts.map((part, index) => {
                     const partLabel =
+                      part.type === 'wh-subject' ? (language === 'es' ? 'WH = sujeto' : 'WH = subject') :
                       part.type === 'wh-word' ? (language === 'es' ? 'Palabra WH' : 'WH Word') :
                       part.type === 'subject' ? t.subjectLabel :
                       part.type === 'adverb' ? t.adverbLabel :
@@ -2890,6 +2973,7 @@ const EnglishSentenceBuilder = () => {
                       part.type === 'adverbial' ? (language === 'es' ? 'Adverbial (A)' : 'Adverbial (A)') :
                       t.complementLabel + ' (C)';
                     const colorClasses =
+                      part.type === 'wh-subject' ? ROLE_TW['wh-word'] :
                       part.type === 'wh-word' ? ROLE_TW['wh-word'] :
                       part.type === 'subject' ? ROLE_TW.subject :
                       part.type === 'adverb' ? 'text-indigo-500 hover:bg-indigo-50' :
@@ -2929,7 +3013,8 @@ const EnglishSentenceBuilder = () => {
                 </div>
                 {selectedPartIndex != null && sentenceAnalysis.parts[selectedPartIndex] && sentenceAnalysis.parts[selectedPartIndex].type !== 'punctuation' && (() => {
                   const part = sentenceAnalysis.parts[selectedPartIndex];
-                  const label = part.type === 'wh-word' ? (language === 'es' ? 'Palabra WH' : 'WH Word')
+                  const label = part.type === 'wh-subject' ? (language === 'es' ? 'WH = sujeto' : 'WH = subject')
+                    : part.type === 'wh-word' ? (language === 'es' ? 'Palabra WH' : 'WH Word')
                     : part.type === 'subject' ? t.subjectLabel
                     : part.type === 'adverb' ? t.adverbLabel
                     : part.type === 'auxiliary' ? t.auxiliaryLabel

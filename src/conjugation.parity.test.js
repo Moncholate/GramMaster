@@ -35,6 +35,16 @@ const assemble = ({ subject, verb, tense, mode, complement, adverb }) => {
   const isBeMainVerb = verb === 'be' && (tense === 'simple-present' || tense === 'simple-past');
   const showAdverb = !!adverb;
   const parts = [];
+  if (mode === 'subject-question') {
+    // La wh ocupa la casilla del sujeto y el orden es el de una afirmacion.
+    parts.push(cap(subjectText));
+    if (showAdverb && auxUnits.length === 0) parts.push(adverb);
+    auxUnits.forEach(a => parts.push(a));
+    if (showAdverb && auxUnits.length > 0) parts.push(adverb);
+    if (!isBeMainVerb) parts.push(verbForm.toLowerCase());
+    if (complement) parts.push(complement);
+    return parts.join(' ') + '?';
+  }
   if (mode === 'interrogative') {
     const [firstAux, ...restAux] = auxUnits;
     if (firstAux) parts.push(cap(firstAux));
@@ -76,6 +86,27 @@ describe('paridad con adverbios de frecuencia (simple present / simple past)', (
         it(`${tense} / ${mode} / ${verb} con "usually"`, () => {
           const cfg = { mode, subject: 'she', verb, complement: verb === 'be' ? 'happy' : 'at home', tense, adverb: 'usually' };
           expect(assemble(cfg)).toBe(buildSentenceText(cfg));
+        });
+      }
+    }
+  }
+});
+
+/* Pregunta de sujeto (AEF Intermedio II 12C). La wh ocupa la casilla del
+   sujeto, así que para la paridad se pasa la wh COMO sujeto: es de ahí de donde
+   sale la concordancia («Who has called?» pero «How many people have called?»).
+   El resto del ensamblado es el de una afirmación, con «?» al final. */
+describe('paridad — pregunta de sujeto', () => {
+  const WH_SUJETOS = ['who', 'what', 'which one', 'which ones', 'how many people', 'how much money'];
+  for (const tense of TENSES) {
+    for (const wh of WH_SUJETOS) {
+      for (const verb of ['work', 'go', 'be']) {
+        it(`${tense} / ${wh} / ${verb}`, () => {
+          const [whWord, ...resto] = wh.split(' ');
+          const cfg = { mode: 'subject-question', subject: '', verb, complement: 'here',
+            tense, adverb: '', whWord, whExtension: resto.join(' ') };
+          // el espejo recibe la wh como sujeto, que es lo que hace App.jsx
+          expect(assemble({ ...cfg, subject: wh })).toBe(buildSentenceText(cfg));
         });
       }
     }

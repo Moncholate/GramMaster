@@ -373,6 +373,40 @@ export const buildSentenceText = ({ mode, subject: subjRaw, verb: vRaw, compleme
     if (tense === 'present-perfect-continuous') return first(hasHave) + ' ' + subj + advAfter + ' been ' + presentParticiple(v) + compStr + '?';
     if (tense === 'used-to')                return first('did') + ' ' + subj + advAfter + ' use to ' + v + compStr + '?';
   }
+  if (mode === 'subject-question') {
+    /* PREGUNTA DE SUJETO — AEF Intermedio II 12C, «questions without
+       auxiliaries». La wh-word ES el sujeto, así que no hay auxiliar prestado
+       ni inversión: el orden es el mismo de una afirmación.
+         Who lives here?          (no «Who does live here?»)
+         What happened?           (no «What did happen?»)
+       Es el error clásico del hispanohablante, porque en español la pregunta de
+       sujeto tampoco invierte («¿Quién vive aquí?») pero el alumno arrastra el
+       auxiliar del resto de las preguntas que ya aprendió.
+       El campo Sujeto no participa: lo ocupa la wh. La concordancia sale de la
+       propia wh — «Who» es 3ª persona, pero «How many people» es plural. */
+    const whSubj = (fullWh || 'who').trim();
+    const s = cap(whSubj);
+    const is3pWh = isThirdPersonSingular(whSubj);
+    const beWh = getBeForm(whSubj), wasWh = getWasWere(whSubj), hasWh = getHasHave(whSubj);
+    if (isHaveTo(modal))                    return s + ' ' + haveToForm(whSubj) + advSp + v + compStr + '?';
+    if (modal)                              return s + ' ' + modal + advSp + v + compStr + '?';
+    if (tense === 'simple-present') {
+      if (isBeVerb)                         return s + ' ' + beWh + advSp.trimEnd() + compStr + '?';
+      return s + advSp + (is3pWh ? conjugate3p(v) : v) + compStr + '?';
+    }
+    if (tense === 'present-continuous')     return s + ' ' + beWh + advSp + presentParticiple(v) + compStr + '?';
+    if (tense === 'simple-past') {
+      if (isBeVerb)                         return s + ' ' + wasWh + advSp.trimEnd() + compStr + '?';
+      return s + advSp + simplePast(v) + compStr + '?';
+    }
+    if (tense === 'past-continuous')        return s + ' ' + wasWh + advSp + presentParticiple(v) + compStr + '?';
+    if (tense === 'simple-future')          return s + ' will' + advSp + v + compStr + '?';
+    if (tense === 'future-going-to')        return s + ' ' + beWh + advSp + 'going to ' + v + compStr + '?';
+    if (tense === 'present-perfect')        return s + ' ' + hasWh + advSp + pp + compStr + '?';
+    if (tense === 'past-perfect')           return s + ' had' + advSp + pp + compStr + '?';
+    if (tense === 'present-perfect-continuous') return s + ' ' + hasWh + advSp + 'been ' + presentParticiple(v) + compStr + '?';
+    if (tense === 'used-to')                return s + advSp + 'used to ' + v + compStr + '?';
+  }
   return '';
 };
 

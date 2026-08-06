@@ -10,6 +10,7 @@ export {
   whSuggestions,
   whAsks,
   whExtPideSustantivo,
+  whSubjectWords,
   frequencyAdverbs,
   timeMarkers,
   getFlattenedMarkers,

@@ -48,13 +48,16 @@ html, body { font-family: 'Lexend', system-ui, -apple-system, 'Segoe UI', Roboto
 :root[data-theme="dark"] .bg-rose-50 { background-color: #331520 !important; }
 :root[data-theme="dark"] .border-teal-200 { border-color: #1c4e4d !important; }
 :root[data-theme="dark"] .border-rose-200 { border-color: #572635 !important; }
-/* gradientes claros del modo activo (Afirm./Neg./Inter.) → tintes oscuros */
+/* gradientes claros del modo activo (Afirm./Neg./Inter./De sujeto) → tintes oscuros */
 :root[data-theme="dark"] .from-emerald-50 { --tw-gradient-from: #123024 !important; }
 :root[data-theme="dark"] .to-emerald-100 { --tw-gradient-to: #16432f !important; }
 :root[data-theme="dark"] .from-rose-50 { --tw-gradient-from: #3a1720 !important; }
 :root[data-theme="dark"] .to-rose-100 { --tw-gradient-to: #4a1d29 !important; }
 :root[data-theme="dark"] .from-amber-50 { --tw-gradient-from: #2e2410 !important; }
 :root[data-theme="dark"] .to-amber-100 { --tw-gradient-to: #41310f !important; }
+/* from-teal-50 ya cae en .bg-teal-50 de arriba; el `to` faltaba. */
+:root[data-theme="dark"] .from-teal-50 { --tw-gradient-from: #0e2b2c !important; }
+:root[data-theme="dark"] .to-teal-100 { --tw-gradient-to: #14403f !important; }
 
 
 /* ── Afordancia de clic en escritorio ──────────────────────────────────────
