@@ -2,6 +2,7 @@
   "name": "Grammaster",
   "short_name": "Grammaster",
   "description": "Aprende inglés construyendo oraciones perfectas",
+  "id": "/GramMaster/",
   "start_url": "/GramMaster/",
   "scope": "/GramMaster/",
   "display": "standalone",
