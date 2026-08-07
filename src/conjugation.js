@@ -483,37 +483,64 @@ const bajaInicial = (frase, subjRaw) => {
 
 const sinPunto = (s) => s.replace(/\s*[.?!]+\s*$/, '');
 
+/* `would have` + participio en los tres signos. Es lo único que el motor no
+   sabía hacer, porque la 3ª no es un tiempo de la lista. */
+const terceraPrincipal = ({ subject, verb, complement }, modo) => {
+  const subj = smartCase(subject);
+  const comp = complement ? ' ' + smartCase(complement) : '';
+  const pp = pastParticiple(verb.toLowerCase().trim());
+  if (modo === 'negative')      return `${subj} wouldn't have ${pp}${comp}`;
+  if (modo === 'interrogative') return `would ${subj} have ${pp}${comp}`;
+  return `${subj} would have ${pp}${comp}`;
+};
+
 /**
  * Arma una condicional completa.
  * @param tipo 1 | 2 | 3
  * @param condicion {subject, verb, complement}
  * @param resultado {subject, verb, complement}
- * @param ifAlFinal si true → "resultado if condición" en vez de "If condición, resultado"
+ * @param modo signo del RESULTADO: 'affirmative' | 'negative' | 'interrogative'
+ * @param condicionNegativa niega la CONDICIÓN ("If it doesn't rain…")
+ * @param ifAlFinal "resultado if condición" en vez de "If condición, resultado"
+ *
+ * El signo de las dos cláusulas es independiente a propósito: negar el
+ * resultado ("no me quedaré") y negar la condición ("si no llueve") son cosas
+ * distintas, y confundirlas es un error clásico. La interrogativa solo aplica
+ * al resultado: la cláusula `if` nunca se pregunta.
  */
-export const buildConditionalText = ({ tipo, condicion, resultado, ifAlFinal = false }) => {
+export const buildConditionalText = ({ tipo, condicion, resultado, modo = 'affirmative',
+                                      condicionNegativa = false, ifAlFinal = false }) => {
   const cfg = CONDICIONALES[tipo] || CONDICIONALES[1];
   if (!condicion?.subject || !condicion?.verb || !resultado?.subject || !resultado?.verb) return '';
 
-  let si = sinPunto(buildSentenceText({ mode: 'affirmative', tense: cfg.ifTense, ...condicion }));
+  let si = sinPunto(buildSentenceText({
+    mode: condicionNegativa ? 'negative' : 'affirmative', tense: cfg.ifTense, ...condicion }));
   si = bajaInicial(si, condicion.subject);
 
   /* Subjuntivo de la 2ª: «If I were you», con `were` para TODAS las personas.
-     Es lo que enseña el libro en la fórmula «If I were you, I'd…». `was` no se
-     marca como error, pero lo que la app genera es la forma que se enseña. */
-  if (cfg.subjuntivo) si = si.replace(/\b(was)\b/, 'were');
+     Es la forma que enseña el libro en «If I were you, I'd…»; `was` se oye y no
+     se marca como error, pero lo que la app GENERA es lo que se practica. */
+  /* Las formas negadas van PRIMERO: `\bwas\b` también casa dentro de «was not»
+     y dejaba «If I were not you», que es correcto pero arcaico. */
+  if (cfg.subjuntivo) si = si
+    .replace(/\bwas\s+not\b/, "weren't")
+    .replace(/\bwasn't\b/, "weren't")
+    .replace(/\bwas\b/, 'were');
 
-  let principal;
-  if (cfg.main.perfecto) {
-    // «would have + participio» — lo único que el motor no sabía hacer
-    const subj = smartCase(resultado.subject);
-    const comp = resultado.complement ? ' ' + smartCase(resultado.complement) : '';
-    principal = `${subj} ${cfg.main.modal} have ${pastParticiple(resultado.verb.toLowerCase().trim())}${comp}`;
-  } else {
-    principal = sinPunto(buildSentenceText({ mode: 'affirmative', ...cfg.main, ...resultado }));
-  }
+  const principal = cfg.main.perfecto
+    ? terceraPrincipal(resultado, modo)
+    : sinPunto(buildSentenceText({ mode: modo, ...cfg.main, ...resultado }));
+
+  const cierre = modo === 'interrogative' ? '?' : '.';
+  /* En interrogativa la principal empieza por el auxiliar, no por el sujeto,
+     así que `bajaInicial` —que mira el sujeto— no sirve: siempre va minúscula
+     detrás de la coma. */
+  const principalTrasComa = modo === 'interrogative'
+    ? principal.charAt(0).toLowerCase() + principal.slice(1)
+    : bajaInicial(principal, resultado.subject);
 
   if (ifAlFinal) {
-    return `${principal} if ${bajaInicial(si, condicion.subject)}.`;
+    return `${cap(principal)} if ${si}${cierre}`;
   }
-  return `If ${si}, ${bajaInicial(principal, resultado.subject)}.`;
+  return `If ${si}, ${principalTrasComa}${cierre}`;
 };

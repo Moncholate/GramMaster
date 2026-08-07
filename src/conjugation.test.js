@@ -370,8 +370,8 @@ describe('getVerbChangeType — clasificación para el desglose visual', () => {
    en la lista de `tenses`: se arman llamando dos veces al mismo motor por
    cláusula. Lo único que no existía era `would have` + participio. */
 describe('condicionales', () => {
-  const arma = (tipo, condicion, resultado, ifAlFinal = false) =>
-    buildConditionalText({ tipo, condicion, resultado, ifAlFinal });
+  const arma = (tipo, condicion, resultado, extra = {}) =>
+    buildConditionalText({ tipo, condicion, resultado, ...extra });
 
   it('1ª — presente simple + will', () => {
     expect(arma(1, { subject: 'it', verb: 'rain' }, { subject: 'I', verb: 'stay', complement: 'home' }))
@@ -405,12 +405,59 @@ describe('condicionales', () => {
   });
 
   it('con el `if` al final no lleva coma y la principal abre la oración', () => {
-    expect(arma(2, { subject: 'I', verb: 'have', complement: 'money' }, { subject: 'I', verb: 'travel' }, true))
+    expect(arma(2, { subject: 'I', verb: 'have', complement: 'money' }, { subject: 'I', verb: 'travel' }, { ifAlFinal: true }))
       .toBe('I would travel if I had money.');
   });
 
   it('sin las dos cláusulas completas no devuelve nada a medias', () => {
     expect(arma(1, { subject: 'it', verb: '' }, { subject: 'I', verb: 'stay' })).toBe('');
     expect(arma(1, { subject: 'it', verb: 'rain' }, { subject: '', verb: 'stay' })).toBe('');
+  });
+});
+
+/* El signo de las dos cláusulas es INDEPENDIENTE. Negar el resultado («no me
+   quedaré») y negar la condición («si no llueve») son cosas distintas, y
+   confundirlas es un error clásico. La interrogativa solo toca al resultado:
+   la cláusula `if` nunca se pregunta. */
+describe('condicionales: negativa e interrogativa', () => {
+  const c1 = { subject: 'it', verb: 'rain' };
+  const r1 = { subject: 'I', verb: 'stay', complement: 'home' };
+  const tu = { subject: 'you', verb: 'stay', complement: 'home' };
+  const arma = (a) => buildConditionalText(a);
+
+  it('niega el RESULTADO', () => {
+    expect(arma({ tipo: 1, condicion: c1, resultado: r1, modo: 'negative' }))
+      .toBe("If it rains, I won't stay home.");
+    expect(arma({ tipo: 2, condicion: { subject: 'I', verb: 'have', complement: 'money' }, resultado: { subject: 'I', verb: 'travel' }, modo: 'negative' }))
+      .toBe("If I had money, I wouldn't travel.");
+    expect(arma({ tipo: 3, condicion: { subject: 'I', verb: 'study' }, resultado: { subject: 'I', verb: 'pass' }, modo: 'negative' }))
+      .toBe("If I had studied, I wouldn't have passed.");
+  });
+
+  it('niega la CONDICIÓN, que es otra cosa', () => {
+    expect(arma({ tipo: 1, condicion: c1, resultado: r1, condicionNegativa: true }))
+      .toBe("If it doesn't rain, I will stay home.");
+    expect(arma({ tipo: 1, condicion: c1, resultado: r1, condicionNegativa: true, modo: 'negative' }))
+      .toBe("If it doesn't rain, I won't stay home.");
+  });
+
+  it('interrogativa: pregunta el resultado, nunca el `if`', () => {
+    expect(arma({ tipo: 1, condicion: c1, resultado: tu, modo: 'interrogative' }))
+      .toBe('If it rains, will you stay home?');
+    expect(arma({ tipo: 2, condicion: { subject: 'I', verb: 'have', complement: 'money' }, resultado: { subject: 'you', verb: 'travel' }, modo: 'interrogative' }))
+      .toBe('If I had money, would you travel?');
+    expect(arma({ tipo: 3, condicion: { subject: 'I', verb: 'study' }, resultado: { subject: 'you', verb: 'pass' }, modo: 'interrogative' }))
+      .toBe('If I had studied, would you have passed?');
+    // con el `if` al final la principal abre y conserva su mayúscula
+    expect(arma({ tipo: 1, condicion: c1, resultado: tu, modo: 'interrogative', ifAlFinal: true }))
+      .toBe('Will you stay home if it rains?');
+  });
+
+  it('el subjuntivo negado es `weren\'t`, no «were not»', () => {
+    const be = { subject: 'I', verb: 'be', complement: 'you' };
+    expect(arma({ tipo: 2, condicion: be, resultado: { subject: 'I', verb: 'travel' }, condicionNegativa: true }))
+      .toBe("If I weren't you, I would travel.");
+    expect(arma({ tipo: 2, condicion: { subject: 'she', verb: 'be', complement: 'here' }, resultado: { subject: 'we', verb: 'ask', complement: 'her' } }))
+      .toBe('If she were here, we would ask her.');
   });
 });
