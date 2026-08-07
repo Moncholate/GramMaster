@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  buildConditionalText,
   presentParticiple,
   simplePast,
   pastParticiple,
@@ -361,5 +362,55 @@ describe('getVerbChangeType — clasificación para el desglose visual', () => {
     expect(changeType('she', 'run', 'present-continuous')).toBe('ing');
     expect(changeType('she', 'study', 'present-continuous')).toBe('ing');
     expect(changeType('she', 'be', 'present-continuous')).toBe('ing');
+  });
+});
+
+/* ── Condicionales ────────────────────────────────────────────────────────
+   Son DOS cláusulas ligadas y el tipo fija los dos tiempos, así que no entran
+   en la lista de `tenses`: se arman llamando dos veces al mismo motor por
+   cláusula. Lo único que no existía era `would have` + participio. */
+describe('condicionales', () => {
+  const arma = (tipo, condicion, resultado, ifAlFinal = false) =>
+    buildConditionalText({ tipo, condicion, resultado, ifAlFinal });
+
+  it('1ª — presente simple + will', () => {
+    expect(arma(1, { subject: 'it', verb: 'rain' }, { subject: 'I', verb: 'stay', complement: 'home' }))
+      .toBe('If it rains, I will stay home.');
+    // la condición conjuga en 3ª persona como cualquier presente simple
+    expect(arma(1, { subject: 'she', verb: 'call' }, { subject: 'we', verb: 'answer' }))
+      .toBe('If she calls, we will answer.');
+  });
+
+  it('2ª — pasado simple + would', () => {
+    expect(arma(2, { subject: 'I', verb: 'have', complement: 'money' }, { subject: 'I', verb: 'travel' }))
+      .toBe('If I had money, I would travel.');
+    // un nombre propio conserva su mayúscula aunque vaya después de "If"
+    expect(arma(2, { subject: 'Maria', verb: 'live', complement: 'in Peru' }, { subject: 'we', verb: 'visit', complement: 'her' }))
+      .toBe('If Maria lived in Peru, we would visit her.');
+  });
+
+  it('2ª — subjuntivo: `were` para todas las personas', () => {
+    // Es la forma que enseña el libro en «If I were you, I'd…». Con el pasado
+    // simple normal saldría «If I was you», que no es lo que se practica.
+    expect(arma(2, { subject: 'I', verb: 'be', complement: 'you' }, { subject: 'I', verb: 'call', complement: 'her' }))
+      .toBe('If I were you, I would call her.');
+  });
+
+  it('3ª — pasado perfecto + would have + participio', () => {
+    expect(arma(3, { subject: 'I', verb: 'study' }, { subject: 'I', verb: 'pass', complement: 'the exam' }))
+      .toBe('If I had studied, I would have passed the exam.');
+    // participio irregular en la principal
+    expect(arma(3, { subject: 'they', verb: 'arrive', complement: 'early' }, { subject: 'we', verb: 'see', complement: 'the show' }))
+      .toBe('If they had arrived early, we would have seen the show.');
+  });
+
+  it('con el `if` al final no lleva coma y la principal abre la oración', () => {
+    expect(arma(2, { subject: 'I', verb: 'have', complement: 'money' }, { subject: 'I', verb: 'travel' }, true))
+      .toBe('I would travel if I had money.');
+  });
+
+  it('sin las dos cláusulas completas no devuelve nada a medias', () => {
+    expect(arma(1, { subject: 'it', verb: '' }, { subject: 'I', verb: 'stay' })).toBe('');
+    expect(arma(1, { subject: 'it', verb: 'rain' }, { subject: '', verb: 'stay' })).toBe('');
   });
 });

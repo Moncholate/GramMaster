@@ -131,5 +131,31 @@ export const TENSE_FAMILIES = {
         "#8a83ff"
       ]
     }
+  },
+  "conditional": {
+    "label": "Condicional",
+    "icon": "⇒",
+    "color": {
+      "light": "#db2777",
+      "dark": "#f472b6"
+    },
+    "ink": {
+      "light": "#831843",
+      "dark": "#f9a8d4"
+    },
+    "bg": {
+      "light": [
+        "#fbe9f1",
+        "#f7cfe1",
+        "#f1a9c9",
+        "#db2777"
+      ],
+      "dark": [
+        "#2a2134",
+        "#452c46",
+        "#6e3c60",
+        "#f472b6"
+      ]
+    }
   }
 };

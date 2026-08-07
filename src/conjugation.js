@@ -453,3 +453,67 @@ export const getVerbChangeType = (verbForm, verbText, tenseId) => {
   if (tenseId === 'simple-past') return isIrregularVerb ? 'irregular' : 'past';
   return 'base';
 };
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   CONDICIONALES
+   Dos cláusulas ligadas donde el TIPO fija los dos tiempos. No es un tiempo
+   más de la lista: por eso vive aparte y no entra en `tenses`.
+
+   Se apoya en `buildSentenceText`, que es por cláusula y sin estado, así que
+   una condicional son dos llamadas y una unión. Lo único que no existía era
+   `would have` + participio, de la tercera.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+export const CONDICIONALES = {
+  1: { ifTense: 'simple-present', main: { tense: 'simple-future' } },
+  2: { ifTense: 'simple-past',    main: { modal: 'would' }, subjuntivo: true },
+  3: { ifTense: 'past-perfect',   main: { modal: 'would', perfecto: true } },
+};
+
+/* La cláusula `if` va en minúscula tras "If ", salvo que el sujeto la pida en
+   mayúscula por sí mismo ("I", nombres propios). `smartCase` ya decidió eso,
+   así que basta con mirar cómo dejó el sujeto: si lo dejó en minúscula, lo que
+   subió la inicial fue `cap()` dentro de buildSentenceText y hay que deshacerlo. */
+const bajaInicial = (frase, subjRaw) => {
+  const s = smartCase(subjRaw || '');
+  return (s && s[0] === s[0].toLowerCase())
+    ? frase.charAt(0).toLowerCase() + frase.slice(1)
+    : frase;
+};
+
+const sinPunto = (s) => s.replace(/\s*[.?!]+\s*$/, '');
+
+/**
+ * Arma una condicional completa.
+ * @param tipo 1 | 2 | 3
+ * @param condicion {subject, verb, complement}
+ * @param resultado {subject, verb, complement}
+ * @param ifAlFinal si true → "resultado if condición" en vez de "If condición, resultado"
+ */
+export const buildConditionalText = ({ tipo, condicion, resultado, ifAlFinal = false }) => {
+  const cfg = CONDICIONALES[tipo] || CONDICIONALES[1];
+  if (!condicion?.subject || !condicion?.verb || !resultado?.subject || !resultado?.verb) return '';
+
+  let si = sinPunto(buildSentenceText({ mode: 'affirmative', tense: cfg.ifTense, ...condicion }));
+  si = bajaInicial(si, condicion.subject);
+
+  /* Subjuntivo de la 2ª: «If I were you», con `were` para TODAS las personas.
+     Es lo que enseña el libro en la fórmula «If I were you, I'd…». `was` no se
+     marca como error, pero lo que la app genera es la forma que se enseña. */
+  if (cfg.subjuntivo) si = si.replace(/\b(was)\b/, 'were');
+
+  let principal;
+  if (cfg.main.perfecto) {
+    // «would have + participio» — lo único que el motor no sabía hacer
+    const subj = smartCase(resultado.subject);
+    const comp = resultado.complement ? ' ' + smartCase(resultado.complement) : '';
+    principal = `${subj} ${cfg.main.modal} have ${pastParticiple(resultado.verb.toLowerCase().trim())}${comp}`;
+  } else {
+    principal = sinPunto(buildSentenceText({ mode: 'affirmative', ...cfg.main, ...resultado }));
+  }
+
+  if (ifAlFinal) {
+    return `${principal} if ${bajaInicial(si, condicion.subject)}.`;
+  }
+  return `If ${si}, ${bajaInicial(principal, resultado.subject)}.`;
+};
