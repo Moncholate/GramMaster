@@ -1986,7 +1986,7 @@ const EnglishSentenceBuilder = () => {
             <div className="flex items-center gap-2 mb-4">
               <button
                 onClick={() => setActivePanel(null)}
-                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold text-gray-500 bg-gray-100 hover:bg-gray-200 hover:text-gray-700 transition-colors shrink-0"
+                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold text-gray-700 bg-gray-100 hover:bg-gray-200 hover:text-gray-700 transition-colors shrink-0"
               >
                 ← {t.builderShort}
               </button>
@@ -2038,7 +2038,7 @@ const EnglishSentenceBuilder = () => {
                               {tenseName && <span className="px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full">{tenseName}</span>}
                               {item.config.modal && <span className="px-2 py-0.5 bg-rose-100 text-rose-700 rounded-full">{item.config.modal}</span>}
                               <span className="px-2 py-0.5 bg-gray-200 text-gray-600 rounded-full">{modeLabels[item.config.mode] || item.config.mode}</span>
-                              <span className="px-2 py-0.5 bg-gray-100 text-gray-400 rounded-full ml-auto">{formatTimestamp(item.timestamp)}</span>
+                              <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full ml-auto">{formatTimestamp(item.timestamp)}</span>
                             </div>
                             <div className="flex gap-2 mt-3">
                               <button onClick={() => copyToClipboard(item.sentence)} className="p-2 hover:bg-indigo-100 rounded-lg"><Copy className="w-4 h-4 text-indigo-600" /></button>
@@ -2078,7 +2078,7 @@ const EnglishSentenceBuilder = () => {
                                 <span className="font-semibold">{language === 'es' ? 'Modo Repaso' : 'Review Mode'}</span>
                                 <p className="text-xs text-gray-500 mt-1 ml-9">{language === 'es' ? 'Repasa estructuras según repetición espaciada' : 'Review structures using spaced repetition'}</p>
                                 {pendingCount > 0 && (
-                                  <span className="absolute top-3 right-3 bg-red-500 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">
+                                  <span className="absolute top-3 right-3 bg-red-600 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">
                                     {pendingCount > 9 ? '9+' : pendingCount}
                                   </span>
                                 )}
@@ -2210,9 +2210,9 @@ const EnglishSentenceBuilder = () => {
                             </p>
                             <div className="flex items-center gap-2 text-xs mt-1 mb-3">
                               <span className="px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full">{language === 'es' ? practiceQuestion.tense.nameEs : practiceQuestion.tense.nameEn}</span>
-                              <span className="px-2 py-0.5 bg-gray-100 text-gray-500 rounded-full">{practiceQuestion.mode === 'affirmative' ? (language === 'es' ? 'Afirmativa' : 'Affirmative') : practiceQuestion.mode === 'negative' ? (language === 'es' ? 'Negativa' : 'Negative') : (language === 'es' ? 'Interrogativa' : 'Interrogative')}</span>
+                              <span className="px-2 py-0.5 bg-gray-100 text-gray-700 rounded-full">{practiceQuestion.mode === 'affirmative' ? (language === 'es' ? 'Afirmativa' : 'Affirmative') : practiceQuestion.mode === 'negative' ? (language === 'es' ? 'Negativa' : 'Negative') : (language === 'es' ? 'Interrogativa' : 'Interrogative')}</span>
                               {!practiceResult && (
-                                <button onClick={() => setShowHint(h => !h)} className="ml-auto px-2 py-0.5 bg-amber-50 text-amber-600 border border-amber-200 rounded-full hover:bg-amber-100 transition-colors">
+                                <button onClick={() => setShowHint(h => !h)} className="ml-auto px-2 py-0.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-full hover:bg-amber-100 transition-colors">
                                   {showHint ? (language === 'es' ? 'Ocultar pista' : 'Hide hint') : (language === 'es' ? 'Pista' : 'Hint')}
                                 </button>
                               )}
@@ -2326,7 +2326,7 @@ const EnglishSentenceBuilder = () => {
                           <button
                             onClick={checkPracticeAnswer}
                             disabled={practiceQuestion.type === 'identify' && ((practiceQuestion.askTense && !identifyTenseAnswer) || !identifyModeAnswer)}
-                            className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg font-medium disabled:opacity-40 disabled:cursor-not-allowed"
+                            className="flex-1 px-4 py-2 bg-green-700 text-white rounded-lg font-medium disabled:opacity-40 disabled:cursor-not-allowed"
                           >{t.checkAnswer}</button>
                         ) : (
                           <button onClick={nextPractice} className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium">
@@ -2603,7 +2603,7 @@ const EnglishSentenceBuilder = () => {
                 <button
                   onClick={resetForm}
                   title={language === 'es' ? 'Limpiar todo' : 'Clear all'}
-                  className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 text-xs text-gray-500 hover:text-red-500 hover:bg-red-50 rounded-lg border border-gray-200 hover:border-red-200 transition-all"
+                  className="shrink-0 flex items-center gap-1 px-2.5 py-1.5 text-xs text-gray-500 hover:text-red-700 hover:bg-red-50 rounded-lg border border-gray-200 hover:border-red-200 transition-all"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>
@@ -2806,7 +2806,7 @@ const EnglishSentenceBuilder = () => {
             {/* Verbo */}
             <div className="relative">
               <label className="flex items-center gap-1.5 mb-1.5">
-                <span className="text-[10px] font-bold bg-rose-100 text-rose-600 px-1.5 py-0.5 rounded">V</span>
+                <span className="text-[10px] font-bold bg-rose-100 text-rose-700 px-1.5 py-0.5 rounded">V</span>
                 <span className="text-sm font-medium text-rose-600">{t.verb}</span>
                 <span className="text-red-500 text-xs">*</span>
               </label>
@@ -2882,7 +2882,7 @@ const EnglishSentenceBuilder = () => {
             {/* Complemento */}
             <div>
               <label className="flex items-center gap-1.5 mb-1.5">
-                <span className="text-[10px] font-bold bg-emerald-100 text-emerald-600 px-1.5 py-0.5 rounded">C</span>
+                <span className="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded">C</span>
                 <span className="text-sm font-medium text-emerald-600">{t.complement}</span>
                 <span className="text-gray-400 text-xs">({t.optional})</span>
               </label>
@@ -3164,7 +3164,7 @@ const EnglishSentenceBuilder = () => {
               <span className="text-xl leading-none" aria-hidden="true">{icon}</span>
               <span className="text-[10px] font-bold leading-tight">{label}</span>
               {badge && (
-                <span aria-hidden="true" className="absolute top-1.5 right-1/2 translate-x-3 bg-indigo-500 text-white font-bold rounded-full flex items-center justify-center" style={{fontSize:'9px', minWidth:'16px', height:'16px', padding:'0 3px'}}>
+                <span aria-hidden="true" className="absolute top-1.5 right-1/2 translate-x-3 bg-indigo-600 text-white font-bold rounded-full flex items-center justify-center" style={{fontSize:'9px', minWidth:'16px', height:'16px', padding:'0 3px'}}>
                   {badge}
                 </span>
               )}

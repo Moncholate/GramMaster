@@ -128,3 +128,12 @@ button:disabled { cursor: not-allowed; }
 :root[data-theme="dark"] .hover\:text-gray-700:hover,
 :root[data-theme="dark"] .hover\:text-slate-600:hover,
 :root[data-theme="dark"] .hover\:text-slate-800:hover { color: #eceff8 !important; }
+
+/* Tinta de marca que la capa no invertía y quedaba oscura sobre fondo oscuro.
+   Compuestos a propósito: los chips sobre tinte claro conservan su texto. */
+:root[data-theme="dark"] .bg-white.text-indigo-600 { color: #c7d2fe !important; }   /* 2.81 → 11.85 */
+:root[data-theme="dark"] .hover\:text-red-700:hover { color: #fca5a5 !important; }  /* 2.44 → 8.89 */
+/* SOLO el hover. El chip `bg-indigo-100` se queda claro a propósito (ver el
+   comentario de los tintes -100 arriba), así que aclararle la tinta lo dejaba
+   en 1,21:1 — un fallo que introduje yo al arreglar el hover. */
+:root[data-theme="dark"] .hover\:bg-indigo-200:hover.text-indigo-700 { color: #c7d2fe !important; }  /* 1.66 → 11+ */
