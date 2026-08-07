@@ -1951,7 +1951,7 @@ const EnglishSentenceBuilder = () => {
             let name = language === 'es' ? b.name.es : b.name.en;
             if (tid) { const o = tenses.find(x => x.id === tid); name = name.replace('{tense}', o ? (language === 'es' ? o.nameEs : o.nameEn) : tid); }
             return (
-              <div key={id} role="status" className="gtoast-in pointer-events-auto flex items-center gap-2.5 max-w-sm px-3.5 py-2.5 rounded-xl text-white shadow-lg bg-gradient-to-br from-rose-500 to-amber-500">
+              <div key={id} role="status" className="gtoast-in pointer-events-auto flex items-center gap-2.5 max-w-sm px-3.5 py-2.5 rounded-xl text-red-950 shadow-lg bg-gradient-to-br from-rose-400 to-amber-400">
                 <span className="text-2xl leading-none">{b.icon}</span>
                 <span className="flex flex-col leading-tight">
                   <b className="text-[0.68rem] uppercase tracking-wide opacity-90 font-extrabold">{language === 'es' ? '¡Logro!' : 'Achievement!'}</b>
@@ -2154,7 +2154,7 @@ const EnglishSentenceBuilder = () => {
                             {language === 'es' ? 'Ejercicio' : 'Exercise'} {rondaEnPantalla} {language === 'es' ? 'de' : 'of'} {RONDA}
                           </span>
                           {answerStreak > 0 && (
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-bold text-white bg-gradient-to-br from-rose-500 to-amber-500 shadow-sm shadow-rose-500/25">
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-bold text-red-950 bg-gradient-to-br from-rose-400 to-amber-400 shadow-sm shadow-rose-400/30">
                               🔥 {language === 'es' ? 'Racha' : 'Streak'}: {answerStreak}
                             </span>
                           )}
@@ -2381,13 +2381,13 @@ const EnglishSentenceBuilder = () => {
                     ) : (
                       <>
                         {/* 1. RACHA */}
-                        <div className={`rounded-xl p-4 flex items-center gap-4 ${streak > 0 ? 'bg-gradient-to-br from-rose-500 to-amber-500 shadow-lg shadow-rose-500/25' : 'bg-gray-50 border border-gray-200'}`}>
+                        <div className={`rounded-xl p-4 flex items-center gap-4 ${streak > 0 ? 'bg-gradient-to-br from-rose-400 to-amber-400 shadow-lg shadow-rose-400/30' : 'bg-gray-50 border border-gray-200'}`}>
                           <span className="text-4xl">{streak > 0 ? '🔥' : '💤'}</span>
                           <div>
                             {streak > 0 ? (
                               <>
-                                <p className="text-2xl font-bold text-white">{streak} {streak === 1 ? t.dayStreakSingle : t.dayStreak}</p>
-                                <p className="text-xs text-white/90">{language === 'es' ? 'Practicando en Grammaster' : 'Practicing in Grammaster'}</p>
+                                <p className="text-2xl font-bold text-red-950">{streak} {streak === 1 ? t.dayStreakSingle : t.dayStreak}</p>
+                                <p className="text-xs text-red-950/85">{language === 'es' ? 'Practicando en Grammaster' : 'Practicing in Grammaster'}</p>
                                 {suiteStreak !== streak && suiteStreak > 0 && (
                                   <p className="text-xs text-white/75 mt-0.5">🧩 {language === 'es' ? `Toda la suite: ${suiteStreak} días` : `Whole suite: ${suiteStreak} days`}</p>
                                 )}
