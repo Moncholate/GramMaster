@@ -2185,7 +2185,9 @@ const EnglishSentenceBuilder = () => {
                               type="text" value={practiceAnswer} onChange={(e) => setPracticeAnswer(e.target.value)}
                               onKeyDown={(e) => e.key === 'Enter' && !practiceResult && checkPracticeAnswer()}
                               placeholder={language === 'es' ? 'Escribe la frase verbal...' : 'Type the verb phrase...'}
-                              className={`w-full mt-3 px-4 py-2 border-2 rounded-lg focus:outline-none ${practiceQuestion.type === 'review' ? 'border-amber-300 focus:border-amber-500' : 'border-indigo-300 focus:border-indigo-500'}`}
+                              /* sin `focus:outline-none`: solo cambiaba el tono del borde, que es
+                                 un indicador demasiado débil. Deja pasar el anillo de dua.generated.css. */
+                              className={`w-full mt-3 px-4 py-2 border-2 rounded-lg ${practiceQuestion.type === 'review' ? 'border-amber-300 focus:border-amber-500' : 'border-indigo-300 focus:border-indigo-500'}`}
                               disabled={!!practiceResult}
                             />
                           </>
@@ -2219,7 +2221,7 @@ const EnglishSentenceBuilder = () => {
                               type="text" value={practiceAnswer} onChange={(e) => setPracticeAnswer(e.target.value)}
                               onKeyDown={(e) => e.key === 'Enter' && !practiceResult && checkPracticeAnswer()}
                               placeholder={language === 'es' ? 'Escribe la parte correcta...' : 'Write the correct part...'}
-                              className="w-full px-4 py-2 border-2 border-rose-300 rounded-lg focus:border-rose-500 focus:outline-none"
+                              className="w-full px-4 py-2 border-2 border-rose-300 rounded-lg focus:border-rose-500"
                               disabled={!!practiceResult}
                             />
                           </>
