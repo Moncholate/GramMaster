@@ -145,6 +145,10 @@ button:disabled { cursor: not-allowed; }
 :root[data-theme="dark"] .bg-pink-50 { background-color: #33162a !important; }
 :root[data-theme="dark"] .bg-pink-100 { background-color: #451c39 !important; }
 :root[data-theme="dark"] .border-pink-200 { border-color: #5c2549 !important; }
+/* El rótulo del selector no tiene fondo propio —lo hereda de la tarjeta—, así
+   que ninguna de las dos herramientas lo ve: ese hueco de la cascada lo
+   declaran las dos. Medido a mano: pink-700 sobre #141826 daba 2,93:1. */
+:root[data-theme="dark"] .text-pink-700 { color: #f9a8d4 !important; }   /* 9.74:1 */
 :root[data-theme="dark"] .bg-pink-50.text-pink-900,
 :root[data-theme="dark"] .bg-pink-100.text-pink-900,
 :root[data-theme="dark"] .text-pink-900 { color: #fbcfe8 !important; }   /* 11.79:1 */

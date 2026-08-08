@@ -1898,6 +1898,22 @@ const EnglishSentenceBuilder = () => {
   }, [genTick]);
 
   const generateSentence = () => {
+    /* La condicional NO pasa por el selector de tiempos —el tipo los fija—, así
+       que exigir tiempo o modal la bloqueaba con todo relleno. Y el aviso dice
+       QUÉ cláusula falta: el genérico dejaba adivinando con los seis campos
+       llenos a la vista. */
+    if (esCondicional) {
+      const faltaCond = !condSubject.trim() || !condVerb.trim();
+      const faltaRes = !subject.trim() || !verb.trim();
+      if (faltaCond || faltaRes) {
+        const es = language === 'es';
+        showNotification('error',
+          faltaCond && faltaRes ? (es ? 'Completa el sujeto y el verbo de las dos cláusulas' : 'Fill in the subject and verb of both clauses')
+          : faltaCond ? (es ? 'Falta el sujeto o el verbo de la condición' : 'The condition is missing its subject or verb')
+          : (es ? 'Falta el sujeto o el verbo del resultado' : 'The result is missing its subject or verb'));
+        return;
+      }
+    } else
     // Si hay modal, no se requiere tiempo. Si no hay modal, sí se requiere tiempo.
     // En la pregunta de sujeto no hay campo Sujeto: lo ocupa la wh.
     if ((!subject && !esPregSujeto) || !verb || (!selectedModal && !selectedTense)) {
@@ -2588,8 +2604,13 @@ const EnglishSentenceBuilder = () => {
           <div className="pb-4 border-b border-gray-100">
             <div className="flex flex-wrap items-center gap-2">
 
-              <label className={`text-xs font-semibold tracking-wide uppercase shrink-0 ${!selectedTense && !selectedModal ? 'text-indigo-600' : 'text-gray-500'}`}>
-                {language === 'es' ? 'Tiempo o modal' : 'Tense or modal'} <span className="text-red-500">*</span>
+              {/* Con la condicional el selector de tiempos no existe, así que el
+                  rótulo tampoco puede pedirlo — y menos con asterisco. */}
+              <label className={`text-xs font-semibold tracking-wide uppercase shrink-0 ${
+                esCondicional ? 'text-pink-700' : (!selectedTense && !selectedModal ? 'text-indigo-600' : 'text-gray-500')}`}>
+                {esCondicional
+                  ? (language === 'es' ? 'Tipo de condicional' : 'Conditional type')
+                  : <>{language === 'es' ? 'Tiempo o modal' : 'Tense or modal'} <span className="text-red-500">*</span></>}
               </label>
               {/* Con la condicional activa el selector de tiempos DESAPARECE: el
                   tipo elige los dos tiempos, y esa correspondencia es justo lo
