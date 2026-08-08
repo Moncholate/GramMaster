@@ -156,3 +156,17 @@ button:disabled { cursor: not-allowed; }
 :root[data-theme="dark"] .text-pink-900 { color: #fbcfe8 !important; }   /* 11.79:1 */
 /* El hover no conserva el tono: solo eleva la superficie, como el resto. */
 :root[data-theme="dark"] .hover\:bg-pink-100:hover { background-color: #2a3042 !important; }
+
+/* Tintas oscuras sobre fondos que SÍ se oscurecen: quedaban entre 1,58:1 y
+   2,84:1. Van ACOTADAS al contenedor y no sueltas, que es la trampa de esta
+   capa: `text-green-700` y `text-red-700` también viven sobre tintes -100 que
+   se quedan CLAROS a propósito (las fichas de acierto/error del repaso), y
+   aclararlas en general las borraría justo ahí.
+   El hover no se toca: Tailwind lo compila a `.hover\:text-red-700:hover`, otra
+   clase, que la capa ya cubre aparte. */
+:root[data-theme="dark"] .bg-teal-50.text-teal-900   { color: #99f6e4 !important; }  /* 11.89:1 sobre #0e2b2c */
+:root[data-theme="dark"] .bg-green-50 .text-green-700 { color: #86efac !important; }  /* 10.15:1 sobre #123024 */
+/* Con espacio Y sin él: en el cuadro de práctica la tinta va en un hijo del
+   fondo, y en el botón de limpiar historial van en el MISMO elemento. */
+:root[data-theme="dark"] .bg-red-50 .text-red-700,
+:root[data-theme="dark"] .bg-red-50.text-red-700      { color: #fca5a5 !important; }  /* 8.89:1 sobre #2e1618, 6.92:1 en hover */
