@@ -38,6 +38,7 @@ import {
   buildVerbPhrase,
   buildSentenceText,
   buildConditionalText,
+  CONDICIONALES,
   detectConjugatedVerbBase,
   getVerbChangeType,
 } from './conjugation';
@@ -1835,7 +1836,50 @@ const EnglishSentenceBuilder = () => {
         modo: selectedMode, condicionNegativa: condNeg });
       setGeneratedSentence(frase);
       setAllModeSentences(null);
-      setSentenceAnalysis(null);
+
+      /* El análisis SÍ se muestra, y de las dos cláusulas. Apagarlo era el
+         error: la app convertía `run` en `ran` sin decir que lo hacía ni cómo
+         se llama eso, y así no enseña nada de la cláusula `if`. Las piezas de
+         ambas se concatenan con un chip `if` en medio, de modo que el panel de
+         siempre las dibuja sin cambios — incluida la marca de «cambió», que es
+         la que muestra run → ran. */
+      const cfg = CONDICIONALES[tipoCond];
+      const modoCond = condNeg ? 'negative' : 'affirmative';
+      const aCond = getAuxAndVerbForm(cond.subject, cond.verb, cfg.ifTense, '', modoCond);
+      const piezasCond = generateSentenceAnalysis({
+        subjectText: cond.subject, verbText: cond.verb, complementText: cond.complement,
+        auxiliary: aCond.auxiliary, verbForm: aCond.verbForm,
+        tenseId: cfg.ifTense, mode: modoCond, modalId: '',
+      }).parts;
+
+      /* La principal no pasa por `getAuxAndVerbForm` en la 3ª: «would have» no
+         es un tiempo de la lista, así que el auxiliar y el participio se pasan
+         a mano. En la 1ª y la 2ª basta con el modal o el tiempo. */
+      const neg = selectedMode === 'negative';
+      const auxRes = cfg.main.perfecto
+        ? (neg ? "wouldn't have" : 'would have')
+        : (cfg.main.modal ? (neg ? "wouldn't" : 'would') : (neg ? "won't" : 'will'));
+      const formaRes = cfg.main.perfecto ? pastParticiple(res.verb.toLowerCase().trim()) : res.verb.toLowerCase().trim();
+      const piezasRes = generateSentenceAnalysis({
+        subjectText: res.subject, verbText: res.verb, complementText: res.complement,
+        auxiliary: auxRes, verbForm: formaRes,
+        tenseId: cfg.main.perfecto ? '' : (cfg.main.tense || ''), mode: selectedMode,
+        modalId: cfg.main.modal || '',
+      }).parts;
+
+      const tnCond = tenses.find(x => x.id === cfg.ifTense);
+      setSentenceAnalysis({
+        parts: [
+          { text: 'If', type: 'conditional-if', color: 'pink',
+            explanation: (language === 'es'
+              ? `Abre la condición, que va en ${tnCond?.nameEs}. El tipo de condicional fija ese tiempo: no se elige.`
+              : `Opens the condition, which goes in ${tnCond?.nameEn}. The conditional type fixes that tense — you don't pick it.`),
+            original: 'If', changed: false },
+          ...piezasCond,
+          ...piezasRes,
+        ],
+      });
+      setShowAnalysisDetails(false);
       return frase;
     }
 
@@ -2629,8 +2673,17 @@ const EnglishSentenceBuilder = () => {
                     >
                       <span className="font-bold">{n}ª</span>
                       <span className="hidden sm:inline">{n === 1 ? t.condTipo1 : n === 2 ? t.condTipo2 : t.condTipo3}</span>
-                      <span className="text-[10px] opacity-70">
-                        {n === 1 ? 'will' : n === 2 ? 'would' : 'would have'}
+                      {/* LOS DOS tiempos, no solo el modal del resultado. Antes
+                          solo se veía «would» y el tiempo de la cláusula `if`
+                          no aparecía en ninguna parte: la app lo aplicaba en
+                          silencio y el alumno nunca sabía cuál era. Esa
+                          correspondencia ES la regla que se enseña. */}
+                      <span className="text-[10px] opacity-80 whitespace-nowrap">
+                        if · {(() => {
+                          const id = CONDICIONALES[n].ifTense;
+                          const tn = tenses.find(x => x.id === id);
+                          return language === 'es' ? tn?.nameEs : tn?.nameEn;
+                        })()} → {n === 1 ? 'will' : n === 2 ? 'would' : 'would have'}
                       </span>
                     </button>
                   ))}
@@ -3125,6 +3178,7 @@ const EnglishSentenceBuilder = () => {
                 <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1 text-xl sm:text-2xl md:text-3xl font-bold font-['Atkinson_Hyperlegible']">
                   {sentenceAnalysis.parts.map((part, index) => {
                     const partLabel =
+                      part.type === 'conditional-if' ? (language === 'es' ? 'Conector · condición' : 'Connector · condition') :
                       part.type === 'wh-subject' ? (language === 'es' ? 'WH = sujeto' : 'WH = subject') :
                       part.type === 'wh-word' ? (language === 'es' ? 'Palabra WH' : 'WH Word') :
                       part.type === 'subject' ? t.subjectLabel :
@@ -3134,6 +3188,7 @@ const EnglishSentenceBuilder = () => {
                       part.type === 'adverbial' ? (language === 'es' ? 'Adverbial (A)' : 'Adverbial (A)') :
                       t.complementLabel + ' (C)';
                     const colorClasses =
+                      part.type === 'conditional-if' ? 'text-pink-700 hover:bg-pink-100' :
                       part.type === 'wh-subject' ? ROLE_TW['wh-word'] :
                       part.type === 'wh-word' ? ROLE_TW['wh-word'] :
                       part.type === 'subject' ? ROLE_TW.subject :
