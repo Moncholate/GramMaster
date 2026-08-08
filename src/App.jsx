@@ -37,6 +37,7 @@ import {
   getAuxAndVerbForm,
   buildVerbPhrase,
   buildSentenceText,
+  buildConditionalText,
   detectConjugatedVerbBase,
   getVerbChangeType,
 } from './conjugation';
@@ -555,6 +556,16 @@ const EnglishSentenceBuilder = () => {
   const [complement, setComplement] = useState('');
   const [selectedTense, setSelectedTense] = useState('');
   const [selectedMode, setSelectedMode] = useState('affirmative');
+  /* CONDICIONALES. Cruzan con el signo en vez de ser un modo hermano: se puede
+     armar una condicional afirmativa, negativa o interrogativa. Y la condición
+     lleva su PROPIO negador, porque negar la condición («si no llueve») no es
+     lo mismo que negar el resultado («no me quedaré»). */
+  const [esCondicional, setEsCondicional] = useState(false);
+  const [tipoCond, setTipoCond] = useState(2);
+  const [condNeg, setCondNeg] = useState(false);
+  const [condSubject, setCondSubject] = useState('');
+  const [condVerb, setCondVerb] = useState('');
+  const [condComplement, setCondComplement] = useState('');
   const [selectedModal, setSelectedModal] = useState('');
   const [whWord, setWhWord] = useState('');
   const [whExtension, setWhExtension] = useState('');
@@ -844,8 +855,15 @@ const EnglishSentenceBuilder = () => {
   /* La pregunta de sujeto solo existe desde el curso donde se enseña (AEF
      Intermedio II 12C). Si el alumno baja de nivel con ese modo puesto, hay que
      sacarlo: si no, queda seleccionado un modo que ya no está en la barra. */
+  /* La pregunta de sujeto no se combina con la condicional: su rasgo es NO
+     tener auxiliar, y el resultado de una condicional siempre lleva uno. */
   const modosVisibles = modes.filter(m =>
-    !m.cefr || COURSE_ORDER.indexOf(m.cefr) <= COURSE_ORDER.indexOf(cefrLevel));
+    (!m.cefr || COURSE_ORDER.indexOf(m.cefr) <= COURSE_ORDER.indexOf(cefrLevel))
+    && !(esCondicional && m.id === 'subject-question'));
+  useEffect(() => {
+    if (!modosVisibles.some(m => m.id === selectedMode)) setSelectedMode('affirmative');
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [esCondicional]);
   useEffect(() => {
     if (!modosVisibles.some(m => m.id === selectedMode)) setSelectedMode('affirmative');
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1806,6 +1824,21 @@ const EnglishSentenceBuilder = () => {
     const params = { subject, verb, complement, tense: selectedTense, modal: selectedModal,
       whWord, whExtension: whExtUsable, adverb };
 
+    /* Condicional: son dos cláusulas y el TIPO fija los dos tiempos, así que no
+       pasa por el selector de tiempos ni por las 3 variantes de modo — esas
+       comparan una misma oración simple en afirmativa/negativa/interrogativa y
+       aquí no aplican. */
+    if (esCondicional) {
+      const cond = { subject: condSubject, verb: condVerb, complement: condComplement };
+      const res = { subject, verb, complement };
+      const frase = buildConditionalText({ tipo: tipoCond, condicion: cond, resultado: res,
+        modo: selectedMode, condicionNegativa: condNeg });
+      setGeneratedSentence(frase);
+      setAllModeSentences(null);
+      setSentenceAnalysis(null);
+      return frase;
+    }
+
     const sentence = buildSentenceText({ mode: selectedMode, ...params });
     setGeneratedSentence(sentence);
 
@@ -1903,7 +1936,8 @@ const EnglishSentenceBuilder = () => {
     if ((!subject && !esPregSujeto) || !verb || (!selectedModal && !selectedTense)) return;
     computeSentenceDisplay();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [subject, verb, complement, selectedTense, selectedMode, selectedModal, whWord, whExtension, selectedAdverb, language]);
+  }, [subject, verb, complement, selectedTense, selectedMode, selectedModal, whWord, whExtension, selectedAdverb, language,
+      esCondicional, tipoCond, condNeg, condSubject, condVerb, condComplement]);
 
   const verbSuggestions = getVerbSuggestions();
 
@@ -2557,7 +2591,31 @@ const EnglishSentenceBuilder = () => {
               <label className={`text-xs font-semibold tracking-wide uppercase shrink-0 ${!selectedTense && !selectedModal ? 'text-indigo-600' : 'text-gray-500'}`}>
                 {language === 'es' ? 'Tiempo o modal' : 'Tense or modal'} <span className="text-red-500">*</span>
               </label>
-              {/* Tiempo y modal son excluyentes: elegir uno limpia el otro. */}
+              {/* Con la condicional activa el selector de tiempos DESAPARECE: el
+                  tipo elige los dos tiempos, y esa correspondencia es justo lo
+                  que se enseña. Dejarlo visible invitaría a elegir por libre. */}
+              {esCondicional ? (
+                <div className="flex flex-wrap gap-1.5">
+                  {[1, 2, 3].map((n) => (
+                    <button
+                      key={n}
+                      onClick={() => setTipoCond(n)}
+                      aria-pressed={tipoCond === n}
+                      title={t.condicionalAyuda}
+                      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-all ${
+                        tipoCond === n ? 'border-pink-500 bg-pink-50 text-pink-900' : 'border-gray-200 bg-white text-gray-500 hover:bg-gray-50'
+                      }`}
+                    >
+                      <span className="font-bold">{n}ª</span>
+                      <span className="hidden sm:inline">{n === 1 ? t.condTipo1 : n === 2 ? t.condTipo2 : t.condTipo3}</span>
+                      <span className="text-[10px] opacity-70">
+                        {n === 1 ? 'will' : n === 2 ? 'would' : 'would have'}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+              /* Tiempo y modal son excluyentes: elegir uno limpia el otro. */
               <TensePicker
                 value={selectedTense}
                 modalValue={selectedModal}
@@ -2567,6 +2625,21 @@ const EnglishSentenceBuilder = () => {
                 cefrLevel={cefrLevel}
                 highlight={!selectedTense && !selectedModal}
               />
+              )}
+
+              {/* El interruptor. La condicional cruza con el signo, no lo
+                  reemplaza: se puede armar afirmativa, negativa e interrogativa. */}
+              <button
+                onClick={() => setEsCondicional(v => !v)}
+                aria-pressed={esCondicional}
+                title={t.condicionalAyuda}
+                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-all shrink-0 ${
+                  esCondicional ? 'border-pink-500 bg-pink-50 text-pink-900' : 'border-gray-200 bg-white text-gray-500 hover:bg-gray-50'
+                }`}
+              >
+                <span aria-hidden="true">⇒</span>
+                {t.condicional}
+              </button>
 
               <div className="hidden sm:block w-px h-5 bg-gray-200 shrink-0" />
 
@@ -2723,9 +2796,56 @@ const EnglishSentenceBuilder = () => {
             {/* Sujeto — en la pregunta de sujeto lo ocupa la wh, así que el
                 campo se apaga en vez de desaparecer: que se vea QUÉ casilla
                 está llenando la wh-word es justamente la lección. */}
+            {/* CONDICIÓN — solo con la condicional activa. Va arriba porque es
+                la que abre la oración, y lleva su propio negador: negar la
+                condición no es lo mismo que negar el resultado. */}
+            {esCondicional && (
+              <div className="md:col-span-full rounded-xl border border-pink-200 bg-pink-50 p-3">
+                <div className="flex flex-wrap items-center gap-2 mb-2">
+                  <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-pink-100 text-pink-900">IF</span>
+                  <span className="text-sm font-medium text-pink-900">{t.condCondicion}</span>
+                  <button
+                    onClick={() => setCondNeg(v => !v)}
+                    aria-pressed={condNeg}
+                    title={t.condNegarAyuda}
+                    className={`ml-auto flex items-center gap-1 px-2 py-1 rounded-lg border text-[11px] font-medium transition-all ${
+                      condNeg ? 'border-rose-500 bg-rose-100 text-rose-800' : 'border-pink-200 bg-white text-pink-900 hover:bg-pink-100'
+                    }`}
+                  >
+                    <XCircle className="w-3 h-3 shrink-0" />
+                    {t.condNegarCondicion}
+                  </button>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <input type="text" value={condSubject} onChange={(e) => setCondSubject(e.target.value)}
+                    autoCapitalize="none" placeholder={t.subject}
+                    className="w-full px-3 py-2 border border-pink-200 rounded-lg text-sm bg-white" />
+                  <input type="text" value={condVerb} onChange={(e) => setCondVerb(e.target.value)}
+                    autoCapitalize="none" placeholder={t.verb}
+                    className="w-full px-3 py-2 border border-pink-200 rounded-lg text-sm bg-white" />
+                  <input type="text" value={condComplement} onChange={(e) => setCondComplement(e.target.value)}
+                    autoCapitalize="none" placeholder={t.complement}
+                    className="w-full px-3 py-2 border border-pink-200 rounded-lg text-sm bg-white" />
+                </div>
+                {/* El `were` del subjuntivo se avisa, no se corrige a escondidas. */}
+                {tipoCond === 2 && condVerb.trim().toLowerCase() === 'be' && (
+                  <p className="mt-2 text-[11px] text-pink-900">{t.condWereNota}</p>
+                )}
+              </div>
+            )}
+            {/* Sin este rótulo los campos de abajo se leen como «los campos de
+                siempre» y no como la otra mitad del par. */}
+            {esCondicional && (
+              <div className="md:col-span-full -mb-2 flex items-center gap-2">
+                <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-pink-100 text-pink-900">⇒</span>
+                <span className="text-sm font-medium text-pink-900">{t.condResultado}</span>
+              </div>
+            )}
+
             <div>
               <label className="flex items-center gap-1.5 mb-1.5">
-                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${esPregSujeto ? 'bg-teal-100 text-teal-700' : 'bg-indigo-100 text-indigo-600'}`}>S</span>
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${esPregSujeto ? 'bg-teal-100 text-teal-700' : 'bg-indigo-100 text-indigo-600'}`}>
+                  S</span>
                 <span className={`text-sm font-medium ${esPregSujeto ? 'text-teal-700' : 'text-indigo-600'}`}>{t.subject}</span>
                 {!esPregSujeto && <span className="text-red-500 text-xs">*</span>}
               </label>
