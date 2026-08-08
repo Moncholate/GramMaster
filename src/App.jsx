@@ -2187,7 +2187,7 @@ const EnglishSentenceBuilder = () => {
       {/* Notificación */}
       {notification && (
         <div role="status" aria-live="polite" className={`fixed top-4 right-4 z-50 px-5 py-3 rounded-lg shadow-lg ${
-          notification.type === 'error' ? 'bg-red-500 text-white' : 'bg-green-500 text-white'
+          notification.type === 'error' ? 'bg-red-600 text-white' : 'bg-green-500 text-green-950'
         }`}>
           <div className="flex items-center gap-2">
             {notification.type === 'error' ? <AlertTriangle className="w-4 h-4" /> : <CheckCircle className="w-4 h-4" />}
@@ -2481,8 +2481,8 @@ const EnglishSentenceBuilder = () => {
                                           ? opt.id === practiceQuestion.tense.id
                                             ? 'bg-green-100 border-green-400 text-green-700'
                                             : identifyTenseAnswer === opt.id && !practiceResult?.tenseOk
-                                              ? 'bg-red-100 border-red-300 text-red-600'
-                                              : 'bg-gray-100 border-gray-200 text-gray-400'
+                                              ? 'bg-red-100 border-red-300 text-red-700'
+                                              : 'bg-gray-100 border-gray-200 text-gray-600'
                                           : identifyTenseAnswer === opt.id
                                             ? 'bg-teal-100 border-teal-400 text-teal-700'
                                             : 'bg-white border-gray-200 text-gray-600 hover:border-teal-300'
@@ -2513,8 +2513,8 @@ const EnglishSentenceBuilder = () => {
                                       ? m.id === practiceQuestion.mode
                                         ? 'bg-green-100 border-green-400 text-green-700'
                                         : identifyModeAnswer === m.id && !practiceResult?.modeOk
-                                          ? 'bg-red-100 border-red-300 text-red-600'
-                                          : 'bg-gray-100 border-gray-200 text-gray-400'
+                                          ? 'bg-red-100 border-red-300 text-red-700'
+                                          : 'bg-gray-100 border-gray-200 text-gray-600'
                                       : identifyModeAnswer === m.id
                                         ? 'bg-teal-100 border-teal-400 text-teal-700'
                                         : 'bg-white border-gray-200 text-gray-600 hover:border-teal-300'
@@ -2898,7 +2898,7 @@ const EnglishSentenceBuilder = () => {
                       onClick={() => { if (!(elegida && esPregSujeto)) { setWhWord(elegida ? '' : wh.id); setWhExtension(''); } }}
                       className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all ${
                         elegida
-                          ? 'bg-teal-600 text-white border-teal-600'
+                          ? 'bg-teal-700 text-white border-teal-700'
                           : 'bg-white text-gray-600 border-gray-300 hover:border-teal-400 hover:text-teal-700'
                       }`}
                     >
@@ -2957,7 +2957,7 @@ const EnglishSentenceBuilder = () => {
                       className={`px-2.5 py-0.5 rounded-full text-xs border transition-all ${
                         whExtension === ext
                           ? 'bg-teal-100 text-teal-800 border-teal-400 font-medium'
-                          : 'bg-white text-gray-500 border-gray-200 hover:border-teal-300 hover:text-teal-600'
+                          : 'bg-white text-gray-500 border-gray-200 hover:border-teal-300 hover:text-teal-700'
                       }`}
                     >
                       {whWords.find(w => w.id === whWord)?.name} {ext}
@@ -3235,7 +3235,7 @@ const EnglishSentenceBuilder = () => {
                       onClick={() => setComplement(chip)}
                       className={`px-2 py-0.5 rounded-full text-xs border transition-all ${
                         complement === chip
-                          ? 'bg-emerald-600 text-white border-emerald-600'
+                          ? 'bg-emerald-700 text-white border-emerald-700'
                           : 'bg-white text-gray-500 border-gray-300 hover:border-emerald-400 hover:text-emerald-700'
                       }`}
                     >

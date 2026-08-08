@@ -164,6 +164,13 @@ button:disabled { cursor: not-allowed; }
    aclararlas en general las borraría justo ahí.
    El hover no se toca: Tailwind lo compila a `.hover\:text-red-700:hover`, otra
    clase, que la capa ya cubre aparte. */
+/* Los hover de los chips: en reposo el botón es `bg-white`, que en oscuro pasa a
+   #141826, pero la tinta del hover se quedaba en su tono oscuro (3,2:1). Van con
+   la variante `hover:` porque Tailwind la compila a OTRA clase: un override
+   sobre `.text-teal-700` no la alcanza. */
+:root[data-theme="dark"] .hover\:text-teal-700:hover    { color: #5eead4 !important; }  /* 11.95:1 sobre #141826 */
+:root[data-theme="dark"] .hover\:text-emerald-700:hover { color: #6ee7b7 !important; }  /* 11.59:1 sobre #141826 */
+
 :root[data-theme="dark"] .bg-teal-50.text-teal-900   { color: #99f6e4 !important; }  /* 11.89:1 sobre #0e2b2c */
 :root[data-theme="dark"] .bg-green-50 .text-green-700 { color: #86efac !important; }  /* 10.15:1 sobre #123024 */
 /* Con espacio Y sin él: en el cuadro de práctica la tinta va en un hijo del
