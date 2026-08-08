@@ -107,7 +107,7 @@ export const TENSE_FAMILIES = {
     }
   },
   "modal": {
-    "label": "Modal / Condicional",
+    "label": "Modal",
     "icon": "◈",
     "color": {
       "light": "#4f46e5",

@@ -132,7 +132,13 @@ const tenseFam = (tenseId) => {
  * en vez de explicarse. Van en su propio grupo, con el color de la familia
  * `modal` del sistema de diseño, porque un modal NO es un tiempo.
  */
-function TensePicker({ value, modalValue, onSelectTense, onSelectModal, language, cefrLevel, highlight }) {
+/* Un selector para UNA decisión: qué estructura verbal lleva la oración. Tiempos,
+   modales y condicionales compiten por ella, así que van los tres aquí dentro.
+   La condicional estaba fuera, en un interruptor que vivía DESPUÉS del selector
+   al que reemplazaba — y `tokens.json` ya la tenía definida como familia, con su
+   color y su ícono ⇒, para ir junto a las demás. */
+function TensePicker({ value, modalValue, condValue, onSelectTense, onSelectModal, onSelectCond,
+                       condLabels, condLabel, condHelp, language, cefrLevel, highlight }) {
   const [open, setOpen] = useState(false);
   const boxRef = useRef(null);
 
@@ -150,6 +156,21 @@ function TensePicker({ value, modalValue, onSelectTense, onSelectModal, language
   const fam = tenseFam(value);
   const selModal = modals.find(m => m.id && m.id === modalValue);
   const modalFam = TENSE_FAMILIES.modal;
+  const condFam = TENSE_FAMILIES.conditional;
+  /* La condicional se enseña desde Intermedio II (1ª y 2ª) y la 3ª en AEF 3, así
+     que el grupo aparece desde el mismo curso que el resto del contenido de ese
+     nivel. Cada opción muestra LOS DOS tiempos y no solo el modal del resultado:
+     esa correspondencia ES la regla, y ocultarla fue el error pedagógico que
+     hubo que corregir la vez pasada. */
+  const condItems = COURSE_ORDER.indexOf('intermedio2') <= COURSE_ORDER.indexOf(cefrLevel)
+    ? [1, 2, 3].map(n => ({
+        n,
+        name: condLabels[n],
+        desc: `if · ${(() => { const tn = tenses.find(x => x.id === CONDICIONALES[n].ifTense);
+                              return language === 'es' ? tn?.nameEs : tn?.nameEn; })()}`
+              + ` → ${n === 1 ? 'will' : n === 2 ? 'would' : 'would have'}`,
+      }))
+    : [];
   const groups = ['present', 'past', 'future'].map(tt => ({
     tt,
     label: tt === 'present' ? (language === 'es' ? 'Presente' : 'Present') : tt === 'past' ? (language === 'es' ? 'Pasado' : 'Past') : (language === 'es' ? 'Futuro' : 'Future'),
@@ -165,12 +186,18 @@ function TensePicker({ value, modalValue, onSelectTense, onSelectModal, language
         onClick={() => setOpen(o => !o)}
         aria-expanded={open}
         aria-haspopup="listbox"
-        style={(fam || selModal) ? { borderLeftWidth: '4px', borderLeftColor: selModal ? modalFam.color[v] : fam.color } : undefined}
+        style={(fam || selModal || condValue) ? { borderLeftWidth: '4px',
+          borderLeftColor: condValue ? condFam.color[v] : selModal ? modalFam.color[v] : fam.color } : undefined}
         className={`w-full flex items-center gap-2 px-2.5 py-2 sm:py-1.5 rounded-lg text-sm font-semibold text-gray-700 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300 cursor-pointer text-left ${
           highlight ? 'border-2 border-indigo-400 ring-2 ring-indigo-200' : 'border border-gray-200'
         }`}
       >
-        {selModal ? (
+        {condValue ? (
+          <>
+            <span className="text-base leading-none shrink-0" style={{ color: condFam.color[v] }} aria-hidden="true">{condFam.icon}</span>
+            <span className="truncate">{condLabels[condValue]}</span>
+          </>
+        ) : selModal ? (
           <>
             <span className="text-base leading-none shrink-0" style={{ color: modalFam.color[v] }} aria-hidden="true">{modalFam.icon}</span>
             <span className="truncate">{selModal.name}</span>
@@ -184,7 +211,7 @@ function TensePicker({ value, modalValue, onSelectTense, onSelectModal, language
             <span className="truncate">{language === 'es' ? sel.nameEs : sel.nameEn}</span>
           </>
         ) : (
-          <span className="text-gray-400 font-medium truncate">{language === 'es' ? 'Selecciona un tiempo o modal...' : 'Select a tense or modal...'}</span>
+          <span className="text-gray-400 font-medium truncate">{language === 'es' ? 'Selecciona un tiempo, modal o condicional...' : 'Select a tense, modal or conditional...'}</span>
         )}
         <ChevronDown className={`w-4 h-4 ml-auto shrink-0 text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
@@ -243,9 +270,54 @@ function TensePicker({ value, modalValue, onSelectTense, onSelectModal, language
             </div>
           ))}
 
-          {/* Cuarto grupo: modales. Separado y con su propio color porque un
-              modal NO es un tiempo — pero va en el mismo selector porque compite
-              por la misma decisión. Sin pastilla de aspecto: no tienen aspecto. */}
+          {/* Condicionales. Ni tiempo ni modal: son dos cláusulas y el TIPO fija
+              los dos tiempos. Van aquí porque compiten por la misma decisión, y
+              cada opción enseña la correspondencia completa («if · Presente
+              Simple → will») en vez de solo el modal del resultado. */}
+          {condItems.length > 0 && (
+            <div className="pt-2 mt-2 border-t border-gray-200">
+              <p className="text-[10px] font-bold uppercase tracking-wide px-1.5 pt-1 flex items-center gap-1.5" style={{ color: condFam.color[v] }}>
+                <span className="w-2 h-2 rounded-full inline-block" style={{ background: condFam.color[v] }} aria-hidden="true" />
+                {condLabel}
+              </p>
+              {/* Esta línea vivía en el `title` del interruptor que se eliminó.
+                  Aquí queda mejor: es justo donde nace la duda —«¿por qué esta
+                  opción no me deja elegir el tiempo?»— y en un tooltip no la
+                  veía nadie en móvil. */}
+              <p className="text-[11px] text-gray-500 px-1.5 pb-1 leading-tight">{condHelp}</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
+                {condItems.map(c => {
+                  const selected = c.n === condValue;
+                  return (
+                    <button
+                      key={c.n}
+                      type="button"
+                      role="option"
+                      aria-selected={selected}
+                      onClick={() => { onSelectCond(c.n); setOpen(false); }}
+                      style={{ background: condFam.bg[v][0], boxShadow: selected ? `inset 0 0 0 2px ${condFam.color[v]}` : undefined }}
+                      className="flex items-center gap-2 pr-2.5 py-2 rounded-lg text-left text-sm font-medium transition-transform hover:scale-[1.01] overflow-hidden"
+                    >
+                      <span className="self-stretch w-1 rounded-full shrink-0" style={{ background: condFam.color[v] }} aria-hidden="true" />
+                      <span className="min-w-0 leading-tight">
+                        <span className="text-gray-800 font-semibold">{c.name}</span>
+                        {/* Sin `nowrap`: el botón lleva `overflow-hidden`, así que
+                            «if · Pasado Perfecto → would have» se cortaría en vez
+                            de envolver. La correspondencia es lo que se enseña —
+                            no puede quedar a medias. */}
+                        <span className="block text-[11px] text-gray-600 leading-tight">{c.desc}</span>
+                      </span>
+                      {selected && <Check className="w-3.5 h-3.5 ml-auto shrink-0 text-gray-800" />}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Modales. Separado y con su propio color porque un modal NO es un
+              tiempo — pero va en el mismo selector porque compite por la misma
+              decisión. Sin pastilla de aspecto: no tienen aspecto. */}
           {modalItems.length > 0 && (
             <div className="pt-2 mt-2 border-t border-gray-200">
               <p className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-1 flex items-center gap-1.5" style={{ color: modalFam.color[v] }}>
@@ -268,7 +340,7 @@ function TensePicker({ value, modalValue, onSelectTense, onSelectModal, language
                       <span className="self-stretch w-1 rounded-full shrink-0" style={{ background: modalFam.color[v] }} aria-hidden="true" />
                       <span className="min-w-0 leading-tight">
                         <span className="text-gray-800 font-semibold">{m.name}</span>
-                        <span className="block text-[11px] text-gray-500 leading-tight">
+                        <span className="block text-[11px] text-gray-600 leading-tight">
                           {language === 'es' ? m.descEs : m.descEn}
                         </span>
                       </span>
@@ -563,9 +635,16 @@ const EnglishSentenceBuilder = () => {
   /* CONDICIONALES. Cruzan con el signo en vez de ser un modo hermano: se puede
      armar una condicional afirmativa, negativa o interrogativa. Y la condición
      lleva su PROPIO negador, porque negar la condición («si no llueve») no es
-     lo mismo que negar el resultado («no me quedaré»). */
-  const [esCondicional, setEsCondicional] = useState(false);
-  const [tipoCond, setTipoCond] = useState(2);
+     lo mismo que negar el resultado («no me quedaré»).
+
+     `tipoCond` es UNA sola fuente de verdad (null · 1 · 2 · 3) y `esCondicional`
+     se deriva. Antes eran dos estados y un interruptor aparte que vivía DESPUÉS
+     del selector de tiempos al que reemplazaba: había que apretar algo a la
+     derecha para que desapareciera lo de la izquierda. Ahora la condicional es
+     una familia más DENTRO del selector, que es donde `tokens.json` la tenía
+     definida desde el principio. */
+  const [tipoCond, setTipoCond] = useState(null);
+  const esCondicional = tipoCond != null;
   const [condNeg, setCondNeg] = useState(false);
   const [condSubject, setCondSubject] = useState('');
   const [condVerb, setCondVerb] = useState('');
@@ -579,10 +658,16 @@ const EnglishSentenceBuilder = () => {
      La regla vive en data/grammar.js, junto a las sugerencias que la disparan. */
   const whExtIncompleta = whExtPideSustantivo(whExtension);
   const whExtUsable = whExtIncompleta ? '' : whExtension.trim();
-  const esPregSujeto = selectedMode === 'subject-question';
-  // En la pregunta de sujeto la wh manda: solo las que pueden ejecutar la acción.
-  const whDisponibles = whWords.filter(wh => wh.id &&
-    (!esPregSujeto || whSubjectWords.includes(wh.id)));
+  /* La pregunta de sujeto YA NO es un cuarto modo. Con los dos ejes es forma `?`
+     + tipo abierta, así que salió de la barra de formas —donde figuraba como un
+     cuarto valor de una variable que solo tiene tres— y pasó a ser un
+     interruptor junto a la wh-word, que es de lo que habla.
+     Tiene que ser una elección del alumno y no algo deducible: «Who called you?»
+     y «Who did you call?» usan la misma palabra. */
+  const [whEsSujeto, setWhEsSujeto] = useState(false);
+  const whDisponibles = whWords.filter(wh => wh.id);
+  /* Lo derivado va más abajo, junto a `cefrLevel`: el curso decide si la
+     pregunta de sujeto se ofrece siquiera, y ese estado se declara después. */
   const [selectedAdverb, setSelectedAdverb] = useState('');
   const [generatedSentence, setGeneratedSentence] = useState('');
   const [semanticWarning, setSemanticWarning] = useState(null);
@@ -634,6 +719,21 @@ const EnglishSentenceBuilder = () => {
   const [showHint, setShowHint] = useState(false);
   const [cefrLevel, setCefrLevelState] = useState(() => readShared('gh_level', GH_LEVELS, 'basico1'));
   const setCefrLevel = (v) => { setCefrLevelState(v); writeShared('gh_level', v); };
+
+  /* La pregunta de sujeto, derivada (ver `whEsSujeto` más arriba). Se OFRECE
+     solo cuando tiene sentido ofrecerla: forma `?`, una wh que pueda ejecutar la
+     acción, y desde el curso donde se enseña (AEF Intermedio II 12C). Con una
+     condicional puesta no se ofrece, y ahora eso es estructural: el resultado de
+     una condicional siempre lleva auxiliar, y el rasgo de la pregunta de sujeto
+     es NO tenerlo. Antes esa exclusión hacía desaparecer un segmento de la barra
+     sin decir por qué. */
+  const puedeSerPregSujeto = selectedMode === 'interrogative' && !esCondicional
+    && whSubjectWords.includes(whWord)
+    && COURSE_ORDER.indexOf('intermedio2') <= COURSE_ORDER.indexOf(cefrLevel);
+  const esPregSujeto = puedeSerPregSujeto && whEsSujeto;
+  /* El motor sigue hablando de `subject-question` —es su vocabulario, y lo fijan
+     los tests—; lo que cambió es de dónde sale. */
+  const modoMotor = esPregSujeto ? 'subject-question' : selectedMode;
   const [notification, setNotification] = useState(null); // { type: 'error' | 'success', message: string }
 
   const [practiceDays, setPracticeDays] = useLocalStorage('practiceDays', []); // array of 'YYYY-MM-DD' strings
@@ -856,30 +956,16 @@ const EnglishSentenceBuilder = () => {
     setSelectedTense('');
   }, [cefrLevel]);
 
-  /* La pregunta de sujeto solo existe desde el curso donde se enseña (AEF
-     Intermedio II 12C). Si el alumno baja de nivel con ese modo puesto, hay que
-     sacarlo: si no, queda seleccionado un modo que ya no está en la barra. */
-  /* La pregunta de sujeto no se combina con la condicional: su rasgo es NO
-     tener auxiliar, y el resultado de una condicional siempre lleva uno. */
-  const modosVisibles = modes.filter(m =>
-    (!m.cefr || COURSE_ORDER.indexOf(m.cefr) <= COURSE_ORDER.indexOf(cefrLevel))
-    && !(esCondicional && m.id === 'subject-question'));
-  useEffect(() => {
-    if (!modosVisibles.some(m => m.id === selectedMode)) setSelectedMode('affirmative');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [esCondicional]);
-  useEffect(() => {
-    if (!modosVisibles.some(m => m.id === selectedMode)) setSelectedMode('affirmative');
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [cefrLevel]);
+  /* La barra de formas ya no necesita filtro: tiene SIEMPRE los tres segmentos y
+     no cambia de ancho con el curso ni con la condicional. Los dos efectos que
+     reponían el modo cuando un segmento se esfumaba se fueron con ellos.
 
-  /* En la pregunta de sujeto la wh es obligatoria y no cualquiera sirve: al
-     entrar al modo con «Where» puesta, se cambia por «Who». */
+     Lo que queda es apagar el interruptor cuando deja de ofrecerse — si no, la
+     casilla guardaría un «sí» invisible y al volver a `who` la pregunta de
+     sujeto se reactivaría sola. */
   useEffect(() => {
-    if (!esPregSujeto) return;
-    if (!whWord || !whSubjectWords.includes(whWord)) { setWhWord('who'); setWhExtension(''); }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [esPregSujeto]);
+    if (!puedeSerPregSujeto && whEsSujeto) setWhEsSujeto(false);
+  }, [puedeSerPregSujeto, whEsSujeto]);
 
   // Limpiar adverbio cuando el tiempo verbal no es compatible
   useEffect(() => {
@@ -1809,8 +1895,13 @@ const EnglishSentenceBuilder = () => {
 
   const resetForm = () => {
     setSubject(''); setVerb(''); setComplement('');
-    setSelectedTense(''); setSelectedMode('affirmative'); setSelectedModal('');
-    setWhWord(''); setWhExtension(''); setWhWarning(''); setSelectedAdverb('');
+    /* `tipoCond` va aquí porque ahora es un valor MÁS del mismo selector que
+       `tense` y `modal`: los tres se limpian juntos o el botón miente. Y las dos
+       cláusulas de la condicional tampoco se limpiaban — «Limpiar todo» las
+       dejaba escritas. */
+    setSelectedTense(''); setSelectedMode('affirmative'); setSelectedModal(''); setTipoCond(null);
+    setCondNeg(false); setCondSubject(''); setCondVerb(''); setCondComplement('');
+    setWhWord(''); setWhExtension(''); setWhWarning(''); setSelectedAdverb(''); setWhEsSujeto(false);
     setGeneratedSentence(''); setSemanticWarning(null);
     setSentenceAnalysis(null); setShowAnalysisDetails(false);
     setAllModeSentences(null); setShowAllModes(false);
@@ -1914,7 +2005,7 @@ const EnglishSentenceBuilder = () => {
       return frase;
     }
 
-    const sentence = buildSentenceText({ mode: selectedMode, ...params });
+    const sentence = buildSentenceText({ mode: modoMotor, ...params });
     setGeneratedSentence(sentence);
 
     /* «Ver los 3 modos» compara afirmativa / negativa / interrogativa de una
@@ -1932,7 +2023,7 @@ const EnglishSentenceBuilder = () => {
        called?». Y como ese modo no es negativo ni interrogativo, el motor cae
        en la rama afirmativa, que es justo el orden que necesita. */
     const sujetoConcordancia = esPregSujeto ? (fullWhWord || 'who') : subject;
-    const { auxiliary, verbForm } = getAuxAndVerbForm(sujetoConcordancia, verb, selectedTense, selectedModal, selectedMode);
+    const { auxiliary, verbForm } = getAuxAndVerbForm(sujetoConcordancia, verb, selectedTense, selectedModal, modoMotor);
     setSentenceAnalysis(generateSentenceAnalysis({
       subjectText: esPregSujeto ? (fullWhWord || 'who') : subject,
       verbText: verb,
@@ -1940,7 +2031,7 @@ const EnglishSentenceBuilder = () => {
       auxiliary,
       verbForm,
       tenseId: selectedTense,
-      mode: selectedMode,
+      mode: modoMotor,
       modalId: selectedModal,
       whWordText: fullWhWord,
       adverbText: adverb
@@ -2009,7 +2100,7 @@ const EnglishSentenceBuilder = () => {
         verb,
         complement,
         tense: tenses.find(t => t.id === selectedTense),
-        mode: selectedMode,
+        mode: modoMotor,
         modal: selectedModal,
         level: cefrLevel,
       }
@@ -2024,11 +2115,17 @@ const EnglishSentenceBuilder = () => {
   // tiempo, modo o entradas actualiza la vista al instante (sin tocar historial)
   useEffect(() => {
     if (!generatedSentence) return;
-    if ((!subject && !esPregSujeto) || !verb || (!selectedModal && !selectedTense)) return;
+    /* La condicional no pasa por el selector de tiempos —el tipo los fija—, así
+       que exigirle tiempo o modal la dejaba SIN actualización en vivo: ya se
+       había generado, pero tocar cualquier campo no cambiaba nada. Es el mismo
+       descuido que tenía la validación al enviar, corregido allá y no aquí. */
+    if (esCondicional) {
+      if (!condSubject.trim() || !condVerb.trim() || !subject.trim() || !verb.trim()) return;
+    } else if ((!subject && !esPregSujeto) || !verb || (!selectedModal && !selectedTense)) return;
     computeSentenceDisplay();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [subject, verb, complement, selectedTense, selectedMode, selectedModal, whWord, whExtension, selectedAdverb, language,
-      esCondicional, tipoCond, condNeg, condSubject, condVerb, condComplement]);
+      esCondicional, tipoCond, condNeg, condSubject, condVerb, condComplement, whEsSujeto]);
 
   const verbSuggestions = getVerbSuggestions();
 
@@ -2690,72 +2787,31 @@ const EnglishSentenceBuilder = () => {
           <div className="pb-4 border-b border-gray-100">
             <div className="flex flex-wrap items-center gap-2">
 
-              {/* Con la condicional el selector de tiempos no existe, así que el
-                  rótulo tampoco puede pedirlo — y menos con asterisco. */}
+              {/* Un solo rótulo para una sola decisión. Antes cambiaba de nombre
+                  según hubiera condicional o no, porque abajo cambiaba el
+                  control entero; ahora el control es siempre el mismo. */}
               <label className={`text-xs font-semibold tracking-wide uppercase shrink-0 ${
-                esCondicional ? 'text-pink-700' : (!selectedTense && !selectedModal ? 'text-indigo-600' : 'text-gray-500')}`}>
-                {esCondicional
-                  ? (language === 'es' ? 'Tipo de condicional' : 'Conditional type')
-                  : <>{language === 'es' ? 'Tiempo o modal' : 'Tense or modal'} <span className="text-red-500">*</span></>}
+                !selectedTense && !selectedModal && !esCondicional ? 'text-indigo-600' : 'text-gray-500'}`}>
+                {language === 'es' ? 'Tiempo, modal o condicional' : 'Tense, modal or conditional'} <span className="text-red-500">*</span>
               </label>
-              {/* Con la condicional activa el selector de tiempos DESAPARECE: el
-                  tipo elige los dos tiempos, y esa correspondencia es justo lo
-                  que se enseña. Dejarlo visible invitaría a elegir por libre. */}
-              {esCondicional ? (
-                <div className="flex flex-wrap gap-1.5">
-                  {[1, 2, 3].map((n) => (
-                    <button
-                      key={n}
-                      onClick={() => setTipoCond(n)}
-                      aria-pressed={tipoCond === n}
-                      title={t.condicionalAyuda}
-                      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-all ${
-                        tipoCond === n ? 'border-pink-500 bg-pink-50 text-pink-900' : 'border-gray-200 bg-white text-gray-500 hover:bg-gray-50'
-                      }`}
-                    >
-                      <span className="font-bold">{n}ª</span>
-                      <span className="hidden sm:inline">{n === 1 ? t.condTipo1 : n === 2 ? t.condTipo2 : t.condTipo3}</span>
-                      {/* LOS DOS tiempos, no solo el modal del resultado. Antes
-                          solo se veía «would» y el tiempo de la cláusula `if`
-                          no aparecía en ninguna parte: la app lo aplicaba en
-                          silencio y el alumno nunca sabía cuál era. Esa
-                          correspondencia ES la regla que se enseña. */}
-                      <span className="text-[10px] opacity-80 whitespace-nowrap">
-                        if · {(() => {
-                          const id = CONDICIONALES[n].ifTense;
-                          const tn = tenses.find(x => x.id === id);
-                          return language === 'es' ? tn?.nameEs : tn?.nameEn;
-                        })()} → {n === 1 ? 'will' : n === 2 ? 'would' : 'would have'}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              ) : (
-              /* Tiempo y modal son excluyentes: elegir uno limpia el otro. */
+              {/* Los tres son excluyentes: elegir uno limpia los otros dos.
+                  La condicional sigue sin pasar por la rampa de tiempos —el tipo
+                  fija los dos—, pero eso ya no exige un control aparte: basta con
+                  que sea otra opción de este mismo selector. */}
               <TensePicker
                 value={selectedTense}
                 modalValue={selectedModal}
-                onSelectTense={(id) => { setSelectedTense(id); setSelectedModal(''); }}
-                onSelectModal={(id) => { setSelectedModal(id); setSelectedTense(''); }}
+                condValue={tipoCond}
+                onSelectTense={(id) => { setSelectedTense(id); setSelectedModal(''); setTipoCond(null); }}
+                onSelectModal={(id) => { setSelectedModal(id); setSelectedTense(''); setTipoCond(null); }}
+                onSelectCond={(n) => { setTipoCond(n); setSelectedTense(''); setSelectedModal(''); }}
+                condLabels={{ 1: t.condTipo1, 2: t.condTipo2, 3: t.condTipo3 }}
+                condLabel={t.condicional}
+                condHelp={t.condicionalAyuda}
                 language={language}
                 cefrLevel={cefrLevel}
-                highlight={!selectedTense && !selectedModal}
+                highlight={!selectedTense && !selectedModal && !esCondicional}
               />
-              )}
-
-              {/* El interruptor. La condicional cruza con el signo, no lo
-                  reemplaza: se puede armar afirmativa, negativa e interrogativa. */}
-              <button
-                onClick={() => setEsCondicional(v => !v)}
-                aria-pressed={esCondicional}
-                title={t.condicionalAyuda}
-                className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-all shrink-0 ${
-                  esCondicional ? 'border-pink-500 bg-pink-50 text-pink-900' : 'border-gray-200 bg-white text-gray-500 hover:bg-gray-50'
-                }`}
-              >
-                <span aria-hidden="true">⇒</span>
-                {t.condicional}
-              </button>
 
               <div className="hidden sm:block w-px h-5 bg-gray-200 shrink-0" />
 
@@ -2764,12 +2820,11 @@ const EnglishSentenceBuilder = () => {
                     propio: el color vive en el signo. Con var(--f-cap) el estado
                     activo ya es consciente del tema y no necesita capa `dark:`. */}
                 <div className="flex flex-1 sm:flex-none rounded-lg border border-gray-200 overflow-hidden shrink-0">
-                  {modosVisibles.map((mode) => (
+                  {modes.map((mode) => (
                     <button
                       key={mode.id}
                       onClick={() => setSelectedMode(mode.id)}
                       aria-pressed={selectedMode === mode.id}
-                      title={mode.id === 'subject-question' ? t.subjectQuestionHelp : undefined}
                       className={`flex flex-1 sm:flex-none items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-all border-r last:border-r-0 border-gray-200 ${
                         selectedMode === mode.id
                           ? 'bg-[var(--f-cap)] text-[var(--f-cap-ink)] shadow-inner font-semibold'
@@ -2782,13 +2837,11 @@ const EnglishSentenceBuilder = () => {
                           distingue por la cápsula y el peso de la tipografía. */}
                       <FormSign form={mode.id} className="text-sm leading-none shrink-0" />
                       <span className="hidden sm:inline">
-                        {mode.id === 'affirmative' ? t.affirmative : mode.id === 'negative' ? t.negative
-                          : mode.id === 'subject-question' ? t.subjectQuestion : t.interrogative}
+                        {mode.id === 'affirmative' ? t.affirmative : mode.id === 'negative' ? t.negative : t.interrogative}
                       </span>
                       <span className="sm:hidden">
                         {mode.id === 'affirmative' ? (language === 'es' ? 'Afirm.' : 'Affirm.')
                           : mode.id === 'negative' ? (language === 'es' ? 'Neg.' : 'Neg.')
-                          : mode.id === 'subject-question' ? t.subjectQuestionShort
                           : (language === 'es' ? 'Inter.' : 'Inter.')}
                       </span>
                     </button>
@@ -2825,14 +2878,8 @@ const EnglishSentenceBuilder = () => {
           </div>
 
           {/* WH Questions */}
-          {(selectedMode === 'interrogative' || esPregSujeto) && (
+          {selectedMode === 'interrogative' && (
             <div className="space-y-2">
-              {/* En la pregunta de sujeto la wh no es opcional: es el sujeto. */}
-              {esPregSujeto && (
-                <p className="text-xs text-teal-800 bg-teal-50 border border-teal-200 rounded-lg px-2.5 py-1.5">
-                  {t.subjectQuestionHelp}
-                </p>
-              )}
               {/* Fila de chips base */}
               <div className="flex flex-wrap items-center gap-1.5">
                 <span className="text-xs font-semibold text-gray-400 uppercase tracking-wide shrink-0 w-6">WH</span>
@@ -2847,7 +2894,7 @@ const EnglishSentenceBuilder = () => {
                       // En escritorio el dato aparece al pasar el mouse; en
                       // móvil, al elegir la wh (la línea de abajo).
                       title={pide ? `${wh.name} → ${language === 'es' ? pide.es : pide.en}` : undefined}
-                      // En la pregunta de sujeto no se puede quedar sin wh: es el sujeto.
+                      // Con la pregunta de sujeto activa no se puede quedar sin wh: ES el sujeto.
                       onClick={() => { if (!(elegida && esPregSujeto)) { setWhWord(elegida ? '' : wh.id); setWhExtension(''); } }}
                       className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all ${
                         elegida
@@ -2860,6 +2907,30 @@ const EnglishSentenceBuilder = () => {
                   );
                 })}
               </div>
+              {/* La pregunta de sujeto, en el sitio del que habla: la wh-word.
+                  Solo se ofrece cuando ya hay una wh que PUEDE ejecutar la
+                  acción, así que el orden es el natural — primero eliges «who»,
+                  después la app te pregunta si ese «who» es quien la hace. Y
+                  tiene que preguntarlo: «Who called you?» y «Who did you call?»
+                  usan la misma palabra, así que no se puede deducir. */}
+              {puedeSerPregSujeto && (
+                <div className="pl-8">
+                  <label className={`inline-flex items-start gap-2 px-2.5 py-1.5 rounded-lg border text-xs cursor-pointer transition-all ${
+                    esPregSujeto ? 'border-teal-500 bg-teal-50 text-teal-900' : 'border-gray-200 bg-white text-gray-600 hover:bg-gray-50'
+                  }`}>
+                    <input
+                      type="checkbox"
+                      checked={esPregSujeto}
+                      onChange={(e) => setWhEsSujeto(e.target.checked)}
+                      className="mt-0.5 accent-teal-600"
+                    />
+                    <span className="min-w-0">
+                      <span className="font-semibold">{t.subjectQuestion}</span>
+                      <span className="block text-[11px] leading-tight opacity-90">{t.subjectQuestionHelp}</span>
+                    </span>
+                  </label>
+                </div>
+              )}
               {/* Qué dato pide la wh elegida. La compuesta manda sobre la base:
                   «how many» pide una cantidad, no «una manera». */}
               {whWord && (() => {

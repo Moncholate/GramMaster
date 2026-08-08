@@ -17,21 +17,13 @@ export const modes = [
   {
     id: 'interrogative',
   },
-  {
-    /* Pregunta de sujeto — AEF Intermedio II 12C, «questions without
-       auxiliaries». Va como modo aparte y no como una variante de la
-       interrogativa porque cambia la estructura entera: sin auxiliar, sin
-       inversión y sin campo Sujeto, que lo ocupa la wh-word.
-       `cefr` la mantiene oculta hasta el curso donde se enseña. */
-    id: 'subject-question',
-    cefr: 'intermedio2',
-    /* Sigue en la barra de modos, pero con los dos ejes ya no le corresponde
-       estar ahí: es una pregunta ABIERTA sin auxiliar, o sea forma `?` + tipo
-       abierta, no una cuarta forma hermana de las otras tres. Por eso su glifo
-       toma el teal del tipo abierto en vez de un tono propio — el teal que ya
-       tenía resultó ser el correcto por casualidad, no por diseño.
-       Reorganizarla es trabajo aparte, acordado con el docente. */
-  },
+  /* La pregunta de sujeto SALIÓ de aquí (AEF Intermedio II 12C, «questions
+     without auxiliaries»). Con los dos ejes es forma `?` + tipo abierta —una
+     pregunta abierta sin auxiliar—, no una cuarta forma hermana de las otras
+     tres, y figurar en esta lista la hacía parecer un cuarto valor de una
+     variable que solo tiene tres. Ahora vive junto a la wh-word, que es de lo
+     que habla, y el curso que la gatea se comprueba ahí.
+     Su vocabulario en el motor (`subject-question`) NO cambió. */
 ];
 
 /* Solo estas pueden ser sujeto. «Where lives here?» no existe: un lugar no

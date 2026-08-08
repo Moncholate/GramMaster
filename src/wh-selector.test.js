@@ -117,13 +117,14 @@ describe('pregunta de sujeto: sin auxiliar prestado ni inversión', () => {
 });
 
 describe('pregunta de sujeto: dónde y con qué se ofrece', () => {
-  it('el modo existe y está gateado al curso donde se enseña', () => {
-    const m = modes.find(x => x.id === 'subject-question');
-    expect(m).toBeTruthy();
-    expect(m.cefr).toBe('intermedio2');
-    // los otros tres no tienen gate: están desde el primer curso
-    for (const otro of ['affirmative', 'negative', 'interrogative'])
-      expect(modes.find(x => x.id === otro).cefr).toBeUndefined();
+  /* La barra de formas tiene EXACTAMENTE tres segmentos. La pregunta de sujeto
+     salió de ahí: con los dos ejes es forma `?` + tipo abierta, no una cuarta
+     forma. Vive junto a la wh-word y su motor no cambió. */
+  it('la barra de formas tiene los tres signos y nada más', () => {
+    expect(modes.map(m => m.id)).toEqual(['affirmative', 'negative', 'interrogative']);
+  });
+  it('ninguna forma está gateada por curso: la barra no cambia de ancho', () => {
+    for (const m of modes) expect(m.cefr).toBeUndefined();
   });
   it('solo se ofrecen las wh que pueden ejecutar la acción', () => {
     expect(whSubjectWords).toContain('who');
@@ -133,7 +134,8 @@ describe('pregunta de sujeto: dónde y con qué se ofrece', () => {
     expect(whSubjectWords).not.toContain('when');
     expect(whSubjectWords).not.toContain('why');
   });
-  it('el gate usa un curso real del orden CEFR', () => {
-    expect(COURSE_ORDER).toContain(modes.find(x => x.id === 'subject-question').cefr);
+  it('el curso donde se enseña sigue siendo uno real del orden CEFR', () => {
+    // el gate se mudó de `modes` al interruptor, pero el curso es el mismo
+    expect(COURSE_ORDER).toContain('intermedio2');
   });
 });
