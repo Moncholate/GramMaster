@@ -426,7 +426,7 @@ function UsageGuide({ language }) {
             <li key={r.k} className="flex items-center gap-2">
               <span className={`shrink-0 w-6 text-center text-[10px] font-bold text-white rounded ${r.dot}`}>{r.k}</span>
               <span className="text-gray-800 font-medium">{es ? r.es : r.en}</span>
-              <span className="text-gray-500 text-xs truncate">— {es ? r.dEs : r.dEn}</span>
+              <span className="text-gray-500 text-xs truncate">{es ? r.dEs : r.dEn}</span>
             </li>
           ))}
         </ul>
@@ -458,8 +458,8 @@ function UsageGuide({ language }) {
                 <b className="text-gray-800">{a.label}</b>
                 <span className="text-gray-500 text-xs">
                   {es
-                    ? ['— un solo verbo: works, played', '— en curso: is working', '— con have/has/had: has worked', '— ambas cosas: has been working'][i]
-                    : ['— a single verb: works, played', '— in progress: is working', '— with have/has/had: has worked', '— both at once: has been working'][i]}
+                    ? ['(un solo verbo: works, played)', '(en curso: is working)', '(con have/has/had: has worked)', '(ambas cosas: has been working)'][i]
+                    : ['(a single verb: works, played)', '(in progress: is working)', '(with have/has/had: has worked)', '(both at once: has been working)'][i]}
                 </span>
               </li>
             );
@@ -469,9 +469,9 @@ function UsageGuide({ language }) {
 
       <Section title={es ? 'Los tres modos' : 'The three modes'}>
         <ul className="space-y-1.5 text-gray-600">
-          <li><b className="text-gray-800">{es ? 'Afirmativa' : 'Affirmative'}</b> — <i>She works here.</i></li>
-          <li><b className="text-gray-800">{es ? 'Negativa' : 'Negative'}</b> — <i>She doesn't work here.</i></li>
-          <li><b className="text-gray-800">{es ? 'Interrogativa' : 'Interrogative'}</b> — <i>Does she work here?</i> {es ? 'Al elegirla aparecen las palabras WH para preguntas abiertas.' : 'Choosing it reveals the WH words for open questions.'}</li>
+          <li><b className="text-gray-800">{es ? 'Afirmativa' : 'Affirmative'}</b>: <i>She works here.</i></li>
+          <li><b className="text-gray-800">{es ? 'Negativa' : 'Negative'}</b>: <i>She doesn't work here.</i></li>
+          <li><b className="text-gray-800">{es ? 'Interrogativa' : 'Interrogative'}</b>: <i>Does she work here?</i> {es ? 'Al elegirla aparecen las palabras WH para preguntas abiertas.' : 'Choosing it reveals the WH words for open questions.'}</li>
         </ul>
       </Section>
 
@@ -487,7 +487,7 @@ function UsageGuide({ language }) {
           {activities.map(([icon, head, body]) => (
             <li key={head} className="flex gap-2">
               <span className="shrink-0">{icon}</span>
-              <span><b className="text-gray-800">{head}</b> <span className="text-gray-600">— {body}</span></span>
+              <span><b className="text-gray-800">{head}</b> <span className="text-gray-600">{body}</span></span>
             </li>
           ))}
         </ul>
@@ -1571,8 +1571,8 @@ const EnglishSentenceBuilder = () => {
       type: complementIsAdverbial ? 'adverbial' : 'complement',
       color: complementIsAdverbial ? 'amber' : 'emerald',
       explanation: complementIsAdverbial
-        ? (language === 'es' ? 'Adverbial — indica cuándo, dónde o cómo ocurre la acción' : 'Adverbial — indicates when, where, or how the action occurs')
-        : (language === 'es' ? 'Complemento — objeto directo o atributo del sujeto' : 'Complement — direct object or subject attribute'),
+        ? (language === 'es' ? 'Adverbial: indica cuándo, dónde o cómo ocurre la acción' : 'Adverbial: indicates when, where, or how the action occurs')
+        : (language === 'es' ? 'Complemento: objeto directo o atributo del sujeto' : 'Complement: direct object or subject attribute'),
       original: complementText,
       changed: false
     } : null;
@@ -1607,7 +1607,7 @@ const EnglishSentenceBuilder = () => {
         color: 'teal',
         explanation: language === 'es'
           ? 'La palabra WH es el SUJETO de la pregunta: por eso no hay auxiliar prestado ni inversión, el orden es el mismo de una afirmación.'
-          : 'The WH word is the SUBJECT of the question: that is why there is no borrowed auxiliary and no inversion — the order is the same as a statement.',
+          : 'The WH word is the SUBJECT of the question: that is why there is no borrowed auxiliary and no inversion: the order is the same as a statement.',
         original: whTxt,
         changed: false
       });
@@ -1995,7 +1995,7 @@ const EnglishSentenceBuilder = () => {
           { text: 'If', type: 'conditional-if', color: 'pink',
             explanation: (language === 'es'
               ? `Abre la condición, que va en ${tnCond?.nameEs}. El tipo de condicional fija ese tiempo: no se elige.`
-              : `Opens the condition, which goes in ${tnCond?.nameEn}. The conditional type fixes that tense — you don't pick it.`),
+              : `Opens the condition, which goes in ${tnCond?.nameEn}. The conditional type fixes that tense; you don't pick it.`),
             original: 'If', changed: false },
           ...conComa(bajaPrimera(piezasCond)),
           ...bajaPrimera(piezasRes),
@@ -2622,7 +2622,7 @@ const EnglishSentenceBuilder = () => {
                                 <p className="text-2xl font-bold text-red-950">{streak} {streak === 1 ? t.dayStreakSingle : t.dayStreak}</p>
                                 <p className="text-xs text-red-950/85">{language === 'es' ? 'Practicando en Grammaster' : 'Practicing in Grammaster'}</p>
                                 {suiteStreak !== streak && suiteStreak > 0 && (
-                                  <p className="text-xs text-white/75 mt-0.5">🧩 {language === 'es' ? `Toda la suite: ${suiteStreak} días` : `Whole suite: ${suiteStreak} days`}</p>
+                                  <p className="text-xs text-white/75 mt-0.5">{language === 'es' ? `Toda la suite: ${suiteStreak} días` : `Whole suite: ${suiteStreak} days`}</p>
                                 )}
                               </>
                             ) : (
@@ -2630,7 +2630,7 @@ const EnglishSentenceBuilder = () => {
                                 <p className="text-lg font-bold text-gray-500">0 {t.dayStreak}</p>
                                 <p className="text-xs text-gray-400">{t.noStreakYet}</p>
                                 {suiteStreak > 0 && (
-                                  <p className="text-xs text-gray-400 mt-0.5">🧩 {language === 'es' ? `Toda la suite: ${suiteStreak} días` : `Whole suite: ${suiteStreak} days`}</p>
+                                  <p className="text-xs text-gray-400 mt-0.5">{language === 'es' ? `Toda la suite: ${suiteStreak} días` : `Whole suite: ${suiteStreak} days`}</p>
                                 )}
                               </>
                             )}
@@ -3104,7 +3104,7 @@ const EnglishSentenceBuilder = () => {
                     .filter((adv) => selectedMode !== 'negative' || !NEGATIVE_SENSE_ADVERBS.includes(adv.id))
                     .map((adv) => (
                     <option key={adv.id} value={adv.id}>
-                      {adv.name}{adv.id && (language === 'es' ? ` - ${adv.descEs}` : ` (${adv.percentage}%)`)}
+                      {adv.id ? adv.name : (language === 'es' ? adv.descEs : adv.descEn)}{adv.id && (language === 'es' ? ` - ${adv.descEs}` : ` (${adv.percentage}%)`)}
                     </option>
                   ))}
                 </select>
@@ -3413,14 +3413,15 @@ const EnglishSentenceBuilder = () => {
                 </button>
                 {showAllModes && (
                   <div className="space-y-1.5">
-                    {[
-                      { key: 'aff', symbol: '✓', bg: 'bg-emerald-50', border: 'border-emerald-200', text: 'text-emerald-800', sym: 'text-emerald-500' },
-                      { key: 'neg', symbol: '✕', bg: 'bg-rose-50',    border: 'border-rose-200',    text: 'text-rose-800',    sym: 'text-rose-500' },
-                      { key: 'int', symbol: '?', bg: 'bg-amber-50',   border: 'border-amber-200',   text: 'text-amber-800',   sym: 'text-amber-500' },
-                    ].map(({ key, symbol, bg, border, text, sym }) => (
-                      <div key={key} className={`flex items-baseline gap-2 px-3 py-2 rounded-lg ${bg} border ${border}`}>
-                        <span className={`text-xs font-bold shrink-0 ${sym}`}>{symbol}</span>
-                        <span className={`text-sm font-medium ${text}`}>{allModeSentences[key]}</span>
+                    {/* Aquí SOBREVIVÍA el cruce de ejes que se corrigió en la
+                        barra de modos: ✓/✕/? sobre emerald, rose y amber, o sea
+                        la negativa con el color del rol `auxiliary` y la
+                        interrogativa con el del rol `adverb`. Mismo arreglo:
+                        cápsula neutra y el tono solo en el signo. */}
+                    {[['affirmative', 'aff'], ['negative', 'neg'], ['interrogative', 'int']].map(([forma, key]) => (
+                      <div key={key} className="flex items-baseline gap-2 px-3 py-2 rounded-lg bg-[var(--f-cap)] border border-[var(--f-cap-border)]">
+                        <FormSign form={forma} className="text-xs font-bold shrink-0" />
+                        <span className="text-sm font-medium text-[var(--f-cap-ink)]">{allModeSentences[key]}</span>
                       </div>
                     ))}
                   </div>
@@ -3449,9 +3450,20 @@ const EnglishSentenceBuilder = () => {
           {/* Iconos emoji, iguales a Desgramatizador y Question Lab: 📖 Guía,
               ✏️ Práctica y 📊 Progreso son los mismos en las tres apps. El de la
               actividad principal sí cambia, porque cambia la actividad: aquí se
-              CONSTRUYE (🧱, como el logo) y allá se analiza (🔍). */}
+              CONSTRUYE y allá se analiza (🔍).
+              El de Construye es el único que no es emoji: era 🧱, un MURO de
+              ladrillos, cuando la analogía de la suite es la pieza de LEGO — y
+              el comentario de antes decía «como el logo», que es justo lo que no
+              era. Misma geometría que la pieza de la Guía de Question Lab. */}
           {[
-            { panel: null,       icon: '🧱', label: language === 'es' ? 'Construye' : 'Build' },
+            { panel: null, label: language === 'es' ? 'Construye' : 'Build',
+              icon: (
+                <svg viewBox="0 0 24 24" className="w-[1.15em] h-[1.15em]" aria-hidden="true">
+                  <rect x="3" y="8.5" width="18" height="11" rx="1.8" fill="currentColor" />
+                  <rect x="6.6" y="6.5" width="4.3" height="4.1" rx="1.2" fill="currentColor" />
+                  <rect x="13.2" y="6.5" width="4.3" height="4.1" rx="1.2" fill="currentColor" />
+                </svg>
+              ) },
             { panel: 'guide',    icon: '📖', label: language === 'es' ? 'Guía' : 'Guide' },
             { panel: 'practice', icon: '✏️', label: language === 'es' ? 'Práctica' : 'Practice' },
             { panel: 'progress', icon: '📊', label: language === 'es' ? 'Progreso' : 'Progress' },

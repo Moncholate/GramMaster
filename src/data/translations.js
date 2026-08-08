@@ -145,7 +145,7 @@ export const translations = {
     builderShort: 'Builder',
     subjectQuestionHelp: 'The WH word is the subject, so there is no auxiliary and no inversion: “Who lives here?”, not “Who does live here?”.',
     condicional: 'Conditional',
-    condicionalAyuda: 'Two linked clauses: the TYPE fixes both tenses — you do not pick them.',
+    condicionalAyuda: 'Two linked clauses: the TYPE fixes both tenses; you do not pick them.',
     condTipo1: 'Real / likely', condTipo2: 'Hypothetical', condTipo3: 'Impossible (past)',
     condCondicion: 'Condition', condResultado: 'Result',
     condNegarCondicion: 'Negate the condition',
