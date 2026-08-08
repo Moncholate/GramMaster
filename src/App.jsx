@@ -1867,6 +1867,34 @@ const EnglishSentenceBuilder = () => {
         modalId: cfg.main.modal || '',
       }).parts;
 
+      /* `generateSentenceAnalysis` está pensado para oraciones SUELTAS: capitaliza
+         la primera palabra y cierra con punto. Aquí ninguna de las dos cláusulas
+         abre la oración —la condición va tras «If » y el resultado tras la coma—,
+         así que hay que deshacer ambas cosas. Se corrige aquí y no en esa
+         función porque tiene un test de paridad que la refleja. */
+      const bajaPrimera = (piezas) => {
+        const i = piezas.findIndex(p => p.type === 'subject' || p.type === 'auxiliary');
+        if (i === -1) return piezas;
+        const p = piezas[i];
+        // Un nombre propio o «I» conservan su mayúscula: smartCase ya lo decidió.
+        if (p.type === 'subject') {
+          const norm = smartCaseSubject(p.original || p.text);
+          if (norm && norm[0] !== norm[0].toLowerCase()) return piezas;
+        }
+        const copia = piezas.slice();
+        copia[i] = { ...p, text: p.text.charAt(0).toLowerCase() + p.text.slice(1) };
+        return copia;
+      };
+      // La condición no termina la oración: cierra con COMA, no con punto.
+      const conComa = (piezas) => [
+        ...piezas.filter(p => p.type !== 'punctuation'),
+        { text: ',', type: 'punctuation', color: 'gray',
+          explanation: language === 'es'
+            ? 'Separa la condición del resultado. Solo va cuando el «if» abre la oración.'
+            : 'Separates the condition from the result. It only appears when the "if" opens the sentence.',
+          original: ',', changed: false },
+      ];
+
       const tnCond = tenses.find(x => x.id === cfg.ifTense);
       setSentenceAnalysis({
         parts: [
@@ -1875,8 +1903,8 @@ const EnglishSentenceBuilder = () => {
               ? `Abre la condición, que va en ${tnCond?.nameEs}. El tipo de condicional fija ese tiempo: no se elige.`
               : `Opens the condition, which goes in ${tnCond?.nameEn}. The conditional type fixes that tense — you don't pick it.`),
             original: 'If', changed: false },
-          ...piezasCond,
-          ...piezasRes,
+          ...conComa(bajaPrimera(piezasCond)),
+          ...bajaPrimera(piezasRes),
         ],
       });
       setShowAnalysisDetails(false);
