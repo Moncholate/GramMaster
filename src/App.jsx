@@ -1,5 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { BookOpen, Volume2, VolumeX, AlertTriangle, CheckCircle, XCircle, HelpCircle, X, History, Copy, Check, Trash2, Play, Info, BarChart2, ChevronDown, UserCircle } from 'lucide-react';
+import { BookOpen, Volume2, VolumeX, AlertTriangle, CheckCircle, XCircle, X, History, Copy, Check, Trash2, Play, Info, BarChart2, ChevronDown, UserCircle } from 'lucide-react';
+/* El chip de los dos ejes (forma + − ? y tipo abierta/cerrada) va generado
+   desde design-tokens: tiene que ser el MISMO objeto en las cuatro apps. */
+import { FormChip, FormSign } from './forms.generated.jsx';
 import {
   translations,
   commonVerbs,
@@ -2152,14 +2155,23 @@ const EnglishSentenceBuilder = () => {
                       </div>
                       {sentenceHistory.map((item, index) => {
                         const tenseName = language === 'es' ? item.config.tense?.nameEs : item.config.tense?.nameEn;
-                        const modeLabels = { affirmative: language === 'es' ? 'Afirmativa' : 'Affirmative', negative: language === 'es' ? 'Negativa' : 'Negative', interrogative: language === 'es' ? 'Interrogativa' : 'Interrogative' };
+                        /* El historial SÍ guarda la wh-word, así que aquí el tipo
+                           de pregunta se puede decir de verdad y no suponerlo:
+                           con wh-word es abierta, sin ella cerrada. La de sujeto
+                           es abierta por definición — la wh-word ES el sujeto. */
+                        const modo = item.config.mode;
+                        const tipoPregunta = modo === 'subject-question' ? 'open'
+                          : modo === 'interrogative' ? (item.config.whWord ? 'open' : 'closed')
+                          : null;
                         return (
                           <div key={index} className="bg-gray-50 p-4 rounded-xl border">
                             <p className="font-medium text-gray-800 mb-2">{item.sentence}</p>
                             <div className="flex flex-wrap gap-1.5 text-xs">
                               {tenseName && <span className="px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full">{tenseName}</span>}
                               {item.config.modal && <span className="px-2 py-0.5 bg-rose-100 text-rose-700 rounded-full">{item.config.modal}</span>}
-                              <span className="px-2 py-0.5 bg-gray-200 text-gray-600 rounded-full">{modeLabels[item.config.mode] || item.config.mode}</span>
+                              <FormChip form={modo === 'subject-question' ? 'interrogative' : modo}
+                                        type={tipoPregunta} lang={language}
+                                        label={modo === 'subject-question' ? t.subjectQuestion : undefined} />
                               <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full ml-auto">{formatTimestamp(item.timestamp)}</span>
                             </div>
                             <div className="flex gap-2 mt-3">
@@ -2301,7 +2313,8 @@ const EnglishSentenceBuilder = () => {
                             </p>
                             <div className="flex gap-2 text-xs mt-1">
                               <span className="px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full">{language === 'es' ? practiceQuestion.tense.nameEs : practiceQuestion.tense.nameEn}</span>
-                              <span className="px-2 py-0.5 bg-gray-200 text-gray-600 rounded-full">{practiceQuestion.mode === 'affirmative' ? (language === 'es' ? 'Afirmativa' : 'Affirmative') : (language === 'es' ? 'Negativa' : 'Negative')}</span>
+                              <FormChip form={practiceQuestion.mode} lang={language}
+                                       type={practiceQuestion.mode === 'interrogative' ? 'closed' : null} />
                             </div>
                             <input
                               type="text" value={practiceAnswer} onChange={(e) => setPracticeAnswer(e.target.value)}
@@ -2332,7 +2345,8 @@ const EnglishSentenceBuilder = () => {
                             </p>
                             <div className="flex items-center gap-2 text-xs mt-1 mb-3">
                               <span className="px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full">{language === 'es' ? practiceQuestion.tense.nameEs : practiceQuestion.tense.nameEn}</span>
-                              <span className="px-2 py-0.5 bg-gray-100 text-gray-700 rounded-full">{practiceQuestion.mode === 'affirmative' ? (language === 'es' ? 'Afirmativa' : 'Affirmative') : practiceQuestion.mode === 'negative' ? (language === 'es' ? 'Negativa' : 'Negative') : (language === 'es' ? 'Interrogativa' : 'Interrogative')}</span>
+                              <FormChip form={practiceQuestion.mode} lang={language}
+                                       type={practiceQuestion.mode === 'interrogative' ? 'closed' : null} />
                               {!practiceResult && (
                                 <button onClick={() => setShowHint(h => !h)} className="ml-auto px-2 py-0.5 bg-amber-50 text-amber-700 border border-amber-200 rounded-full hover:bg-amber-100 transition-colors">
                                   {showHint ? (language === 'es' ? 'Ocultar pista' : 'Hide hint') : (language === 'es' ? 'Pista' : 'Hint')}
@@ -2746,6 +2760,9 @@ const EnglishSentenceBuilder = () => {
               <div className="hidden sm:block w-px h-5 bg-gray-200 shrink-0" />
 
               <div className="flex w-full sm:w-auto sm:ml-auto items-center gap-2">
+                {/* El modo activo se marca con la cápsula NEUTRA, no con un tono
+                    propio: el color vive en el signo. Con var(--f-cap) el estado
+                    activo ya es consciente del tema y no necesita capa `dark:`. */}
                 <div className="flex flex-1 sm:flex-none rounded-lg border border-gray-200 overflow-hidden shrink-0">
                   {modosVisibles.map((mode) => (
                     <button
@@ -2754,13 +2771,16 @@ const EnglishSentenceBuilder = () => {
                       aria-pressed={selectedMode === mode.id}
                       title={mode.id === 'subject-question' ? t.subjectQuestionHelp : undefined}
                       className={`flex flex-1 sm:flex-none items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-all border-r last:border-r-0 border-gray-200 ${
-                        selectedMode === mode.id ? mode.activeClasses : 'bg-white text-gray-500 hover:bg-gray-50'
+                        selectedMode === mode.id
+                          ? 'bg-[var(--f-cap)] text-[var(--f-cap-ink)] shadow-inner font-semibold'
+                          : 'bg-white text-gray-500 hover:bg-gray-50'
                       }`}
                     >
-                      {mode.id === 'affirmative' ? <CheckCircle className="w-3.5 h-3.5 shrink-0" />
-                        : mode.id === 'negative' ? <XCircle className="w-3.5 h-3.5 shrink-0" />
-                        : mode.id === 'subject-question' ? <UserCircle className="w-3.5 h-3.5 shrink-0" />
-                        : <HelpCircle className="w-3.5 h-3.5 shrink-0" />}
+                      {/* Sin `opacity` en el inactivo: atenuar el signo lo dejaba
+                          en 2,87:1 sobre blanco (ni el 3:1 de gráfico), y además
+                          el color del signo ES el distintivo. Lo activo ya se
+                          distingue por la cápsula y el peso de la tipografía. */}
+                      <FormSign form={mode.id} className="text-sm leading-none shrink-0" />
                       <span className="hidden sm:inline">
                         {mode.id === 'affirmative' ? t.affirmative : mode.id === 'negative' ? t.negative
                           : mode.id === 'subject-question' ? t.subjectQuestion : t.interrogative}

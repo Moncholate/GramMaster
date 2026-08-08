@@ -1,22 +1,21 @@
-// Modos de oración
+/* Modos de oración.
+   Antes cada uno traía su propio tono (emerald / rose / amber) y los dos ejes
+   quedaban CRUZADOS: la negativa era rose, que es el color del rol `auxiliary`
+   — o sea, el mismo tono que el «doesn't» que la construye — y la interrogativa
+   era amber, que es el del rol `adverb`, al que pertenece el «not» que marca la
+   negativa. La forma es propiedad de la ORACIÓN ENTERA, no de una pieza, así
+   que ya no toma tono de la rampa de roles: el color va solo en el SIGNO
+   (+ − ?), que sale de design-tokens, y el estado activo se marca con la
+   cápsula neutra. Ver `forms` en tokens.json. */
 export const modes = [
   {
     id: 'affirmative',
-    emoji: '✓',
-    activeClasses: 'border-emerald-500 bg-gradient-to-br from-emerald-50 to-emerald-100 shadow-md scale-105',
-    textClass: 'text-emerald-700'
   },
   {
     id: 'negative',
-    emoji: '✕',
-    activeClasses: 'border-rose-500 bg-gradient-to-br from-rose-50 to-rose-100 shadow-md scale-105',
-    textClass: 'text-rose-700'
   },
   {
     id: 'interrogative',
-    emoji: '?',
-    activeClasses: 'border-amber-500 bg-gradient-to-br from-amber-50 to-amber-100 shadow-md scale-105',
-    textClass: 'text-amber-700'
   },
   {
     /* Pregunta de sujeto — AEF Intermedio II 12C, «questions without
@@ -25,10 +24,13 @@ export const modes = [
        inversión y sin campo Sujeto, que lo ocupa la wh-word.
        `cefr` la mantiene oculta hasta el curso donde se enseña. */
     id: 'subject-question',
-    emoji: '👤',
     cefr: 'intermedio2',
-    activeClasses: 'border-teal-500 bg-gradient-to-br from-teal-50 to-teal-100 shadow-md scale-105',
-    textClass: 'text-teal-700'
+    /* Sigue en la barra de modos, pero con los dos ejes ya no le corresponde
+       estar ahí: es una pregunta ABIERTA sin auxiliar, o sea forma `?` + tipo
+       abierta, no una cuarta forma hermana de las otras tres. Por eso su glifo
+       toma el teal del tipo abierto en vez de un tono propio — el teal que ya
+       tenía resultó ser el correcto por casualidad, no por diseño.
+       Reorganizarla es trabajo aparte, acordado con el docente. */
   },
 ];
 
