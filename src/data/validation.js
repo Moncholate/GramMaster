@@ -34,6 +34,36 @@ export const validSubjectNouns = [
 ];
 
 // Nombres hispanos comunes (para usuarios de Sudamérica)
+
+/* Nombres de pila ingleses. La lista de nombres solo tenía hispanos, así que
+   «peter» o «john» escritos en minúscula se quedaban así: smartCase devuelve
+   tal cual lo que no reconoce. En el modo normal no se notaba porque el sujeto
+   abre la oración y se capitaliza igual; en una condicional va detrás de «If »
+   y el fallo queda a la vista.
+   NO se puede usar «desconocido = nombre propio»: el diccionario de comunes no
+   tiene people, rain, exam, bus… y los capitalizaría a todos.
+   EXCLUIDOS a propósito los que chocan con palabra común o modal: will, mark,
+   rose, grace, may, june, bill, jack, pat, sue, art, dawn, faith, hope, ray.
+   Verificado: cero colisiones con englishDictionary, pronombres, determinantes
+   ni verbos irregulares. */
+export const englishNames = [
+  "peter", "john", "james", "robert", "michael", "william", "david", "richard", "thomas", "charles",
+  "daniel", "matthew", "anthony", "george", "kevin", "brian", "edward", "ronald", "timothy", "jason",
+  "jeffrey", "ryan", "jacob", "nicholas", "eric", "stephen", "jonathan", "justin", "scott", "brandon",
+  "benjamin", "samuel", "gregory", "alexander", "patrick", "dennis", "jerry", "tyler", "aaron", "henry",
+  "douglas", "adam", "nathan", "zachary", "walter", "kyle", "harold", "jeremy", "keith", "roger",
+  "gerald", "ethan", "arthur", "terry", "christian", "andrew", "joshua", "kenneth", "paul", "steven",
+  "joseph", "oliver", "lucas", "noah", "liam", "mason", "logan", "mary", "patricia", "jennifer",
+  "linda", "elizabeth", "barbara", "susan", "jessica", "sarah", "karen", "nancy", "lisa", "betty",
+  "margaret", "sandra", "ashley", "dorothy", "kimberly", "emily", "donna", "michelle", "carol", "amanda",
+  "melissa", "deborah", "stephanie", "rebecca", "laura", "sharon", "cynthia", "kathleen", "amy", "angela",
+  "shirley", "anna", "brenda", "pamela", "nicole", "ruth", "katherine", "samantha", "christine", "catherine",
+  "virginia", "debra", "rachel", "janet", "emma", "carolyn", "heather", "diane", "julie", "joyce",
+  "evelyn", "joan", "christina", "kelly", "martha", "lauren", "frances", "alice", "judy", "megan",
+  "cheryl", "andrea", "hannah", "jacqueline", "gloria", "teresa", "sara", "janice", "marie", "julia",
+  "olivia", "sophia", "isabella", "charlotte", "amelia", "harper", "lucy", "chloe",
+];
+
 export const hispanicNames = [
   // Nombres masculinos
   'juan', 'jose', 'josé', 'carlos', 'luis', 'miguel', 'pedro', 'pablo', 'diego',

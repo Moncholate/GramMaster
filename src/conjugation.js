@@ -2,7 +2,7 @@
 // Todo es puro (sin estado de React) para poder testearse de forma aislada.
 import { commonVerbs, irregularVerbs } from './data/verbs';
 import { englishDictionary } from './data/dictionary';
-import { validPronouns, validDeterminers, hispanicNames } from './data/validation';
+import { validPronouns, validDeterminers, hispanicNames, englishNames } from './data/validation';
 
 // ---------------------------------------------------------------------------
 // Sujeto
@@ -41,7 +41,8 @@ export const smartCase = (raw) => {
       const lower = word.toLowerCase();
       if (lower === 'i') return 'I';
       if (ALWAYS_CAPITAL.has(lower)) return upperFirst(lower);
-      if (hispanicNames.includes(lower) || hispanicNames.includes(stripAccents(lower))) {
+      if (hispanicNames.includes(lower) || hispanicNames.includes(stripAccents(lower))
+          || englishNames.includes(lower)) {
         return upperFirst(lower);
       }
       if (

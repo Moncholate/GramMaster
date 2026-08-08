@@ -461,3 +461,44 @@ describe('condicionales: negativa e interrogativa', () => {
       .toBe('If she were here, we would ask her.');
   });
 });
+
+/* Nombres propios en minúscula. La lista de nombres solo tenía hispanos, así
+   que «peter» escrito en minúscula se quedaba así. En el modo normal no se
+   notaba —el sujeto abre la oración y se capitaliza igual— pero en una
+   condicional va detrás de «If » y el fallo queda a la vista. */
+describe('smartCase: nombres ingleses', () => {
+  it('capitaliza el nombre aunque venga en minúscula', () => {
+    expect(smartCaseSubject('peter')).toBe('Peter');
+    expect(smartCaseSubject('john')).toBe('John');
+    expect(smartCaseSubject('sarah')).toBe('Sarah');
+    expect(smartCaseSubject('emma')).toBe('Emma');
+    expect(smartCaseSubject('maria')).toBe('Maria');   // los hispanos ya andaban
+  });
+
+  it('NO toca las palabras comunes', () => {
+    // No se puede usar «desconocido = nombre propio»: el diccionario de comunes
+    // no tiene people, rain, exam… y quedarían capitalizados.
+    for (const w of ['he', 'the dog', 'people', 'my brother', 'students'])
+      expect(smartCaseSubject(w)).toBe(w);
+  });
+
+  it('no rompe los modales ni las palabras que también son nombre', () => {
+    // `will`, `mark`, `rose`, `may`, `bill`… quedaron FUERA de la lista a
+    // propósito: capitalizar «will» rompería el futuro.
+    expect(smartCaseSubject('will')).toBe('will');
+    // may/june siguen capitalizándose, pero por ser MESES, no por ser nombres.
+    expect(smartCaseSubject('may')).toBe('May');
+  });
+
+  it('el nombre se capitaliza dentro de una condicional', () => {
+    expect(buildConditionalText({ tipo: 1,
+      condicion: { subject: 'peter', verb: 'run', complement: 'all day' },
+      resultado: { subject: 'he', verb: 'be', complement: 'tired' } }))
+      .toBe('If Peter runs all day, he will be tired.');
+    // y el sujeto común de la condición NO se capitaliza pese a ir tras «If »
+    expect(buildConditionalText({ tipo: 2,
+      condicion: { subject: 'the dog', verb: 'bark' },
+      resultado: { subject: 'sarah', verb: 'wake up' } }))
+      .toBe('If the dog barked, Sarah would wake up.');
+  });
+});
