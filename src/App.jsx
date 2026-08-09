@@ -16,6 +16,8 @@ import {
   whAsks,
   whExtPideSustantivo,
   whSubjectWords,
+  CONDICIONALES_POR_CURSO,
+  PARES_CONDICIONAL,
   frequencyAdverbs,
   timeMarkers,
   uncountableNouns,
@@ -42,6 +44,8 @@ import {
   buildSentenceText,
   buildConditionalText,
   CONDICIONALES,
+  conditionalVerbPhrase,
+  esWasPorWere,
   detectConjugatedVerbBase,
   getVerbChangeType,
 } from './conjugation';
@@ -1135,6 +1139,38 @@ const EnglishSentenceBuilder = () => {
 
       return { type: 'identify', subject: subj, verb: v, complement: comp, tense, mode, fullSentence, tenseOptions, askTense, askMode };
     }
+
+    if (type === 'conditional') {
+      /* La app da UNA cláusula y el alumno completa la otra. Es la única
+         actividad donde escribe la forma CONJUGADA de una condicional, así que
+         es el sitio donde de verdad aplica el «acepta `was` y avisa».
+         Se pregunta por la condición o por el resultado, al azar: la
+         correspondencia entre las dos mitades se aprende en los dos sentidos. */
+      const tiposDisponibles = CONDICIONALES_POR_CURSO.filter(
+        c => COURSE_ORDER.indexOf(c.cefr) <= courseIndex).map(c => c.tipo);
+      if (!tiposDisponibles.length) return null;
+      const tipoCond = tiposDisponibles[Math.floor(Math.random() * tiposDisponibles.length)];
+      const par = PARES_CONDICIONAL[Math.floor(Math.random() * PARES_CONDICIONAL.length)];
+      const parte = Math.random() < 0.5 ? 'condicion' : 'resultado';
+      const clausula = parte === 'condicion' ? par.cond : par.res;
+
+      const correctAnswer = conditionalVerbPhrase({ tipo: tipoCond, parte,
+        subject: clausula.subject, verb: clausula.verb });
+      const fullSentence = buildConditionalText({ tipo: tipoCond, condicion: par.cond, resultado: par.res });
+      /* El tiempo para las estadísticas es el de la cláusula `if`: es el que
+         identifica al tipo de condicional, y el del resultado (would, would
+         have) no es un tiempo de la lista. */
+      const tense = tenses.find(t => t.id === CONDICIONALES[tipoCond].ifTense) || availableTenses[0];
+      const acceptedAnswers = [correctAnswer.toLowerCase()];
+      const sinContraer = correctAnswer.replace("doesn't", 'does not').replace("don't", 'do not')
+        .replace("didn't", 'did not').replace("won't", 'will not').replace("wouldn't", 'would not')
+        .replace("hadn't", 'had not').replace("weren't", 'were not');
+      if (sinContraer !== correctAnswer) acceptedAnswers.push(sinContraer.toLowerCase());
+
+      return { type: 'conditional', tipoCond, parte, cond: par.cond, res: par.res,
+               subject: clausula.subject, verb: clausula.verb, complement: clausula.complement,
+               tense, mode: 'affirmative', correctAnswer, acceptedAnswers, fullSentence };
+    }
   };
 
   // FASE 2: Iniciar modo práctica
@@ -1313,7 +1349,15 @@ const EnglishSentenceBuilder = () => {
     }
     const userAns = practiceAnswer.toLowerCase().trim().replace(/\.$/, '');
     const accepted = practiceQuestion.acceptedAnswers || [practiceQuestion.correctAnswer.toLowerCase()];
-    const isCorrect = accepted.some(a => a.replace(/\.$/, '') === userAns);
+    /* «If I WAS rich» en vez de «If I WERE rich»: la forma coloquial existe y el
+       alumno la va a escribir. Cuenta como ACIERTO y se avisa aparte — marcarla
+       mal enseñaría que está prohibida, y no lo está. Es la decisión tomada para
+       toda la suite, y esta actividad es el único sitio donde se puede aplicar:
+       es la única donde el alumno escribe la forma conjugada de una condicional. */
+    const avisoWas = practiceQuestion.type === 'conditional' && esWasPorWere({
+      tipo: practiceQuestion.tipoCond, parte: practiceQuestion.parte,
+      verb: practiceQuestion.verb, respuesta: userAns });
+    const isCorrect = avisoWas || accepted.some(a => a.replace(/\.$/, '') === userAns);
     updateSRS(practiceQuestion.tense?.id, practiceQuestion.mode, isCorrect);
     recordGameAttempt(practiceQuestion.tense?.id, isCorrect);
     setAnswerStreak(s => isCorrect ? s + 1 : 0);
@@ -1477,6 +1521,9 @@ const EnglishSentenceBuilder = () => {
       correctAnswer: practiceQuestion.correctAnswer,
       fullSentence: practiceQuestion.fullSentence,
       hint,
+      /* Aviso, no corrección: la respuesta cuenta como buena y además se explica
+         por qué la forma de manual es otra. */
+      avisoWas,
     });
   };
 
@@ -2320,6 +2367,15 @@ const EnglishSentenceBuilder = () => {
                             { type: 'fill', icon: '📝', title: t.fillInBlank, desc: language === 'es' ? 'Completa la oración' : 'Complete the sentence' },
                             { type: 'correct', icon: '✏️', title: t.correctError, desc: language === 'es' ? 'Corrige el error' : 'Correct the error' },
                             { type: 'identify', icon: '🔍', title: language === 'es' ? 'Identificar estructura' : 'Identify structure', desc: language === 'es' ? 'Reconoce el tiempo/estructura verbal y el modo' : 'Recognize the tense/structure and mode' },
+                            /* Solo desde el curso donde se enseña la 1ª condicional.
+                               Antes de eso la actividad no tendría de dónde sacar
+                               un tipo y quedaría vacía. */
+                            ...(COURSE_ORDER.indexOf('intermedio2') <= COURSE_ORDER.indexOf(cefrLevel)
+                              ? [{ type: 'conditional', icon: '⇒',
+                                   title: language === 'es' ? 'Completa la condicional' : 'Complete the conditional',
+                                   desc: language === 'es' ? 'La app te da una mitad; escribe la otra'
+                                                           : 'The app gives you one half; write the other' }]
+                              : []),
                           ].map(p => (
                             <button key={p.type} onClick={() => startPractice(p.type)} className="w-full p-4 bg-gray-50 hover:bg-indigo-50 rounded-xl border-2 border-transparent hover:border-indigo-200 text-left transition-all">
                               <span className="text-2xl mr-3">{p.icon}</span>
@@ -2394,7 +2450,7 @@ const EnglishSentenceBuilder = () => {
                       {/* Tarjeta de pregunta */}
                       {/* Colores por actividad, del sistema de la suite:
                           completar=índigo · corregir=coral · identificar=teal · repaso=ámbar */}
-                      <div className={`p-4 rounded-xl border ${practiceQuestion.type === 'identify' ? 'bg-teal-50 border-teal-200' : practiceQuestion.type === 'correct' ? 'bg-rose-50 border-rose-200' : practiceQuestion.type === 'review' ? 'bg-amber-50 border-amber-200' : 'bg-indigo-50 border-indigo-200'}`}>
+                      <div className={`p-4 rounded-xl border ${practiceQuestion.type === 'conditional' ? 'bg-pink-50 border-pink-200' : practiceQuestion.type === 'identify' ? 'bg-teal-50 border-teal-200' : practiceQuestion.type === 'correct' ? 'bg-rose-50 border-rose-200' : practiceQuestion.type === 'review' ? 'bg-amber-50 border-amber-200' : 'bg-indigo-50 border-indigo-200'}`}>
                         {(practiceQuestion.type === 'fill' || practiceQuestion.type === 'review') && (
                           <>
                             <p className={`text-xs font-medium mb-2 uppercase tracking-wide ${practiceQuestion.type === 'review' ? 'text-amber-600' : 'text-indigo-500'}`}>
@@ -2405,7 +2461,7 @@ const EnglishSentenceBuilder = () => {
                             <p className="text-lg font-medium mb-1">
                               <span className="text-gray-800">{practiceQuestion.subject}</span>
                               <span className="mx-2 px-3 py-0.5 bg-white border-2 border-indigo-400 rounded text-indigo-600 font-bold">____</span>
-                              <span className="text-indigo-400 text-sm font-normal">({practiceQuestion.verb})</span>
+                              <span className="text-indigo-600 text-sm font-normal">({practiceQuestion.verb})</span>
                               <span className="text-gray-800 ml-1">{practiceQuestion.complement}.</span>
                             </p>
                             <div className="flex gap-2 text-xs mt-1">
@@ -2424,6 +2480,54 @@ const EnglishSentenceBuilder = () => {
                             />
                           </>
                         )}
+                        {practiceQuestion.type === 'conditional' && (() => {
+                          const q = practiceQuestion;
+                          const otra = q.parte === 'condicion' ? 'resultado' : 'condicion';
+                          const cl = otra === 'condicion' ? q.cond : q.res;
+                          /* La mitad que NO se pregunta se muestra ya conjugada:
+                             es la pista de qué tipo es, y de ahí sale la forma
+                             que toca en la otra. Esa correspondencia ES la regla. */
+                          const frase = conditionalVerbPhrase({ tipo: q.tipoCond, parte: otra,
+                            subject: cl.subject, verb: cl.verb });
+                          const hecha = `${cl.subject} ${frase}${cl.complement ? ' ' + cl.complement : ''}`;
+                          const pide = q.parte === 'condicion' ? q.cond : q.res;
+                          const hueco = (
+                            <>
+                              <span className="text-gray-800">{pide.subject}</span>
+                              <span className="mx-2 px-3 py-0.5 bg-white border-2 border-pink-400 rounded text-pink-700 font-bold">____</span>
+                              <span className="text-pink-700 text-sm font-normal">({pide.verb})</span>
+                              {pide.complement && <span className="text-gray-800 ml-1">{pide.complement}</span>}
+                            </>
+                          );
+                          return (
+                            <>
+                              <p className="text-xs text-pink-700 font-medium mb-2 uppercase tracking-wide">
+                                {q.parte === 'condicion'
+                                  ? (language === 'es' ? 'Completa la condición' : 'Complete the condition')
+                                  : (language === 'es' ? 'Completa el resultado' : 'Complete the result')}
+                              </p>
+                              <p className="text-lg font-medium mb-1">
+                                <span className="text-gray-500">If </span>
+                                {q.parte === 'condicion' ? hueco : <span className="text-gray-800">{hecha}</span>}
+                                <span className="text-gray-500">, </span>
+                                {q.parte === 'resultado' ? hueco : <span className="text-gray-800">{hecha}</span>}
+                                <span className="text-gray-800">.</span>
+                              </p>
+                              <div className="flex gap-2 text-xs mt-1">
+                                <span className="px-2 py-0.5 bg-pink-100 text-pink-900 rounded-full">
+                                  ⇒ {q.tipoCond === 1 ? t.condTipo1 : q.tipoCond === 2 ? t.condTipo2 : t.condTipo3}
+                                </span>
+                              </div>
+                              <input
+                                type="text" value={practiceAnswer} onChange={(e) => setPracticeAnswer(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && !practiceResult && checkPracticeAnswer()}
+                                placeholder={language === 'es' ? 'Escribe la frase verbal...' : 'Type the verb phrase...'}
+                                className="w-full mt-3 px-4 py-2 border-2 rounded-lg border-pink-300 focus:border-pink-500"
+                                disabled={!!practiceResult}
+                              />
+                            </>
+                          );
+                        })()}
                         {practiceQuestion.type === 'correct' && (
                           <>
                             <p className="text-xs text-rose-500 font-medium mb-2 uppercase tracking-wide">{language === 'es' ? 'Corrige el error' : 'Correct the error'}</p>
@@ -2542,6 +2646,14 @@ const EnglishSentenceBuilder = () => {
                           ) : (
                             <>
                               {!practiceResult.correct && <p className="text-sm text-red-600 mt-1">{t.theCorrectAnswer}: <span className="font-semibold">{practiceResult.correctAnswer}</span></p>}
+                              {/* Cuenta como acierto y ADEMÁS se explica. Marcarlo
+                                  mal enseñaría que «was» está prohibido, y no lo
+                                  está: es la forma coloquial y existe. */}
+                              {practiceResult.avisoWas && (
+                                <p className="text-sm text-pink-900 bg-pink-50 border border-pink-200 rounded-lg px-3 py-2 mt-2">
+                                  {t.condWereAviso}
+                                </p>
+                              )}
                               {practiceResult.hint && (
                                 <p className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mt-2">
                                   💡 {practiceResult.hint}

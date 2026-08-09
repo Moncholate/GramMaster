@@ -11,6 +11,8 @@ import {
   getAuxAndVerbForm,
   detectConjugatedVerbBase,
   getVerbChangeType,
+  conditionalVerbPhrase,
+  esWasPorWere,
 } from './conjugation';
 
 describe('presentParticiple', () => {
@@ -500,5 +502,47 @@ describe('smartCase: nombres ingleses', () => {
       condicion: { subject: 'the dog', verb: 'bark' },
       resultado: { subject: 'sarah', verb: 'wake up' } }))
       .toBe('If the dog barked, Sarah would wake up.');
+  });
+});
+
+describe('condicionales · la frase verbal de cada cláusula (modo práctica)', () => {
+  const fv = (o) => conditionalVerbPhrase(o);
+
+  it('1ª: presente simple en la condición, will en el resultado', () => {
+    expect(fv({ tipo: 1, parte: 'condicion', subject: 'it', verb: 'rain' })).toBe('rains');
+    expect(fv({ tipo: 1, parte: 'resultado', subject: 'I', verb: 'stay' })).toBe('will stay');
+  });
+
+  it('2ª: pasado simple en la condición, would en el resultado', () => {
+    expect(fv({ tipo: 2, parte: 'condicion', subject: 'I', verb: 'win' })).toBe('won');
+    expect(fv({ tipo: 2, parte: 'resultado', subject: 'I', verb: 'travel' })).toBe('would travel');
+  });
+
+  it('3ª: pasado perfecto en la condición, would have + participio en el resultado', () => {
+    expect(fv({ tipo: 3, parte: 'condicion', subject: 'she', verb: 'call' })).toBe('had called');
+    expect(fv({ tipo: 3, parte: 'resultado', subject: 'I', verb: 'go' })).toBe('would have gone');
+  });
+
+  it('el `were` del subjuntivo se pide para TODAS las personas', () => {
+    // «If I were rich», no «If I was rich»: es la forma que se enseña
+    expect(fv({ tipo: 2, parte: 'condicion', subject: 'I', verb: 'be' })).toBe('were');
+    expect(fv({ tipo: 2, parte: 'condicion', subject: 'he', verb: 'be' })).toBe('were');
+    expect(fv({ tipo: 2, parte: 'condicion', subject: 'they', verb: 'be' })).toBe('were');
+  });
+
+  it('negar una cláusula no arrastra a la otra', () => {
+    expect(fv({ tipo: 1, parte: 'condicion', subject: 'it', verb: 'rain', negativa: true })).toBe("doesn't rain");
+    expect(fv({ tipo: 2, parte: 'resultado', subject: 'I', verb: 'travel', negativa: true })).toBe("wouldn't travel");
+    expect(fv({ tipo: 3, parte: 'resultado', subject: 'I', verb: 'go', negativa: true })).toBe("wouldn't have gone");
+  });
+
+  it('«was» por «were» se reconoce para AVISAR, no para dar por malo', () => {
+    const base = { tipo: 2, parte: 'condicion', verb: 'be' };
+    expect(esWasPorWere({ ...base, respuesta: 'was' })).toBe(true);
+    expect(esWasPorWere({ ...base, respuesta: "wasn't" })).toBe(true);
+    // y no se confunde con otros casos
+    expect(esWasPorWere({ ...base, respuesta: 'were' })).toBe(false);
+    expect(esWasPorWere({ tipo: 3, parte: 'condicion', verb: 'be', respuesta: 'was' })).toBe(false);
+    expect(esWasPorWere({ tipo: 2, parte: 'resultado', verb: 'be', respuesta: 'was' })).toBe(false);
   });
 });

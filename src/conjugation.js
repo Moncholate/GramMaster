@@ -545,3 +545,43 @@ export const buildConditionalText = ({ tipo, condicion, resultado, modo = 'affir
   }
   return `If ${si}, ${principalTrasComa}${cierre}`;
 };
+
+/**
+ * La frase verbal de UNA de las dos cláusulas de una condicional: lo que el
+ * alumno escribe en el modo práctica. Vive aquí y no en la interfaz porque es
+ * la misma regla que usa `buildConditionalText` para construir la oración
+ * entera — si se separan, la app podría pedir una forma y validar otra.
+ *
+ * @param tipo  1 | 2 | 3
+ * @param parte 'condicion' | 'resultado'
+ * @param negativa niega ESA cláusula
+ */
+export const conditionalVerbPhrase = ({ tipo, parte, subject, verb, negativa = false }) => {
+  const cfg = CONDICIONALES[tipo] || CONDICIONALES[1];
+  const v = String(verb || '').toLowerCase().trim();
+  const modo = negativa ? 'negative' : 'affirmative';
+  if (!subject || !v) return '';
+
+  if (parte === 'condicion') {
+    /* El `were` del subjuntivo: en la 2ª condicional «be» va en `were` para
+       TODAS las personas, también «I» y «he». Es lo que se enseña, así que es
+       lo que se pide — y `was` se acepta con aviso, no se da por malo. */
+    if (cfg.subjuntivo && v === 'be') return negativa ? "weren't" : 'were';
+    return buildVerbPhrase(subject, v, cfg.ifTense, null, modo);
+  }
+  /* La 3ª no es un tiempo de la lista: `would have` + participio se arma aquí,
+     igual que en `terceraPrincipal`. */
+  if (cfg.main.perfecto) return negativa ? `wouldn't have ${pastParticiple(v)}` : `would have ${pastParticiple(v)}`;
+  if (cfg.main.modal)    return buildVerbPhrase(subject, v, '', cfg.main.modal, modo);
+  return buildVerbPhrase(subject, v, cfg.main.tense, null, modo);
+};
+
+/* «If I was rich» en vez de «If I were rich»: la forma coloquial existe y el
+   alumno la va a escribir. Se acepta y se avisa —no se marca mal—, que es la
+   decisión tomada para toda la suite. Solo aplica a la CONDICIÓN de la 2ª. */
+export const esWasPorWere = ({ tipo, parte, verb, respuesta }) => {
+  if (tipo !== 2 || parte !== 'condicion') return false;
+  if (String(verb || '').toLowerCase().trim() !== 'be') return false;
+  const r = String(respuesta || '').toLowerCase().trim().replace(/\.$/, '');
+  return r === 'was' || r === "wasn't" || r === 'was not';
+};

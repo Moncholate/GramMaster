@@ -26,6 +26,41 @@ export const modes = [
      Su vocabulario en el motor (`subject-question`) NO cambió. */
 ];
 
+/* Cuándo se ofrece cada condicional en el modo práctica. Sale del temario:
+   la 1ª y la 2ª en Intermedio II (AEF Int. II 8B y 9A), la 3ª en Intermedio
+   Alto (AEF 3 9A). Ver la memoria del syllabus antes de mover esto. */
+export const CONDICIONALES_POR_CURSO = [
+  { tipo: 1, cefr: 'intermedio2' },
+  { tipo: 2, cefr: 'intermedio2' },
+  { tipo: 3, cefr: 'avanzado' },
+];
+
+/* Pares condición/resultado para la práctica. Van EMPAREJADOS a mano y no
+   combinados al azar porque una condicional tiene que tener sentido: «If it
+   rains, I will stay at home» enseña; «If it rains, I will eat at school» es
+   ruido que distrae de la forma, que es lo que se practica.
+   Todos funcionan en los tres tipos, que es lo que permite sortear el tipo sin
+   tocar el par. `be` aparece a propósito: es el que dispara el `were` del
+   subjuntivo en la 2ª. */
+export const PARES_CONDICIONAL = [
+  { cond: { subject: 'it',   verb: 'rain',  complement: '' },
+    res:  { subject: 'I',    verb: 'stay',  complement: 'at home' } },
+  { cond: { subject: 'you',  verb: 'ask',   complement: 'me' },
+    res:  { subject: 'I',    verb: 'help',  complement: 'you' } },
+  { cond: { subject: 'I',    verb: 'win',   complement: 'the lottery' },
+    res:  { subject: 'I',    verb: 'travel', complement: 'the world' } },
+  { cond: { subject: 'she',  verb: 'call',  complement: 'me' },
+    res:  { subject: 'I',    verb: 'answer', complement: '' } },
+  { cond: { subject: 'we',   verb: 'leave', complement: 'early' },
+    res:  { subject: 'we',   verb: 'arrive', complement: 'on time' } },
+  { cond: { subject: 'I',    verb: 'be',    complement: 'rich' },
+    res:  { subject: 'I',    verb: 'buy',   complement: 'a house' } },
+  { cond: { subject: 'he',   verb: 'study', complement: 'more' },
+    res:  { subject: 'he',   verb: 'pass',  complement: 'the exam' } },
+  { cond: { subject: 'they', verb: 'be',    complement: 'here' },
+    res:  { subject: 'we',   verb: 'start', complement: 'the meeting' } },
+];
+
 /* Solo estas pueden ser sujeto. «Where lives here?» no existe: un lugar no
    ejecuta la acción. */
 export const whSubjectWords = ['who', 'what', 'which', 'how'];

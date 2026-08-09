@@ -11,6 +11,8 @@ export {
   whAsks,
   whExtPideSustantivo,
   whSubjectWords,
+  CONDICIONALES_POR_CURSO,
+  PARES_CONDICIONAL,
   frequencyAdverbs,
   timeMarkers,
   getFlattenedMarkers,
