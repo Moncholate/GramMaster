@@ -17,7 +17,20 @@ import {
   whExtPideSustantivo,
   whSubjectWords,
   CONDICIONALES_POR_CURSO,
+  UNIDADES_POR_CURSO,
+  unidadIndice,
   PARES_CONDICIONAL,
+  COMPLEMENTOS_BE,
+  COMPLEMENTOS_ADVERBIALES,
+  COMPLEMENTOS_TIEMPO,
+  COMPLEMENTO_DE_VERBO,
+  VERBOS_FUERA_DE_PRACTICA,
+  VERBOS_REGULARES,
+  VERBOS_REGULARES_AMPLIA,
+  VERBOS_IRREGULARES,
+  VERBOS_IRREGULARES_BASICO,
+  VERBOS_IRREGULARES_INTERMEDIO,
+  VERBOS_IRREGULARES_AVANZADO,
   frequencyAdverbs,
   timeMarkers,
   uncountableNouns,
@@ -699,6 +712,11 @@ const EnglishSentenceBuilder = () => {
   // FASE 2: Nuevos estados
   const [practiceMode, setPracticeMode] = useState(false);
   const [practiceType, setPracticeType] = useState('');
+  /* `''` = mezcla (lo normal y lo que mejor retiene); un id de tiempo = práctica
+     focalizada en ese contenido. No se guarda entre sesiones a propósito: es una
+     decisión del momento («hoy quiero machacar el presente perfecto»), no un
+     ajuste del alumno como el nivel o la unidad. */
+  const [practiceTema, setPracticeTema] = useState('');
   const [practiceQuestion, setPracticeQuestion] = useState(null);
   const [practiceAnswer, setPracticeAnswer] = useState('');
   const [practiceResult, setPracticeResult] = useState(null);
@@ -722,7 +740,46 @@ const EnglishSentenceBuilder = () => {
   const [identifyModeAnswer, setIdentifyModeAnswer] = useState('');
   const [showHint, setShowHint] = useState(false);
   const [cefrLevel, setCefrLevelState] = useState(() => readShared('gh_level', GH_LEVELS, 'basico1'));
-  const setCefrLevel = (v) => { setCefrLevelState(v); writeShared('gh_level', v); };
+  /* HASTA DÓNDE VA EL CURSO. `null` = no lo ha dicho todavía; `''` = eligió ver
+     el curso entero. La diferencia importa: con `null` la práctica lo pregunta
+     una vez, con `''` ya respondió y no se vuelve a preguntar.
+     Se guarda compartido (mismo mecanismo que el nivel) para que cuando esto se
+     propague a las otras apps no haya que preguntarlo cuatro veces. */
+  const [unidadCurso, setUnidadCursoState] = useState(() => {
+    try { return localStorage.getItem('gh_unidad'); } catch { return null; }
+  });
+  const setUnidadCurso = (v) => {
+    setUnidadCursoState(v);
+    try { localStorage.setItem('gh_unidad', v); } catch { /* modo privado */ }
+  };
+  const setCefrLevel = (v) => {
+    setCefrLevelState(v); writeShared('gh_level', v);
+    /* Cambiar de curso reinicia la unidad: «9A» de Intermedio II no significa
+       nada en Básico I, y arrastrarla dejaría un filtro silencioso y falso. */
+    setUnidadCursoState(null);
+    try { localStorage.removeItem('gh_unidad'); } catch { /* modo privado */ }
+  };
+
+  /* Un contenido está disponible si es de un curso ANTERIOR (ya lo vio entero) o
+     si es del curso actual y su unidad no pasa de donde va la clase. */
+  const unidadTope = unidadCurso ? unidadIndice(unidadCurso) : Infinity;
+  const esCursoActual = (item) => COURSE_ORDER.indexOf(item.cefr) === COURSE_ORDER.indexOf(cefrLevel);
+  const yaVisto = (item) => {
+    if (!item) return false;
+    const i = COURSE_ORDER.indexOf(item.cefr);
+    const actual = COURSE_ORDER.indexOf(cefrLevel);
+    if (i < actual) return true;                    // curso anterior: visto entero
+    if (i > actual) return false;
+    // curso actual: hasta la unidad, contando la etapa temprana de `be`
+    return unidadIndice(item.unidad) <= unidadTope
+        || (item.unidadBe != null && unidadIndice(item.unidadBe) <= unidadTope);
+  };
+  /* El tiempo está visto SOLO con `be`: la etapa temprana ya pasó pero la de los
+     demás verbos no. Practicarlo con «work» sería preguntar por lo que aún no
+     se ha enseñado; con `be` es exactamente lo que sabe. */
+  const soloBe = (item) => !!item && item.unidadBe != null && esCursoActual(item)
+    && unidadIndice(item.unidadBe) <= unidadTope
+    && unidadIndice(item.unidad) > unidadTope;
 
   /* La pregunta de sujeto, derivada (ver `whEsSujeto` más arriba). Se OFRECE
      solo cuando tiene sentido ofrecerla: forma `?`, una wh que pueda ejecutar la
@@ -1067,20 +1124,108 @@ const EnglishSentenceBuilder = () => {
     return { sentence: cap(subj) + ' ' + v + compStr + '.', wrongPart: v, correctPart: v };
   };
 
+  /* ── El pozo del que sale cada ejercicio ──────────────────────────────────
+     Vive aquí y no dentro de una actividad porque la práctica Y el repaso (SRS)
+     corrigen y puntúan los dos, así que los dos tienen que acotarse igual. El
+     repaso tenía su propia lista de diez verbos genéricos y se le escapaba. */
+  const courseIndex = COURSE_ORDER.indexOf(cefrLevel);
+  const subjects = ['I', 'You', 'He', 'She', 'We', 'They'];
+  const alAzar = (lista) => lista[Math.floor(Math.random() * lista.length)];
+
+  /* Los verbos salen de la página 133 del libro, no de una lista inventada, y
+     los IRREGULARES solo entran cuando el curso ya los vio: en Básico II los
+     regulares son la 11A y los irregulares la 11B, una clase después. Sin esto
+     la 11A podía pedir «went» o «wrote». */
+  const conIrregulares = (tense) => !(tense && tense.unidadIrregulares != null
+    && esCursoActual(tense) && unidadIndice(tense.unidadIrregulares) > unidadTope);
+  /* Cada libro suelta más irregulares: doce en Básico (pág. 133), 51 en
+     Elemental (pág. 165), 63 en Intermedio (pág. 164) y 71 en Intermedio Alto.
+     Sin la escala, un alumno de Básico II recibía «swam» y uno de Elemental
+     «threw», que están uno y dos cursos más arriba. */
+  const irregularesDelCurso =
+    courseIndex <= COURSE_ORDER.indexOf('basico2')    ? VERBOS_IRREGULARES_BASICO
+    : courseIndex <= COURSE_ORDER.indexOf('elemental2') ? VERBOS_IRREGULARES
+    : courseIndex <= COURSE_ORDER.indexOf('intermedio2') ? VERBOS_IRREGULARES_INTERMEDIO
+    : VERBOS_IRREGULARES_AVANZADO;
+  /* Los regulares no se escalonan igual: hasta Elemental son los del libro, y
+     DESDE INTERMEDIO se abren, porque a esa altura la regla `-ed` ya está
+     sabida y los 50 de Starter se quedan cortos (decisión del docente). */
+  const regularesDelCurso = courseIndex >= COURSE_ORDER.indexOf('intermedio1')
+    ? VERBOS_REGULARES_AMPLIA : VERBOS_REGULARES;
+  /* Los que la estructura no puede armar salen aquí y no de las listas: esas son
+     copia del libro y hay tests que las cruzan contra sus páginas. */
+  const armables = (lista) => lista.filter(v => !VERBOS_FUERA_DE_PRACTICA.includes(v));
+
+  /* Ni la FORMA ni la PERSONA llegan de golpe: Básico I enseña el presente
+     simple (+) y (−) con I/you/we/they en la 5A, las preguntas en la 5B y
+     he/she/it en la 6A. La práctica sorteaba la forma entre las tres, así que
+     en la 5A podía pedir «Does she work?»: justo las dos cosas que le faltan.
+     Es la misma mecánica de `unidadBe`, movida al eje de la forma y al de la
+     persona. Con `be` no aplica: para su unidad ya está completo. */
+  const etapaPendiente = (tense, campo) => !!tense && tense[campo] != null
+    && esCursoActual(tense) && !soloBe(tense)
+    && unidadIndice(tense[campo]) > unidadTope;
+  const modosPara = (tense) => etapaPendiente(tense, 'unidadInterrogativa')
+    ? ['affirmative', 'negative']
+    : ['affirmative', 'negative', 'interrogative'];
+
+  /* El complemento lo manda el VERBO. Un transitivo sin objeto no queda raro,
+     queda agramatical («He created at school»), y eso era lo único que impedía
+     usar más que los verbos del libro. Detrás del objeto solo van adverbiales
+     de TIEMPO: «visited the museum at home» se contradice. */
+  const complementoPara = (verbo) => {
+    const fijo = COMPLEMENTO_DE_VERBO[verbo];
+    if (!fijo) return alAzar(COMPLEMENTOS_ADVERBIALES);
+    /* Si el complemento fijo YA es una frase preposicional (el caso de `live`,
+       que pide lugar), no se le encadena otra: «lived in Santiago on weekends»
+       no dice nada. Detrás de un objeto sí, y solo de tiempo. */
+    if (/^(in|at|on|with|to|for) /.test(fijo)) return fijo;
+    return Math.random() < 0.5 ? fijo : `${fijo} ${alAzar(COMPLEMENTOS_TIEMPO)}`;
+  };
+
+  /* Con un tiempo visto SOLO en su etapa de `be`, no vale cualquier verbo:
+     preguntar «I ____ (work) every day» a alguien de Básico I unidad 2 es
+     preguntarle por la 5A. Y el complemento tampoco vale tal cual — «I am
+     every day» no existe. Cada actividad llama a esto con el tiempo que le
+     tocó, porque hasta entonces no se sabe cuál es. */
+  const paraTiempo = (tense) => {
+    /* La tercera persona del singular es la 6A: hasta entonces el sujeto sale
+       sin `he`/`she`, o la respuesta correcta sería la -s que aún no ha visto.
+       Con `be` no aplica: para la 2B el verbo está completo en todas ellas. */
+    const sujetos = etapaPendiente(tense, 'unidadTerceraPersona')
+      ? subjects.filter(s => !['He', 'She', 'It'].includes(s))
+      : subjects;
+    if (soloBe(tense)) return { subj: alAzar(sujetos), v: 'be', comp: alAzar(COMPLEMENTOS_BE) };
+    const pool = armables(conIrregulares(tense)
+      ? [...regularesDelCurso, ...irregularesDelCurso]
+      : regularesDelCurso);
+    const v = alAzar(pool);
+    return { subj: alAzar(sujetos), v, comp: complementoPara(v) };
+  };
+
   // FASE 2: Generar pregunta de práctica
   const generatePracticeQuestion = (type) => {
-    const courseIndex = COURSE_ORDER.indexOf(cefrLevel);
-    const availableTenses = tenses.filter(t => COURSE_ORDER.indexOf(t.cefr) <= courseIndex);
-    const subjects = ['I', 'You', 'He', 'She', 'We', 'They'];
-    const verbs = ['work', 'study', 'play', 'eat', 'live', 'travel', 'read', 'write', 'run', 'cook'];
-    const complements = ['every day', 'at school', 'at home', 'in the park', 'with friends', 'in the morning', 'on weekends'];
-
-    const subj = subjects[Math.floor(Math.random() * subjects.length)];
-    const v = verbs[Math.floor(Math.random() * verbs.length)];
-    const comp = complements[Math.floor(Math.random() * complements.length)];
-
+    /* La práctica se acota a lo VISTO, no a todo el curso. El constructor no:
+       ahí el alumno explora a propósito y puede armar lo que quiera. La
+       diferencia es que la práctica corrige y puntúa, y no se puede evaluar a
+       nadie sobre algo que no se ha enseñado. */
+    const availableTenses = tenses.filter(yaVisto);
+    /* TEMA: acota de qué contenido sale la PREGUNTA, no el resto del ejercicio.
+       Los distractores de «Identificar» siguen saliendo de todo lo visto: con un
+       solo tiempo en la lista el ejercicio sería trivial y no enseñaría a
+       distinguir, que es justo lo que evalúa.
+       La mezcla sigue siendo lo normal; esto es opcional, para cuando se quiere
+       machacar un contenido concreto. */
+    const poolTema = practiceTema
+      ? availableTenses.filter(t => t.id === practiceTema)
+      : availableTenses;
+    const delTema = (lista) => {
+      const acotada = practiceTema ? lista.filter(t => t.id === practiceTema) : lista;
+      return acotada.length ? acotada : lista;
+    };
     if (type === 'fill') {
-      const tense = availableTenses[Math.floor(Math.random() * availableTenses.length)];
+      const tense = poolTema[Math.floor(Math.random() * poolTema.length)];
+      const { subj, v, comp } = paraTiempo(tense);
       const mode = Math.random() > 0.4 ? 'affirmative' : 'negative';
       const correctAnswer = buildVerbPhrase(subj, v, tense.id, null, mode);
       const fullSentence = buildSentenceText({ mode, subject: subj, verb: v, complement: comp, tense: tense.id });
@@ -1109,8 +1254,15 @@ const EnglishSentenceBuilder = () => {
       const simpleTenses = availableTenses.filter(t =>
         ['simple-present', 'simple-past', 'present-continuous', 'present-perfect', 'past-continuous'].includes(t.id)
       );
-      const tense = (simpleTenses.length > 0 ? simpleTenses : availableTenses)[Math.floor(Math.random() * (simpleTenses.length || availableTenses.length))];
-      const mode = ['affirmative', 'negative', 'interrogative'][Math.floor(Math.random() * 3)];
+      /* Fuera los tiempos vistos SOLO con `be`: esta actividad arma una oración
+         mal a propósito, y `buildWrongSentence` no contempla `be` — saldrían
+         frases rotas de un modo que no es el error que se quiere enseñar.
+         Que una actividad no sirva para un contenido es mejor que forzarla. */
+      const usables = delTema(simpleTenses.length > 0 ? simpleTenses : availableTenses).filter(t => !soloBe(t));
+      if (!usables.length) return null;
+      const tense = usables[Math.floor(Math.random() * usables.length)];
+      const mode = alAzar(modosPara(tense));
+      const { subj, v, comp } = paraTiempo(tense);
       const { sentence: wrongSentence, wrongPart, correctPart } = buildWrongSentence(subj, v, comp, tense.id, mode);
       const fullSentence = buildSentenceText({ mode, subject: subj, verb: v, complement: comp, tense: tense.id });
       const acceptedAnswers = [correctPart.toLowerCase()];
@@ -1120,14 +1272,16 @@ const EnglishSentenceBuilder = () => {
     }
 
     if (type === 'identify') {
-      const courseIndex = COURSE_ORDER.indexOf(cefrLevel);
       // Si hay menos de 3 tiempos disponibles, solo pedir modo
       const askTense = availableTenses.length >= 3;
       const askMode = true; // siempre pedir modo
       const optionCount = courseIndex <= 1 ? 3 : courseIndex <= 3 ? 4 : 5;
 
-      const mode = ['affirmative', 'negative', 'interrogative'][Math.floor(Math.random() * 3)];
-      const tense = availableTenses[Math.floor(Math.random() * availableTenses.length)];
+      /* El tiempo se sortea ANTES que la forma: la forma depende de él, porque
+         en la etapa previa a la 5B la interrogativa todavía no está vista. */
+      const tense = poolTema[Math.floor(Math.random() * poolTema.length)];
+      const mode = alAzar(modosPara(tense));
+      const { subj, v, comp } = paraTiempo(tense);
       const fullSentence = buildSentenceText({ mode, subject: subj, verb: v, complement: comp, tense: tense.id });
 
       // Distractores solo de los tiempos que el estudiante conoce
@@ -1146,8 +1300,7 @@ const EnglishSentenceBuilder = () => {
          es el sitio donde de verdad aplica el «acepta `was` y avisa».
          Se pregunta por la condición o por el resultado, al azar: la
          correspondencia entre las dos mitades se aprende en los dos sentidos. */
-      const tiposDisponibles = CONDICIONALES_POR_CURSO.filter(
-        c => COURSE_ORDER.indexOf(c.cefr) <= courseIndex).map(c => c.tipo);
+      const tiposDisponibles = CONDICIONALES_POR_CURSO.filter(yaVisto).map(c => c.tipo);
       if (!tiposDisponibles.length) return null;
       const tipoCond = tiposDisponibles[Math.floor(Math.random() * tiposDisponibles.length)];
       const par = PARES_CONDICIONAL[Math.floor(Math.random() * PARES_CONDICIONAL.length)];
@@ -1221,12 +1374,10 @@ const EnglishSentenceBuilder = () => {
   const generateReviewQuestion = (tenseId, mode) => {
     const tense = tenses.find(t => t.id === tenseId);
     if (!tense) return null;
-    const subjects = ['I', 'You', 'He', 'She', 'We', 'They'];
-    const verbs = ['work', 'study', 'play', 'eat', 'live', 'travel', 'read', 'write', 'run', 'cook'];
-    const complements = ['every day', 'at school', 'at home', 'in the park', 'with friends', 'in the morning', 'on weekends'];
-    const subj = subjects[Math.floor(Math.random() * subjects.length)];
-    const v = verbs[Math.floor(Math.random() * verbs.length)];
-    const comp = complements[Math.floor(Math.random() * complements.length)];
+    /* Mismo pozo que la práctica. Antes tenía diez verbos genéricos propios, así
+       que se le escapaban tanto el escalón de irregulares como el objeto del
+       verbo: podía pedir «I ____ (read) every day» a alguien de Básico. */
+    const { subj, v, comp } = paraTiempo(tense);
     const correctAnswer = buildVerbPhrase(subj, v, tenseId, null, mode);
     const fullSentence = buildSentenceText({ mode, subject: subj, verb: v, complement: comp, tense: tenseId });
     const uncontracted = correctAnswer
@@ -2333,7 +2484,82 @@ const EnglishSentenceBuilder = () => {
               {/* Panel de Práctica */}
               {activePanel === 'practice' && (
                 <div className="space-y-4">
-                  {!practiceQuestion ? (
+                  {/* HASTA DÓNDE VA LA CLASE. Va aquí y no junto al nivel a
+                      propósito: el nivel hace falta en toda la app, pero la
+                      unidad solo cambia algo en la PRÁCTICA — que es la que
+                      corrige y puntúa. Preguntarlo en la portada sería una
+                      segunda barrera de entrada para quien solo viene a construir
+                      oraciones.
+                      Se pregunta UNA vez (unidadCurso === null) y después queda
+                      como una línea compacta, porque el curso avanza cada semana
+                      y esto se queda viejo: tiene que ser fácil de mover. */}
+                  {!practiceQuestion && (() => {
+                    /* UN SOLO control en los dos estados, y es un `select`: la
+                       lista de unidades llega a 18 en Intermedio II, que en un
+                       teléfono son cinco filas de fichas. El desplegable ocupa
+                       una fila y sigue a la vista — que era la condición.
+                       Es además el mismo control que la app ya usa para el nivel.
+                       La primera vez lleva encima la explicación de POR QUÉ se
+                       pregunta; después se queda solo, en una línea. */
+                    const sinResponder = unidadCurso === null;
+                    const selector = (
+                      <select
+                        value={sinResponder ? '__' : unidadCurso}
+                        onChange={(e) => setUnidadCurso(e.target.value)}
+                        className="px-2 py-1 border border-indigo-300 rounded-lg bg-white text-sm font-semibold text-indigo-600"
+                      >
+                        {sinResponder && <option value="__" disabled>{t.unidadElige}</option>}
+                        <option value="">{t.unidadTodo}</option>
+                        {(UNIDADES_POR_CURSO[cefrLevel] || []).map(u => (
+                          <option key={u} value={u}>{u}</option>
+                        ))}
+                      </select>
+                    );
+                    return sinResponder ? (
+                      <div className="p-3 rounded-xl border-2 border-indigo-200 bg-indigo-50">
+                        <p className="font-semibold text-gray-800 text-sm">{t.unidadPregunta}</p>
+                        <p className="text-xs text-gray-600 mt-1 mb-2">{t.unidadPorQue}</p>
+                        {selector}
+                      </div>
+                    ) : (
+                      <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-xs text-gray-600">
+                        <span>{unidadCurso ? t.unidadVas : t.unidadTodoCurso}</span>
+                        {selector}
+                        {/* TEMA. La mezcla va primera y marcada como recomendada
+                            porque lo es: practicar contenidos mezclados retiene
+                            bastante mejor que hacerlo por bloques. Lo focalizado
+                            existe para machacar algo concreto, no para sustituirla. */}
+                        <span className="ml-1">{t.temaEtiqueta}</span>
+                        <select
+                          value={practiceTema}
+                          onChange={(e) => setPracticeTema(e.target.value)}
+                          className="px-2 py-1 border border-indigo-300 rounded-lg bg-white text-sm font-semibold text-indigo-600 max-w-[11rem]"
+                        >
+                          <option value="">{t.temaMezcla}</option>
+                          {/* «(to be)» cuando el tiempo solo se ha visto en su
+                              etapa temprana: el alumno debe saber que ahí se
+                              practica «I am at home», no «I work every day». */}
+                          {tenses.filter(yaVisto).map(tn => (
+                            <option key={tn.id} value={tn.id}>
+                              {(language === 'es' ? tn.nameEs : tn.nameEn) + (soloBe(tn) ? ' (to be)' : '')}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    );
+                  })()}
+                  {/* Sin ningún tiempo visto no hay práctica posible: en Básico I
+                      el primero llega en la 5A, así que un alumno en la 2A tiene
+                      el conjunto vacío. Antes eso escogía `undefined` de una lista
+                      vacía y reventaba; ahora se dice, que además es la verdad. */}
+                  {!practiceQuestion && !tenses.some(yaVisto) ? (
+                    <div className="p-4 rounded-xl border border-gray-200 bg-gray-50 text-center">
+                      <p className="font-semibold text-gray-800">{t.unidadSinContenido}</p>
+                      <button onClick={() => setUnidadCurso(null)} className="mt-2 text-sm font-semibold text-indigo-600 underline">
+                        {t.unidadCambiar}
+                      </button>
+                    </div>
+                  ) : !practiceQuestion ? (
                     <div className="space-y-3">
                       {reviewUpToDate ? (
                         <div className="text-center py-10">
@@ -2365,12 +2591,17 @@ const EnglishSentenceBuilder = () => {
                           })()}
                           {[
                             { type: 'fill', icon: '📝', title: t.fillInBlank, desc: language === 'es' ? 'Completa la oración' : 'Complete the sentence' },
-                            { type: 'correct', icon: '✏️', title: t.correctError, desc: language === 'es' ? 'Corrige el error' : 'Correct the error' },
+                            /* «Corrige el error» necesita un tiempo con verbos
+                               normales: no se ofrece mientras solo se haya visto
+                               la etapa de `be`. */
+                            ...(tenses.filter(yaVisto).some(tn => !soloBe(tn))
+                              ? [{ type: 'correct', icon: '✏️', title: t.correctError, desc: language === 'es' ? 'Corrige el error' : 'Correct the error' }]
+                              : []),
                             { type: 'identify', icon: '🔍', title: language === 'es' ? 'Identificar estructura' : 'Identify structure', desc: language === 'es' ? 'Reconoce el tiempo/estructura verbal y el modo' : 'Recognize the tense/structure and mode' },
-                            /* Solo desde el curso donde se enseña la 1ª condicional.
-                               Antes de eso la actividad no tendría de dónde sacar
-                               un tipo y quedaría vacía. */
-                            ...(COURSE_ORDER.indexOf('intermedio2') <= COURSE_ORDER.indexOf(cefrLevel)
+                            /* Solo si el alumno ya vio alguna condicional: antes de
+                               eso la actividad no tendría de dónde sacar un tipo y
+                               quedaría vacía. */
+                            ...(CONDICIONALES_POR_CURSO.some(yaVisto)
                               ? [{ type: 'conditional', icon: '⇒',
                                    title: language === 'es' ? 'Completa la condicional' : 'Complete the conditional',
                                    desc: language === 'es' ? 'La app te da una mitad; escribe la otra'

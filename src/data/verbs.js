@@ -73,6 +73,15 @@ export const irregularVerbs = {
   ride: { past: 'rode', participle: 'ridden' },
   rise: { past: 'rose', participle: 'risen' },
   shake: { past: 'shook', participle: 'shaken' },
+  /* Faltaba, y sin él la regla regular daba «lended»: una forma que no existe.
+     Salió de cruzar los datos contra la tabla de irregulares del libro (AEF 2,
+     pág. 164) — ningún chequeo interno podía verlo, porque la app era coherente
+     consigo misma. Afecta también al constructor, no solo a la práctica. */
+  lend: { past: 'lent', participle: 'lent' },
+  /* Igual que `lend`, del cruce contra AEF 3 (pág. 165). Existe «shined» para
+     los zapatos, pero «shone» es la forma que da el libro y la del sentido
+     dominante (la luz). `lie` NO se agrega: ver la nota al final del objeto. */
+  shine: { past: 'shone', participle: 'shone' },
   show: { past: 'showed', participle: 'shown' },
   sing: { past: 'sang', participle: 'sung' },
   sink: { past: 'sank', participle: 'sunk' },
@@ -144,4 +153,12 @@ export const irregularVerbs = {
   leap: { past: 'leaped', participle: 'leaped' },
   spell: { past: 'spelled', participle: 'spelled' },
   spill: { past: 'spilled', participle: 'spilled' },
+  /* `lie` NO está aquí, y es deliberado. El libro lo lista como irregular
+     (lie → lay → lain), pero eso es «recostarse». El otro `lie` es «mentir» y
+     es REGULAR (lied). Son dos verbos distintos escritos igual.
+     Meter la forma del libro rompería el sentido más frecuente en clase: «He
+     lied to me» pasaría a «He lay to me». Se queda como regular, que acierta en
+     el caso común, y queda FUERA de la práctica para no enseñar ninguno de los
+     dos como si fuera el único. Es el mismo criterio de ambigüedad léxica que
+     usan Question Lab y Desgramatizador. */
 };

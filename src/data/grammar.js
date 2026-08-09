@@ -26,13 +26,287 @@ export const modes = [
      Su vocabulario en el motor (`subject-question`) NO cambió. */
 ];
 
+/* Unidades de cada curso, extraídas de `Grammar HUB/syllabus-aef.md`. Un curso
+   avanza ~una unidad por clase, y la mayoría tiene 2 clases por semana (3-4 los
+   intensivos): o sea que entre la semana 3 y la 6 hay media asignatura de
+   diferencia. Sin esto la práctica pregunta por contenido del curso que el
+   alumno todavía no ha visto — y como la racha y las insignias castigan el
+   fallo, lo penaliza por no saber algo que nadie le ha enseñado.
+   PENDIENTE: cuando esto se propague a las otras apps, su sitio es
+   `Grammar HUB/curriculum.json`, que ya se sincroniza a las cuatro. */
+export const UNIDADES_POR_CURSO = {
+  basico1:     ['1A', '1B', '2A', '2B', '3A', '3B', '4A', '4B', '5A', '5B', '6A', '6B'],
+  basico2:     ['7A', '7B', '8A', '8B', '9A', '9B', '10A', '10B', '11A', '11B', '12A', '12B'],
+  elemental1:  ['1A', '1B', '1C', '2A', '2B', '2C', '3A', '3B', '3C', '4A', '4B', '4C', '5A', '5B', '5C', '6A', '6B', '6C'],
+  elemental2:  ['7A', '7B', '7C', '8A', '8B', '8C', '9A', '9B', '9C', '10A', '10B', '10C', '11A', '11B', '11C', '12A', '12B', '12C'],
+  intermedio1: ['1A', '1B', '1C', '2A', '2B', '2C', '3A', '3B', '3C', '4A', '4B', '4C', '5A', '5B', '5C', '6A', '6B', '6C'],
+  intermedio2: ['7A', '7B', '7C', '8A', '8B', '8C', '9A', '9B', '9C', '10A', '10B', '10C', '11A', '11B', '11C', '12A', '12B', '12C'],
+  avanzado:    ['1A', '1B', '2A', '2B', '3A', '3B', '4A', '4B', '5A', '5B', '6A', '6B', '7A', '7B', '8A', '8B', '9A', '9B', '10A', '10B'],
+};
+
+/* Orden DENTRO del curso. Comparar como texto no sirve: «10A» < «9B» carácter a
+   carácter. Sin unidad (`null`) devuelve -1 = disponible desde el principio, que
+   es lo correcto para lo que se enseña en Practical English y no figura en la
+   columna de gramática del temario (ver la Trampa 2 de la memoria del syllabus). */
+export const unidadIndice = (u) => {
+  const m = /^(\d+)([A-Z])$/.exec(String(u || ''));
+  return m ? Number(m[1]) * 10 + (m[2].charCodeAt(0) - 65) : -1;
+};
+
+/* POR ETAPAS. El libro no enseña un tiempo de golpe: primero `be` y bastante
+   después el resto de los verbos.
+     Presente simple → be en Básico I 1A-2B, los demás verbos en 5A,
+                       las preguntas en 5B y he/she/it en 6A
+     Pasado simple   → was/were en Básico II 10B, los regulares en 11A,
+                       los irregulares en 11B
+   La app tenía UN ítem para todo eso, así que un alumno de Básico I en la
+   unidad 2 aparecía como que no había visto nada — cuando lleva tres clases con
+   el verbo `be`. `unidadBe` es la etapa temprana; entre esa unidad y `unidad`
+   el tiempo se practica SOLO con `be`, que es exactamente lo que sabe.
+
+   `unidadBe` del presente simple es la 2B y no la 1A, aunque el `be` empiece en
+   la 1A: el libro lo reparte por personas (1A yo/tú, 1B he/she/it, 2A el plural)
+   y las preguntas Wh- llegan en la 2B. Decisión del docente (2026-08-08): son
+   cuatro clases seguidas y el desfase dura poco, así que se abre cuando el `be`
+   está COMPLETO en vez de llenar el modelo de campos por persona. La app no se
+   usa todas las clases; se pierden tres y se gana no preguntar nunca de más.
+   El corte que sí importa ahí es cerradas antes que abiertas, y para la 2B las
+   dos existen — eso pesará al propagarlo a Question Lab, que es todo preguntas.
+
+   `unidadInterrogativa` y `unidadTerceraPersona` son el mismo mecanismo aplicado
+   a la FORMA y a la PERSONA en vez de al verbo: en la 5A el alumno arma (+) y
+   (−) con I/you/we/they, nada más. Sin esto la práctica sorteaba la forma al
+   azar entre las tres y podía pedirle «Does she work?», que son justo las dos
+   cosas que aún no ha visto.
+   Complementos que funcionan con `be`: «I am every day» no existe, así que la
+   lista de siempre no sirve tal cual. */
+export const COMPLEMENTOS_BE = ['at home', 'at school', 'in the park', 'with friends',
+                                'happy', 'tired', 'ready', 'late', 'busy'];
+
+/* COMPLEMENTOS. Para un verbo que se sostiene solo, cualquiera de estos vale.
+   Para uno que exige objeto directo NO: «He created every day» es agramatical,
+   no solo raro, y esa era la única razón por la que la práctica no podía usar
+   medio diccionario. Cada verbo transitivo trae su objeto en `OBJETO_DE_VERBO`. */
+export const COMPLEMENTOS_ADVERBIALES = ['every day', 'at school', 'at home',
+  'in the park', 'with friends', 'in the morning', 'on weekends'];
+/* Solo de TIEMPO, para lo que va DESPUÉS de un objeto. Los de lugar no sirven
+   ahí: «visited the museum at home» se contradice. Y todos tienen que aguantar
+   cualquier tiempo verbal, así que nada de «last night», que choca con el
+   presente simple. */
+export const COMPLEMENTOS_TIEMPO = ['every day', 'in the morning', 'on weekends',
+                                    'after class'];
+
+/* UN complemento canónico por verbo, no una lista por categorías. Con
+   categorías salía «parked the tickets»: `park` no admite cualquier cosa,
+   admite un vehículo. Elegido uno a uno, la variedad la ponen el sujeto, el
+   tiempo, la forma y el adverbial que puede ir detrás.
+   Casi todos son objetos directos; `live` está por el otro motivo: pide un
+   LUGAR («She lived in the morning» es tan falso como «She created at home»).
+   Que un verbo NO esté aquí significa que se sostiene con cualquier adverbial.
+   No puede faltar ninguno por descuido: hay un test que recorre todos los pozos
+   de la práctica y exige que cada verbo esté clasificado en un lado o en otro.
+   Nada de posesivos: «She raised my hand» es gramatical pero dice otra cosa, y
+   el sujeto lo sortea la app. */
+export const COMPLEMENTO_DE_VERBO = {
+  // Regulares del libro (pág. 133)
+  answer: 'the question', ask: 'a question', book: 'the tickets', call: 'the doctor',
+  carry: 'the bags', change: 'the plan', clean: 'the kitchen', close: 'the door',
+  cook: 'dinner', finish: 'the book', hate: 'the food', help: 'the children',
+  invite: 'the neighbors', like: 'the movie', live: 'in Santiago', love: 'the song',
+  miss: 'the bus', need: 'a new phone', offer: 'the coffee', open: 'the window',
+  pack: 'the bags', paint: 'the wall', park: 'the car', pass: 'the test',
+  play: 'the guitar', rent: 'a car', start: 'the class', stop: 'the car',
+  study: 'English', travel: 'to Europe', turn: 'the page', use: 'the computer',
+  want: 'a new phone', wash: 'the dishes', watch: 'the game',
+  // Regulares que se abren desde Intermedio
+  accept: 'the offer', achieve: 'the goal', add: 'the numbers', advise: 'the students',
+  allow: 'the change', approve: 'the plan', believe: 'the story', complete: 'the course',
+  consider: 'the offer', create: 'a website', debate: 'the topic', defend: 'the project',
+  demand: 'an answer', deny: 'the story', design: 'the poster', develop: 'the app',
+  discover: 'the truth', discuss: 'the problem', enjoy: 'the concert', explain: 'the rules',
+  explore: 'the city', follow: 'the instructions', include: 'the details',
+  notice: 'the mistake', observe: 'the birds', order: 'a pizza', organize: 'the party',
+  plan: 'the trip', practice: 'the piano', prefer: 'coffee', prepare: 'the presentation',
+  promise: 'an answer', protect: 'the environment', raise: 'the money', reach: 'the top',
+  realize: 'the mistake', receive: 'the message', recognize: 'the song',
+  recommend: 'the restaurant', reject: 'the offer', remember: 'the address',
+  request: 'a copy', save: 'the file', select: 'the winner', serve: 'the food',
+  solve: 'the problem', suggest: 'a plan', taste: 'the soup', touch: 'the screen',
+  visit: 'the museum', warn: 'the neighbors',
+  // Irregulares
+  beat: 'the champion', become: 'a teacher', begin: 'the lesson', bite: 'the apple',
+  break: 'the window', bring: 'the tickets', build: 'a house', buy: 'a new phone',
+  catch: 'the ball', choose: 'the blue one', come: 'to the party', cut: 'the bread',
+  do: 'the homework', draw: 'a picture', drink: 'the coffee', drive: 'the car',
+  eat: 'the cake', feel: 'the pain', find: 'the keys', fly: 'to Madrid',
+  forget: 'the address', get: 'the message', go: 'to the beach', leave: 'the office',
+  give: 'the answer', grow: 'vegetables', hang: 'the picture', have: 'a car',
+  hear: 'the news', hit: 'the ball', hurt: 'the player', keep: 'the receipt',
+  know: 'the answer', lend: 'the book', lose: 'the keys', make: 'a cake',
+  meet: 'the team', pay: 'the bill', read: 'the news', ride: 'a bike',
+  ring: 'the bell', say: 'goodbye', see: 'the movie', sell: 'the house', send: 'the message',
+  shut: 'the door', sing: 'a song', speak: 'English', spend: 'the money',
+  steal: 'the money', take: 'the bus', teach: 'English', tell: 'the truth',
+  throw: 'the ball', understand: 'the question', wear: 'a jacket', win: 'the game',
+  write: 'a letter',
+};
+
+/* La otra mitad: los que aceptan cualquiera de los adverbiales libres.
+   Está escrita entera, en vez de deducirla por descarte, justamente para que
+   olvidar un verbo sea un test en rojo y no una oración agramatical suelta. */
+export const VERBOS_CON_ADVERBIAL_LIBRE = [
+  // Regulares del libro (pág. 133)
+  'arrive', 'cry', 'decide', 'learn', 'listen', 'look', 'move',
+  'relax', 'stay', 'talk', 'wait', 'walk', 'work',
+  // Regulares que se abren desde Intermedio
+  'agree', 'appear', 'argue', 'continue', 'dance', 'disagree', 'exercise',
+  'heal', 'improve', 'refuse', 'rest', 'return', 'search', 'shop', 'try',
+  // Irregulares
+  'fall', 'run', 'sit', 'sleep', 'stand', 'swim', 'think', 'wake',
+];
+/* `come`, `go`, `fly`, `travel` y `leave` NO están aquí aunque parezcan
+   intransitivos: piden `to` delante del lugar. «She came at school» es falso, y
+   salía una de cada tres veces. Llevan complemento fijo, y la regla de no
+   encadenar dos frases preposicionales impide que se les pegue otra detrás. */
+
+/* Verbos que la app NO puede armar, aunque el alumno los sepa. No es nivel, es
+   estructura: la oración es «sujeto + verbo + complemento» y estos piden otra
+   cosa. Los seis sujetos de la práctica son personas, y eso también pesa.
+     put / set          → exigen además un lugar: «I put the book» está incompleto
+     let                → objeto + infinitivo sin `to`: «let me go»
+     cost               → pide un precio, y el sujeto es una persona
+     mean               → su objeto natural es una cláusula, no un sustantivo
+     shine, rain, snow  → su sujeto natural es el sol o el cielo, no «She»
+   `rain` y `snow` estaban en el pozo desde el principio, porque vienen en la
+   página 133 del libro: la práctica podía producir «She rained at school». Se
+   vio leyendo las oraciones generadas, no midiendo nada.
+   `check in` sale por lo mismo (la partícula), y `dream`/`smell`/`lie` NO están
+   aquí: esos salen por tener dos formas válidas o dos significados. */
+export const VERBOS_FUERA_DE_PRACTICA = ['cost', 'let', 'mean', 'put', 'rain',
+                                         'set', 'shine', 'snow'];
+
+/* Los verbos que el LIBRO lista, copiados de la página 133 de American English
+   File («Regular and irregular verbs»), aportada por el profesor.
+   Importa que salgan de ahí y no de una lista inventada: en Básico II el alumno
+   maneja quince verbos, y preguntarle por uno que no ha visto es lo mismo que
+   preguntarle por un tiempo que no ha visto.
+   La práctica usaba `eat`, `read` y `run`, que NO están en ninguna de las dos
+   listas — y las tres son irregulares, así que en la unidad de los regulares
+   pedían una forma que el alumno no tenía por qué conocer. */
+export const VERBOS_REGULARES = [
+  'answer', 'arrive', 'ask', 'book', 'call', 'carry', 'change', 'clean', 'close',
+  'cook', 'cry', 'decide', 'finish', 'hate', 'help', 'invite', 'learn', 'like',
+  'listen', 'live', 'look', 'love', 'miss', 'move', 'need', 'offer', 'open',
+  'pack', 'paint', 'park', 'pass', 'play', 'rain', 'relax', 'rent', 'snow',
+  'start', 'stay', 'stop', 'study', 'talk', 'travel', 'turn', 'use', 'wait',
+  'walk', 'want', 'wash', 'watch', 'work',
+];
+/* `check in` está en la página pero se queda fuera: es un phrasal verb y la
+   partícula rompe el armado de la oración. No es una omisión, es una decisión. */
+
+/* DESDE INTERMEDIO la lista de arriba queda corta: son verbos de Starter y a
+   esa altura el alumno maneja cientos. Decisión del docente (2026-08-08): «se
+   les puede preguntar cualquiera de los regulares existentes, si total ya saben
+   la regla». Los irregulares siguen escalonados por curso porque ahí sí hay una
+   forma que memorizar; en los regulares lo único que se practica es `-ed`.
+
+   El límite nunca fue el vocabulario, era el ARMADO: mientras el complemento
+   solo podía ser adverbial, un verbo que exige objeto salía agramatical («He
+   created at school»). Con `OBJETO_DE_VERBO` eso deja de ser un límite y entran
+   también los transitivos.
+   Los que siguen fuera lo están por otra cosa:
+     `smell` → «smelled (also smelt)», dos formas válidas y la práctica compara
+       contra una. Igual que `dream`. Ver [[ambiguedad-lexica]].
+     `kill`, `attack`, `die` → se sostienen perfectamente, pero es material de
+       aula. Decisión de tono, no de gramática.
+     `happen`, `increase`, `decrease`, `seem` → su sujeto natural no es una
+       persona, y los seis sujetos de la práctica lo son.
+     `hope` → su complemento es una cláusula («hoped that…»), no un sustantivo.
+
+   Todos pasaron por el conjugador uno a uno, con las trampas de ortografía que
+   tenían que salir bien: `agree` → agreeing (no «agreing»), `plan` → planned
+   (dobla) y `visit` → visited (NO dobla). El test las fija. */
+export const VERBOS_REGULARES_AMPLIA = [
+  ...VERBOS_REGULARES,
+  // Se sostienen sin objeto
+  'agree', 'appear', 'argue', 'continue', 'dance', 'disagree', 'exercise',
+  'heal', 'improve', 'refuse', 'rest', 'return', 'search', 'shop', 'try',
+  // Transitivos, cada uno con su objeto en OBJETO_DE_VERBO
+  'accept', 'achieve', 'add', 'advise', 'allow', 'approve', 'believe',
+  'complete', 'consider', 'create', 'debate', 'defend', 'demand', 'deny',
+  'design', 'develop', 'discover', 'discuss', 'enjoy', 'explain', 'explore',
+  'follow', 'include', 'notice', 'observe', 'order', 'organize', 'plan',
+  'practice', 'prefer', 'prepare', 'promise', 'protect', 'raise', 'reach',
+  'realize', 'receive', 'recognize', 'recommend', 'reject', 'remember',
+  'request', 'save', 'select', 'serve', 'solve', 'suggest', 'taste', 'touch',
+  'visit', 'warn',
+];
+
+/* IRREGULARES POR CURSO. El libro los va soltando: en Básico son doce y en
+   Elemental la tabla completa. Sin la distinción, un alumno de Básico II podía
+   recibir «swam» o «understood», que aparecen dos cursos más arriba.
+   En las dos listas falta `be` a propósito: tiene su propia etapa (`unidadBe`).
+   `can` tampoco está: es modal y no lleva participio («can → could → —»).
+   Las formas se cruzaron una a una contra el libro y coinciden todas; el test
+   que lo comprueba está en curriculo.test.js y es lo que impide que se pudran. */
+export const VERBOS_IRREGULARES_BASICO = [
+  'buy', 'do', 'get', 'go', 'have', 'leave', 'say', 'see', 'send', 'sit', 'tell', 'write',
+];
+/* Página 165 (AEF 3). Suma once a la de Intermedio, menos tres que se quedan
+   fuera y NO por olvido:
+     `lie`   → dos verbos distintos escritos igual: «recostarse» (lay/lain, el
+       que da el libro) y «mentir» (lied, regular). Preguntarlo enseñaría uno de
+       los dos como si fuera el único. Ver la nota en verbs.js.
+     `smell` → «smelled (also smelt)», dos formas válidas, y la práctica compara
+       contra una sola. Mismo caso que `dream`.
+     `dream` → ya estaba fuera por lo mismo. Curioso: AEF 2 prefiere «dreamt» y
+       AEF 3 prefiere «dreamed». Ni los libros se ponen de acuerdo. */
+export const VERBOS_IRREGULARES_AVANZADO = [
+  'beat', 'become', 'begin', 'bite', 'break', 'bring', 'build', 'buy', 'catch',
+  'choose', 'come', 'cost', 'cut', 'do', 'draw', 'drink', 'drive', 'eat', 'fall',
+  'feel', 'find', 'fly', 'forget', 'get', 'give', 'go', 'grow', 'hang', 'have',
+  'hear', 'hit', 'hurt', 'keep', 'know', 'leave', 'lend', 'let', 'lose', 'make',
+  'mean', 'meet', 'pay', 'put', 'read', 'ride', 'ring', 'run', 'say', 'see',
+  'sell', 'send', 'set', 'shine', 'shut', 'sing', 'sit', 'sleep', 'speak',
+  'spend', 'stand', 'steal', 'swim', 'take', 'teach', 'tell', 'think', 'throw',
+  'understand', 'wake', 'wear', 'win', 'write',
+];
+
+/* Página 164 (AEF 2). Suma catorce a la tabla de Elemental.
+   Dos que el libro lista y aquí NO entran, y no es olvido:
+     `learn` → el libro da «learned», que es la forma regular, y ya está en
+       VERBOS_REGULARES. Meterlo aquí lo duplicaría.
+     `dream` → el libro da «dreamt (also dreamed)». La app produce «dreamed» y
+       las dos son correctas, pero la práctica compara contra UNA respuesta:
+       marcaría mal a quien escriba la otra. Un verbo con dos formas válidas
+       necesita un trato que este ejercicio no tiene. */
+export const VERBOS_IRREGULARES_INTERMEDIO = [
+  'become', 'begin', 'break', 'bring', 'build', 'buy', 'catch', 'choose', 'come',
+  'cost', 'cut', 'do', 'drink', 'drive', 'eat', 'fall', 'feel', 'find', 'fly',
+  'forget', 'get', 'give', 'go', 'grow', 'have', 'hear', 'hit', 'keep', 'know',
+  'leave', 'lend', 'let', 'lose', 'make', 'meet', 'pay', 'put', 'read', 'ring',
+  'run', 'say', 'see', 'sell', 'send', 'shut', 'sing', 'sit', 'sleep', 'speak',
+  'spend', 'stand', 'steal', 'swim', 'take', 'teach', 'tell', 'think', 'throw',
+  'understand', 'wake', 'wear', 'win', 'write',
+];
+
+/* Página 165 (AEF 1). Incluye `eat`, `read` y `run`, que en Básico NO estaban. */
+export const VERBOS_IRREGULARES = [
+  'become', 'begin', 'break', 'bring', 'build', 'buy', 'catch', 'come', 'cost',
+  'do', 'drink', 'drive', 'eat', 'fall', 'feel', 'find', 'fly', 'forget',
+  'get', 'give', 'go', 'have', 'hear', 'know', 'leave', 'lose', 'make',
+  'meet', 'pay', 'put', 'read', 'run', 'say', 'see', 'send', 'sing',
+  'sit', 'sleep', 'speak', 'spend', 'stand', 'swim', 'teach', 'take',
+  'tell', 'think', 'understand', 'wake', 'wear', 'win', 'write',
+];
+
 /* Cuándo se ofrece cada condicional en el modo práctica. Sale del temario:
    la 1ª y la 2ª en Intermedio II (AEF Int. II 8B y 9A), la 3ª en Intermedio
    Alto (AEF 3 9A). Ver la memoria del syllabus antes de mover esto. */
 export const CONDICIONALES_POR_CURSO = [
-  { tipo: 1, cefr: 'intermedio2' },
-  { tipo: 2, cefr: 'intermedio2' },
-  { tipo: 3, cefr: 'avanzado' },
+  { tipo: 1, cefr: 'intermedio2', unidad: '8B' },
+  { tipo: 2, cefr: 'intermedio2', unidad: '9A' },
+  { tipo: 3, cefr: 'avanzado',    unidad: '9A' },
 ];
 
 /* Pares condición/resultado para la práctica. Van EMPAREJADOS a mano y no
@@ -70,16 +344,16 @@ export const whSubjectWords = ['who', 'what', 'which', 'how'];
 export const COURSE_ORDER = ['basico1', 'basico2', 'elemental1', 'elemental2', 'intermedio1', 'intermedio2', 'avanzado'];
 
 export const tenses = [
-  { id: 'simple-present',             nameEn: 'Simple Present',             nameEs: 'Presente Simple',             example: 'I work',              timeType: 'present', cefr: 'basico1',     descEn: 'Habits, facts, routines',                          descEs: 'Hábitos, hechos, rutinas' },
-  { id: 'present-continuous',         nameEn: 'Present Continuous',         nameEs: 'Presente Continuo',           example: 'I am working',        timeType: 'present', cefr: 'basico2',     descEn: 'Actions happening now',                            descEs: 'Acciones ocurriendo ahora' },
-  { id: 'simple-past',                nameEn: 'Simple Past',                nameEs: 'Pasado Simple',               example: 'I worked',            timeType: 'past',    cefr: 'basico2',     descEn: 'Completed actions in the past',                    descEs: 'Acciones completadas en el pasado' },
-  { id: 'future-going-to',            nameEn: 'Future (going to)',          nameEs: 'Futuro (going to)',           example: 'I am going to work',  timeType: 'future',  cefr: 'elemental2',  descEn: 'Plans and intentions',                             descEs: 'Planes e intenciones' },
-  { id: 'present-perfect',            nameEn: 'Present Perfect',            nameEs: 'Presente Perfecto',           example: 'I have worked',       timeType: 'present', cefr: 'elemental2',  descEn: 'Past actions with present relevance',              descEs: 'Acciones pasadas con relevancia presente' },
-  { id: 'past-continuous',            nameEn: 'Past Continuous',            nameEs: 'Pasado Continuo',             example: 'I was working',       timeType: 'past',    cefr: 'intermedio1', descEn: 'Actions in progress in the past',                  descEs: 'Acciones en progreso en el pasado' },
-  { id: 'simple-future',              nameEn: 'Simple Future (will)',       nameEs: 'Futuro Simple (will)',        example: 'I will work',         timeType: 'future',  cefr: 'intermedio1', descEn: 'Predictions, spontaneous decisions',               descEs: 'Predicciones, decisiones espontáneas' },
-  { id: 'past-perfect',               nameEn: 'Past Perfect',               nameEs: 'Pasado Perfecto',             example: 'I had worked',        timeType: 'past',    cefr: 'intermedio2', descEn: 'Actions before another past action',               descEs: 'Acciones antes de otra acción pasada' },
-  { id: 'used-to',                    nameEn: 'Used to',                    nameEs: 'Used to',                     example: 'I used to work',      timeType: 'past',    cefr: 'intermedio2', descEn: 'Past habits that no longer exist',                 descEs: 'Hábitos pasados que ya no existen' },
-  { id: 'present-perfect-continuous', nameEn: 'Present Perfect Continuous', nameEs: 'Presente Perfecto Continuo', example: 'I have been working', timeType: 'present', cefr: 'avanzado',    descEn: 'Actions that started in the past and continue',    descEs: 'Acciones que empezaron en el pasado y continúan' },
+  { id: 'simple-present', unidad: '5A', unidadBe: '2B', unidadInterrogativa: '5B', unidadTerceraPersona: '6A', nameEn: 'Simple Present',             nameEs: 'Presente Simple',             example: 'I work',              timeType: 'present', cefr: 'basico1',     descEn: 'Habits, facts, routines',                          descEs: 'Hábitos, hechos, rutinas' },
+  { id: 'present-continuous', unidad: '9A',         nameEn: 'Present Continuous',         nameEs: 'Presente Continuo',           example: 'I am working',        timeType: 'present', cefr: 'basico2',     descEn: 'Actions happening now',                            descEs: 'Acciones ocurriendo ahora' },
+  { id: 'simple-past', unidad: '11A', unidadBe: '10B', unidadIrregulares: '11B',                nameEn: 'Simple Past',                nameEs: 'Pasado Simple',               example: 'I worked',            timeType: 'past',    cefr: 'basico2',     descEn: 'Completed actions in the past',                    descEs: 'Acciones completadas en el pasado' },
+  { id: 'future-going-to', unidad: '10B',            nameEn: 'Future (going to)',          nameEs: 'Futuro (going to)',           example: 'I am going to work',  timeType: 'future',  cefr: 'elemental2',  descEn: 'Plans and intentions',                             descEs: 'Planes e intenciones' },
+  { id: 'present-perfect', unidad: '12A',            nameEn: 'Present Perfect',            nameEs: 'Presente Perfecto',           example: 'I have worked',       timeType: 'present', cefr: 'elemental2',  descEn: 'Past actions with present relevance',              descEs: 'Acciones pasadas con relevancia presente' },
+  { id: 'past-continuous', unidad: '2B',            nameEn: 'Past Continuous',            nameEs: 'Pasado Continuo',             example: 'I was working',       timeType: 'past',    cefr: 'intermedio1', descEn: 'Actions in progress in the past',                  descEs: 'Acciones en progreso en el pasado' },
+  { id: 'simple-future', unidad: '6A',              nameEn: 'Simple Future (will)',       nameEs: 'Futuro Simple (will)',        example: 'I will work',         timeType: 'future',  cefr: 'intermedio1', descEn: 'Predictions, spontaneous decisions',               descEs: 'Predicciones, decisiones espontáneas' },
+  { id: 'past-perfect', unidad: '12A',               nameEn: 'Past Perfect',               nameEs: 'Pasado Perfecto',             example: 'I had worked',        timeType: 'past',    cefr: 'intermedio2', descEn: 'Actions before another past action',               descEs: 'Acciones antes de otra acción pasada' },
+  { id: 'used-to', unidad: '11A',                    nameEn: 'Used to',                    nameEs: 'Used to',                     example: 'I used to work',      timeType: 'past',    cefr: 'intermedio2', descEn: 'Past habits that no longer exist',                 descEs: 'Hábitos pasados que ya no existen' },
+  { id: 'present-perfect-continuous', unidad: '2B', nameEn: 'Present Perfect Continuous', nameEs: 'Presente Perfecto Continuo', example: 'I have been working', timeType: 'present', cefr: 'avanzado',    descEn: 'Actions that started in the past and continue',    descEs: 'Acciones que empezaron en el pasado y continúan' },
 ];
 // Contrastados contra syllabus-aef.md (temario real de los cursos). Se quitaron:
 //   would-past  → no es un tiempo (would + base = misma forma que un modal), el
@@ -92,7 +366,7 @@ export const tenses = [
 export const modals = [
   { id: '', name: '—', category: null, cefr: null, descEs: 'Sin verbo modal', descEn: 'No modal', fullDescEs: '', fullDescEn: '' },
   {
-    id: 'can',
+    id: 'can', unidad: '8A',
     name: 'Can',
     category: 'ability',
     cefr: 'basico2',
@@ -105,7 +379,10 @@ export const modals = [
   {
     // Elemental II por Practical English (pedir algo). Como gramática de
     // habilidad pasada llega en AEF 3 4B, pero el alumno ya lo usa antes.
-    id: 'could',
+    // La unidad la dio el docente (2026-08-08): aparece DESPUÉS de la 7C, o sea
+    // que la primera clase en que puede salir es la 8A. No está en la columna de
+    // gramática del temario porque Practical English no figura ahí.
+    id: 'could', unidad: '8A',
     name: 'Could',
     category: 'ability',
     cefr: 'elemental2',
@@ -117,7 +394,7 @@ export const modals = [
   },
   {
     // No tiene unidad propia: se nombra junto a `might`, así que va a su nivel.
-    id: 'may',
+    id: 'may', unidad: '11B',
     name: 'May',
     category: 'ability',
     cefr: 'intermedio2',
@@ -128,7 +405,7 @@ export const modals = [
     fullDescEn: 'Expresses formal permission or possibility. A more formal alternative to "might".'
   },
   {
-    id: 'might',
+    id: 'might', unidad: '11B',
     name: 'Might',
     category: 'ability',
     cefr: 'intermedio2',
@@ -139,7 +416,7 @@ export const modals = [
     fullDescEn: 'Expresses possibility with less certainty than "may". Time-neutral.'
   },
   {
-    id: 'must',
+    id: 'must', unidad: '7C',
     name: 'Must',
     category: 'obligation',
     cefr: 'intermedio2',
@@ -150,7 +427,7 @@ export const modals = [
     fullDescEn: 'Expresses strong obligation or logical certainty. Mainly refers to the present.'
   },
   {
-    id: 'should',
+    id: 'should', unidad: '8A',
     name: 'Should',
     category: 'obligation',
     cefr: 'intermedio2',
@@ -161,7 +438,7 @@ export const modals = [
     fullDescEn: 'Expresses advice or moral obligation. Time-neutral, applies to present or future.'
   },
   {
-    id: 'will',
+    id: 'will', unidad: '6A',
     name: 'Will',
     category: 'future',
     cefr: 'intermedio1',
@@ -172,13 +449,17 @@ export const modals = [
     fullDescEn: 'Expresses future, predictions, or willingness. Already indicates future time by itself.'
   },
   {
-    // Elemental I por Practical English (invitar/ofrecer). Su uso condicional
-    // llega en Intermedio II 9A, pero eso es la 2ª condicional: una estructura
-    // completa (If + pasado, would + base), no el modal suelto.
-    id: 'would',
+    /* Básico II por Practical English (invitar/ofrecer). Su uso condicional
+       llega en Intermedio II 9A, pero eso es la 2ª condicional: una estructura
+       completa (If + pasado, would + base), no el modal suelto.
+       CORRECCIÓN del docente (2026-08-08): estaba en Elemental I y aparece
+       antes, después de la 9B de Básico II — la primera clase en que puede
+       salir es la 10A. La nota vieja de syllabus-aef.md decía Elemental I; esta
+       es más precisa y la reemplaza. */
+    id: 'would', unidad: '10A',
     name: 'Would',
     category: 'future',
-    cefr: 'elemental1',
+    cefr: 'basico2',
     descEs: 'Invitar / Ofrecer',
     descEn: 'Invitations / Offers',
     timeContext: 'conditional',
@@ -187,7 +468,7 @@ export const modals = [
   },
   {
     // No tiene unidad propia: se nombra junto a `should`, así que va a su nivel.
-    id: 'shall',
+    id: 'shall', unidad: '8A',
     name: 'Shall',
     category: 'future',
     cefr: 'intermedio2',
@@ -200,7 +481,7 @@ export const modals = [
   {
     // Intermedio II 7C, junto a `must`. Es el único "modal" que se conjuga
     // (has to / doesn't have to), así que el conjugador lo trata aparte.
-    id: 'have-to',
+    id: 'have-to', unidad: '7C',
     name: 'Have to',
     category: 'obligation',
     cefr: 'intermedio2',
