@@ -1,3 +1,5 @@
+import { NIVELES, delCurriculo } from './curriculum.generated';
+
 /* Modos de oración.
    Antes cada uno traía su propio tono (emerald / rose / amber) y los dos ejes
    quedaban CRUZADOS: la negativa era rose, que es el color del rol `auxiliary`
@@ -26,23 +28,20 @@ export const modes = [
      Su vocabulario en el motor (`subject-question`) NO cambió. */
 ];
 
-/* Unidades de cada curso, extraídas de `Grammar HUB/syllabus-aef.md`. Un curso
-   avanza ~una unidad por clase, y la mayoría tiene 2 clases por semana (3-4 los
-   intensivos): o sea que entre la semana 3 y la 6 hay media asignatura de
-   diferencia. Sin esto la práctica pregunta por contenido del curso que el
-   alumno todavía no ha visto — y como la racha y las insignias castigan el
-   fallo, lo penaliza por no saber algo que nadie le ha enseñado.
-   PENDIENTE: cuando esto se propague a las otras apps, su sitio es
-   `Grammar HUB/curriculum.json`, que ya se sincroniza a las cuatro. */
-export const UNIDADES_POR_CURSO = {
-  basico1:     ['1A', '1B', '2A', '2B', '3A', '3B', '4A', '4B', '5A', '5B', '6A', '6B'],
-  basico2:     ['7A', '7B', '8A', '8B', '9A', '9B', '10A', '10B', '11A', '11B', '12A', '12B'],
-  elemental1:  ['1A', '1B', '1C', '2A', '2B', '2C', '3A', '3B', '3C', '4A', '4B', '4C', '5A', '5B', '5C', '6A', '6B', '6C'],
-  elemental2:  ['7A', '7B', '7C', '8A', '8B', '8C', '9A', '9B', '9C', '10A', '10B', '10C', '11A', '11B', '11C', '12A', '12B', '12C'],
-  intermedio1: ['1A', '1B', '1C', '2A', '2B', '2C', '3A', '3B', '3C', '4A', '4B', '4C', '5A', '5B', '5C', '6A', '6B', '6C'],
-  intermedio2: ['7A', '7B', '7C', '8A', '8B', '8C', '9A', '9B', '9C', '10A', '10B', '10C', '11A', '11B', '11C', '12A', '12B', '12C'],
-  avanzado:    ['1A', '1B', '2A', '2B', '3A', '3B', '4A', '4B', '5A', '5B', '6A', '6B', '7A', '7B', '8A', '8B', '9A', '9B', '10A', '10B'],
-};
+/* EL CURRÍCULO YA NO VIVE AQUÍ. Nivel y unidad de cada contenido salen de
+   `Grammar HUB/curriculum.json` vía `npm run sync-curriculum`, que escribe
+   `curriculum.generated.js` para esta app y `cefr.generated.js` para Question
+   Lab. Las unidades a su vez salen de `syllabus-aef.md`, que es el temario real.
+
+   Por qué generado y no copiado: el nivel de cada contenido estaba escrito a
+   mano en Grammaster Y en Question Lab, y `would` se quedó un curso y medio
+   tarde en las DOS, porque corregirlo en una no corrige la otra. Con un solo
+   archivo, arreglar el temario arregla las tres apps a la vez.
+
+   Sin unidad, la práctica pregunta por contenido del curso que el alumno aún no
+   ha visto — y como la racha y las insignias castigan el fallo, lo penaliza por
+   no saber algo que nadie le ha enseñado. */
+export { UNIDADES_POR_CURSO } from './curriculum.generated';
 
 /* Orden DENTRO del curso. Comparar como texto no sirve: «10A» < «9B» carácter a
    carácter. Sin unidad (`null`) devuelve -1 = disponible desde el principio, que
@@ -303,11 +302,9 @@ export const VERBOS_IRREGULARES = [
 /* Cuándo se ofrece cada condicional en el modo práctica. Sale del temario:
    la 1ª y la 2ª en Intermedio II (AEF Int. II 8B y 9A), la 3ª en Intermedio
    Alto (AEF 3 9A). Ver la memoria del syllabus antes de mover esto. */
-export const CONDICIONALES_POR_CURSO = [
-  { tipo: 1, cefr: 'intermedio2', unidad: '8B' },
-  { tipo: 2, cefr: 'intermedio2', unidad: '9A' },
-  { tipo: 3, cefr: 'avanzado',    unidad: '9A' },
-];
+export const CONDICIONALES_POR_CURSO = [1, 2, 3].map(tipo => ({
+  tipo, ...delCurriculo(`conditional-${tipo}`),
+}));
 
 /* Pares condición/resultado para la práctica. Van EMPAREJADOS a mano y no
    combinados al azar porque una condicional tiene que tener sentido: «If it
@@ -339,21 +336,23 @@ export const PARES_CONDICIONAL = [
    ejecuta la acción. */
 export const whSubjectWords = ['who', 'what', 'which', 'how'];
 
-// Tiempos verbales
-// Orden de cursos para el filtro acumulativo de tiempos verbales
-export const COURSE_ORDER = ['basico1', 'basico2', 'elemental1', 'elemental2', 'intermedio1', 'intermedio2', 'avanzado'];
+// Orden de cursos para el filtro acumulativo. Mismo array que la suite entera.
+export const COURSE_ORDER = NIVELES;
 
+/* Tiempos verbales. `cefr` y las unidades NO se escriben aquí: salen de
+   `delCurriculo(id)`, que las lee del generado. Aquí quedan solo los nombres,
+   los ejemplos y las descripciones, que son de esta app. */
 export const tenses = [
-  { id: 'simple-present', unidad: '5A', unidadBe: '2B', unidadInterrogativa: '5B', unidadTerceraPersona: '6A', nameEn: 'Simple Present',             nameEs: 'Presente Simple',             example: 'I work',              timeType: 'present', cefr: 'basico1',     descEn: 'Habits, facts, routines',                          descEs: 'Hábitos, hechos, rutinas' },
-  { id: 'present-continuous', unidad: '9A',         nameEn: 'Present Continuous',         nameEs: 'Presente Continuo',           example: 'I am working',        timeType: 'present', cefr: 'basico2',     descEn: 'Actions happening now',                            descEs: 'Acciones ocurriendo ahora' },
-  { id: 'simple-past', unidad: '11A', unidadBe: '10B', unidadIrregulares: '11B',                nameEn: 'Simple Past',                nameEs: 'Pasado Simple',               example: 'I worked',            timeType: 'past',    cefr: 'basico2',     descEn: 'Completed actions in the past',                    descEs: 'Acciones completadas en el pasado' },
-  { id: 'future-going-to', unidad: '10B',            nameEn: 'Future (going to)',          nameEs: 'Futuro (going to)',           example: 'I am going to work',  timeType: 'future',  cefr: 'elemental2',  descEn: 'Plans and intentions',                             descEs: 'Planes e intenciones' },
-  { id: 'present-perfect', unidad: '12A',            nameEn: 'Present Perfect',            nameEs: 'Presente Perfecto',           example: 'I have worked',       timeType: 'present', cefr: 'elemental2',  descEn: 'Past actions with present relevance',              descEs: 'Acciones pasadas con relevancia presente' },
-  { id: 'past-continuous', unidad: '2B',            nameEn: 'Past Continuous',            nameEs: 'Pasado Continuo',             example: 'I was working',       timeType: 'past',    cefr: 'intermedio1', descEn: 'Actions in progress in the past',                  descEs: 'Acciones en progreso en el pasado' },
-  { id: 'simple-future', unidad: '6A',              nameEn: 'Simple Future (will)',       nameEs: 'Futuro Simple (will)',        example: 'I will work',         timeType: 'future',  cefr: 'intermedio1', descEn: 'Predictions, spontaneous decisions',               descEs: 'Predicciones, decisiones espontáneas' },
-  { id: 'past-perfect', unidad: '12A',               nameEn: 'Past Perfect',               nameEs: 'Pasado Perfecto',             example: 'I had worked',        timeType: 'past',    cefr: 'intermedio2', descEn: 'Actions before another past action',               descEs: 'Acciones antes de otra acción pasada' },
-  { id: 'used-to', unidad: '11A',                    nameEn: 'Used to',                    nameEs: 'Used to',                     example: 'I used to work',      timeType: 'past',    cefr: 'intermedio2', descEn: 'Past habits that no longer exist',                 descEs: 'Hábitos pasados que ya no existen' },
-  { id: 'present-perfect-continuous', unidad: '2B', nameEn: 'Present Perfect Continuous', nameEs: 'Presente Perfecto Continuo', example: 'I have been working', timeType: 'present', cefr: 'avanzado',    descEn: 'Actions that started in the past and continue',    descEs: 'Acciones que empezaron en el pasado y continúan' },
+  { id: 'simple-present',   ...delCurriculo('simple-present'),   nameEn: 'Simple Present',             nameEs: 'Presente Simple',             example: 'I work',              timeType: 'present', descEn: 'Habits, facts, routines',                       descEs: 'Hábitos, hechos, rutinas' },
+  { id: 'present-continuous', ...delCurriculo('present-continuous'), nameEn: 'Present Continuous',     nameEs: 'Presente Continuo',           example: 'I am working',        timeType: 'present', descEn: 'Actions happening now',                         descEs: 'Acciones ocurriendo ahora' },
+  { id: 'simple-past',      ...delCurriculo('simple-past'),      nameEn: 'Simple Past',                nameEs: 'Pasado Simple',               example: 'I worked',            timeType: 'past',    descEn: 'Completed actions in the past',                 descEs: 'Acciones completadas en el pasado' },
+  { id: 'future-going-to',  ...delCurriculo('future-going-to'),  nameEn: 'Future (going to)',          nameEs: 'Futuro (going to)',           example: 'I am going to work',  timeType: 'future',  descEn: 'Plans and intentions',                          descEs: 'Planes e intenciones' },
+  { id: 'present-perfect',  ...delCurriculo('present-perfect'),  nameEn: 'Present Perfect',            nameEs: 'Presente Perfecto',           example: 'I have worked',       timeType: 'present', descEn: 'Past actions with present relevance',           descEs: 'Acciones pasadas con relevancia presente' },
+  { id: 'past-continuous',  ...delCurriculo('past-continuous'),  nameEn: 'Past Continuous',            nameEs: 'Pasado Continuo',             example: 'I was working',       timeType: 'past',    descEn: 'Actions in progress in the past',               descEs: 'Acciones en progreso en el pasado' },
+  { id: 'simple-future',    ...delCurriculo('simple-future'),    nameEn: 'Simple Future (will)',       nameEs: 'Futuro Simple (will)',        example: 'I will work',         timeType: 'future',  descEn: 'Predictions, spontaneous decisions',            descEs: 'Predicciones, decisiones espontáneas' },
+  { id: 'past-perfect',     ...delCurriculo('past-perfect'),     nameEn: 'Past Perfect',               nameEs: 'Pasado Perfecto',             example: 'I had worked',        timeType: 'past',    descEn: 'Actions before another past action',            descEs: 'Acciones antes de otra acción pasada' },
+  { id: 'used-to',          ...delCurriculo('used-to'),          nameEn: 'Used to',                    nameEs: 'Used to',                     example: 'I used to work',      timeType: 'past',    descEn: 'Past habits that no longer exist',              descEs: 'Hábitos pasados que ya no existen' },
+  { id: 'present-perfect-continuous', ...delCurriculo('present-perfect-continuous'), nameEn: 'Present Perfect Continuous', nameEs: 'Presente Perfecto Continuo', example: 'I have been working', timeType: 'present', descEn: 'Actions that started in the past and continue', descEs: 'Acciones que empezaron en el pasado y continúan' },
 ];
 // Contrastados contra syllabus-aef.md (temario real de los cursos). Se quitaron:
 //   would-past  → no es un tiempo (would + base = misma forma que un modal), el
@@ -366,10 +365,9 @@ export const tenses = [
 export const modals = [
   { id: '', name: '—', category: null, cefr: null, descEs: 'Sin verbo modal', descEn: 'No modal', fullDescEs: '', fullDescEn: '' },
   {
-    id: 'can', unidad: '8A',
+    id: 'can', ...delCurriculo('can'),
     name: 'Can',
     category: 'ability',
-    cefr: 'basico2',
     descEs: 'Habilidad / Posibilidad',
     descEn: 'Ability / Possibility',
     timeContext: 'present',
@@ -382,10 +380,9 @@ export const modals = [
     // La unidad la dio el docente (2026-08-08): aparece DESPUÉS de la 7C, o sea
     // que la primera clase en que puede salir es la 8A. No está en la columna de
     // gramática del temario porque Practical English no figura ahí.
-    id: 'could', unidad: '8A',
+    id: 'could', ...delCurriculo('could'),
     name: 'Could',
     category: 'ability',
-    cefr: 'elemental2',
     descEs: 'Pedir algo / Cortesía',
     descEn: 'Requests / Politeness',
     timeContext: 'past',
@@ -394,10 +391,9 @@ export const modals = [
   },
   {
     // No tiene unidad propia: se nombra junto a `might`, así que va a su nivel.
-    id: 'may', unidad: '11B',
+    id: 'may', ...delCurriculo('may'),
     name: 'May',
     category: 'ability',
-    cefr: 'intermedio2',
     descEs: 'Permiso / Posibilidad',
     descEn: 'Permission / Possibility',
     timeContext: 'present',
@@ -405,10 +401,9 @@ export const modals = [
     fullDescEn: 'Expresses formal permission or possibility. A more formal alternative to "might".'
   },
   {
-    id: 'might', unidad: '11B',
+    id: 'might', ...delCurriculo('might'),
     name: 'Might',
     category: 'ability',
-    cefr: 'intermedio2',
     descEs: 'Posibilidad remota',
     descEn: 'Remote possibility',
     timeContext: 'neutral',
@@ -416,10 +411,9 @@ export const modals = [
     fullDescEn: 'Expresses possibility with less certainty than "may". Time-neutral.'
   },
   {
-    id: 'must', unidad: '7C',
+    id: 'must', ...delCurriculo('must'),
     name: 'Must',
     category: 'obligation',
-    cefr: 'intermedio2',
     descEs: 'Obligación fuerte',
     descEn: 'Strong obligation',
     timeContext: 'present',
@@ -427,10 +421,9 @@ export const modals = [
     fullDescEn: 'Expresses strong obligation or logical certainty. Mainly refers to the present.'
   },
   {
-    id: 'should', unidad: '8A',
+    id: 'should', ...delCurriculo('should'),
     name: 'Should',
     category: 'obligation',
-    cefr: 'intermedio2',
     descEs: 'Consejo / Deber moral',
     descEn: 'Advice / Moral duty',
     timeContext: 'neutral',
@@ -438,10 +431,9 @@ export const modals = [
     fullDescEn: 'Expresses advice or moral obligation. Time-neutral, applies to present or future.'
   },
   {
-    id: 'will', unidad: '6A',
+    id: 'will', ...delCurriculo('will'),
     name: 'Will',
     category: 'future',
-    cefr: 'intermedio1',
     descEs: 'Futuro / Voluntad',
     descEn: 'Future / Willingness',
     timeContext: 'future',
@@ -456,10 +448,9 @@ export const modals = [
        antes, después de la 9B de Básico II — la primera clase en que puede
        salir es la 10A. La nota vieja de syllabus-aef.md decía Elemental I; esta
        es más precisa y la reemplaza. */
-    id: 'would', unidad: '10A',
+    id: 'would', ...delCurriculo('would'),
     name: 'Would',
     category: 'future',
-    cefr: 'basico2',
     descEs: 'Invitar / Ofrecer',
     descEn: 'Invitations / Offers',
     timeContext: 'conditional',
@@ -468,10 +459,9 @@ export const modals = [
   },
   {
     // No tiene unidad propia: se nombra junto a `should`, así que va a su nivel.
-    id: 'shall', unidad: '8A',
+    id: 'shall', ...delCurriculo('shall'),
     name: 'Shall',
     category: 'future',
-    cefr: 'intermedio2',
     descEs: 'Sugerencia / Ofrecimiento',
     descEn: 'Suggestion / Offer',
     timeContext: 'future',
@@ -481,10 +471,9 @@ export const modals = [
   {
     // Intermedio II 7C, junto a `must`. Es el único "modal" que se conjuga
     // (has to / doesn't have to), así que el conjugador lo trata aparte.
-    id: 'have-to', unidad: '7C',
+    id: 'have-to', ...delCurriculo('have-to'),
     name: 'Have to',
     category: 'obligation',
-    cefr: 'intermedio2',
     descEs: 'Obligación externa',
     descEn: 'External obligation',
     timeContext: 'present',

@@ -752,7 +752,18 @@ const EnglishSentenceBuilder = () => {
     setUnidadCursoState(v);
     try { localStorage.setItem('gh_unidad', v); } catch { /* modo privado */ }
   };
+  /* El nivel vigente en un ref, no solo en el estado: el `handler` del
+     postMessage del Hub se registra una vez (`useEffect` con []), así que lee
+     para siempre el `cefrLevel` del primer render. Comparar contra el estado
+     ahí daría falsos «ha cambiado». */
+  const nivelRef = useRef(cefrLevel);
+  useEffect(() => { nivelRef.current = cefrLevel; }, [cefrLevel]);
   const setCefrLevel = (v) => {
+    /* Solo si CAMBIA de verdad. El Hub reenvía el nivel por postMessage cada
+       vez que carga el iframe, y sin esta guarda cada visita desde el Hub
+       borraba la unidad del curso — el alumno la ponía y desaparecía sola. */
+    if (v === nivelRef.current) return;
+    nivelRef.current = v;
     setCefrLevelState(v); writeShared('gh_level', v);
     /* Cambiar de curso reinicia la unidad: «9A» de Intermedio II no significa
        nada en Básico I, y arrastrarla dejaría un filtro silencioso y falso. */
