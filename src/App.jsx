@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { BookOpen, Volume2, VolumeX, AlertTriangle, CheckCircle, XCircle, X, History, Copy, Check, Trash2, Play, Info, BarChart2, ChevronDown, UserCircle } from 'lucide-react';
 /* El chip de los dos ejes (forma + − ? y tipo abierta/cerrada) va generado
    desde design-tokens: tiene que ser el MISMO objeto en las cuatro apps. */
@@ -45,6 +45,8 @@ import {
 import {
   smartCaseSubject,
   isThirdPersonSingular,
+  registrarNombres,
+  nombreAmbiguo,
   getBeForm,
   getWasWere,
   getHasHave,
@@ -69,6 +71,10 @@ import { loadProgress, saveProgress, recordAttempt, recordRound, evaluateBadges,
 
 /* Toggle de tema de la suite (auto→claro→oscuro por SO; toggle binario que ofrece
    el modo destino). Usa window.ghTheme, sincronizado same-origin entre las 4 apps. */
+/* Lo inyecta vite.config.js al construir. En `npm run dev` no existe, y ahí da
+   igual: el reporte solo importa cuando la app está publicada. */
+const APP_VERSION = typeof __APP_BUILD__ === 'string' ? __APP_BUILD__ : 'dev';
+
 function ThemeToggle({ lang = 'es' }) {
   const [eff, setEff] = useState(() => (typeof window !== 'undefined' && window.ghTheme ? window.ghTheme.effective() : 'light'));
   useEffect(() => {
@@ -823,7 +829,76 @@ const EnglishSentenceBuilder = () => {
   const [showAllModes, setShowAllModes] = useState(false);
 
   // Validación de entradas
+  /* NOMBRES DEL CURSO. Salió en clase: «Jans» se conjugaba en plural, porque una
+     palabra desconocida terminada en -s es ambigua y la app no puede saberlo.
+     En vez de adivinar, lo pregunta una vez y lo recuerda. Clave compartida con
+     la suite: un nombre es un nombre en las cuatro apps.
+     El registro se hace en el inicializador para que la PRIMERA conjugación ya
+     lo tenga: si esperara a un efecto, la oración se generaría una vez mal. */
+  const [nombresPropios, setNombresPropios] = useState(() => {
+    let l = [];
+    try { l = JSON.parse(localStorage.getItem('gh_nombres') || '[]'); } catch { l = []; }
+    if (!Array.isArray(l)) l = [];
+    registrarNombres(l);
+    return l;
+  });
+  const agregarNombre = (n) => {
+    const lista = [...new Set([...nombresPropios, String(n).toLowerCase().trim()])];
+    registrarNombres(lista);
+    setNombresPropios(lista);
+    try { localStorage.setItem('gh_nombres', JSON.stringify(lista)); } catch { /* modo privado */ }
+  };
+  /* ── REPORTAR UN PROBLEMA ────────────────────────────────────────────────
+     Pedido del profesor después de la primera clase. La app es un archivo
+     estático en GitHub Pages: NO hay servidor, así que no puede enviar nada por
+     su cuenta, y un enlace `mailto:` tampoco adjunta imágenes.
+     Lo que sí puede, y vale más que un pantallazo, es volcar el ESTADO EXACTO
+     con el que falló: eso se pega tal cual en un test, una foto no. */
+  const [reporte, setReporte] = useState(null);
+  const [reporteCopiado, setReporteCopiado] = useState(false);
+  const construirReporte = () => {
+    const linea = (k, v) => (v == null || v === '' ? null : `${k}: ${v}`);
+    const p = practiceQuestion;
+    return [
+      `Grammaster ${APP_VERSION}`,
+      linea('Curso', cefrLevel),
+      linea('Unidad', unidadCurso || (unidadCurso === '' ? 'todo el curso' : 'sin responder')),
+      linea('Idioma', language),
+      p ? `— PRÁCTICA (${practiceType}) —` : '— CONSTRUCTOR —',
+      p ? linea('Ejercicio', p.fullSentence || p.wrongSentence || '') : linea('Tiempo', esCondicional ? `condicional ${tipoCond}` : selectedTense),
+      p ? linea('Tiempo', p.tense && p.tense.id) : linea('Modal', selectedModal),
+      p ? linea('Forma', p.mode) : linea('Forma', selectedMode),
+      p ? linea('Esperaba', p.correctAnswer) : linea('Wh', [whWord, whExtension].filter(Boolean).join(' ')),
+      p ? null : linea('Sujeto', subject),
+      p ? null : linea('Verbo', verb),
+      p ? null : linea('Complemento', complement),
+      p ? null : linea('Salió', generatedSentence),
+      '—',
+      linea('Navegador', typeof navigator !== 'undefined' ? navigator.userAgent : ''),
+      '',
+      language === 'es' ? 'Qué esperaba en vez de eso:' : 'What I expected instead:',
+      '',
+    ].filter(Boolean).join('\n');
+  };
+  const copiarReporte = async () => {
+    try { await navigator.clipboard.writeText(reporte); setReporteCopiado(true); }
+    catch { setReporteCopiado(false); }
+  };
+  /* La dirección se arma al pulsar y NO está escrita entera en el HTML: los
+     rastreadores de spam leen el código publicado, y esta es una cuenta
+     personal. No es paranoia, es lo que le pasa a cualquier `mailto:` a la
+     vista. */
+  const abrirCorreo = () => {
+    const destino = ['v.moralesm', 'profesor.duoc.cl'].join('@');
+    const asunto = language === 'es' ? 'Grammaster: reporte de un problema' : 'Grammaster: problem report';
+    window.location.href = `mailto:${destino}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(reporte)}`;
+  };
+
   const [subjectValidation, setSubjectValidation] = useState({ valid: true, warning: null });
+  /* Depende de `nombresPropios` aunque no lo use: el registro que consulta
+     `nombreAmbiguo` vive en el módulo de conjugación y no es reactivo, así que
+     sin esta dependencia el aviso no desaparecería al declarar el nombre. */
+  const sujetoAmbiguo = useMemo(() => nombreAmbiguo(subject), [subject, nombresPropios]);
   const [verbValidation, setVerbValidation] = useState({ valid: true, warning: null });
   const [verbBaseSuggestion, setVerbBaseSuggestion] = useState(null);
   const [complementValidation, setComplementValidation] = useState({ valid: true, warning: null });
@@ -2071,13 +2146,16 @@ const EnglishSentenceBuilder = () => {
   useEffect(() => {
     const timer = setTimeout(() => {
       if (complement.trim()) {
-        setComplementValidation(validateComplement(complement, language));
+        /* El verbo entra en la validación: sin él no hay forma de ver que a
+           «go the park» le falta el «to». Y por eso el efecto depende también
+           de `verb`: escribir el verbo DESPUÉS del complemento es lo normal. */
+        setComplementValidation(validateComplement(complement, language, verb));
       } else {
         setComplementValidation({ valid: true, warning: null });
       }
     }, 300);
     return () => clearTimeout(timer);
-  }, [complement, language]);
+  }, [complement, language, verb]);
 
   // Verificar ortografía en tiempo real
   useEffect(() => {
@@ -2374,6 +2452,42 @@ const EnglishSentenceBuilder = () => {
 
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-[#f5f6fb]">
+      {/* Panel de reporte. El texto va en un textarea de solo lectura y no en un
+          <pre>: así el alumno puede seleccionarlo a mano si el portapapeles
+          falla, que en un iframe o sin HTTPS pasa. */}
+      {reporte !== null && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 p-3" role="dialog" aria-modal="true" aria-label={t.reportar}>
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg p-4 sm:p-5 space-y-3">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="font-bold text-gray-800">{t.reportar}</h3>
+                <p className="text-xs text-gray-600 mt-0.5">{t.reporteAyuda}</p>
+              </div>
+              <button onClick={() => setReporte(null)} aria-label={t.close} className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <textarea
+              readOnly value={reporte} rows={11}
+              onChange={() => {}}
+              className="w-full text-xs font-mono p-2.5 border border-gray-300 rounded-lg bg-gray-50 text-gray-800"
+            />
+            <div className="flex flex-wrap gap-2">
+              <button onClick={copiarReporte} className="px-3 py-2 rounded-lg bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 flex items-center gap-1.5">
+                {reporteCopiado ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                {reporteCopiado ? t.copiado : t.copiar}
+              </button>
+              {/* El hover NO cambia el fondo: `text-indigo-700` sobre
+                  `bg-indigo-50` da 2,00:1 en oscuro, porque la capa oscura
+                  invierte el fondo y deja la tinta donde estaba. Se marca con
+                  el borde, que no depende del tema. */}
+              <button onClick={abrirCorreo} className="px-3 py-2 rounded-lg border border-indigo-300 text-indigo-700 text-sm font-semibold hover:border-indigo-500">
+                {t.abrirCorreo}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {badgeToasts.length > 0 && (
         <div className="fixed left-0 right-0 bottom-4 z-50 flex flex-col items-center gap-2 px-4 pointer-events-none" aria-live="polite">
           {badgeToasts.map(({ id, key }) => {
@@ -3126,6 +3240,21 @@ const EnglishSentenceBuilder = () => {
             {/* Toggle de tema de la suite — siempre visible */}
             <ThemeToggle lang={language} />
 
+            {/* Reportar un problema. Sin ícono propio: comparte el del aviso,
+                que es lo que el alumno acaba de ver en pantalla. */}
+            <button
+              onClick={() => { setReporte(construirReporte()); setReporteCopiado(false); }}
+              title={t.reportar}
+              aria-label={t.reportar}
+              /* Hover NEUTRO, no ámbar. El ámbar chocaba en los dos temas: el
+                 600 daba 3,07:1 sobre `bg-amber-50` en claro y el 700 daba
+                 3,15:1 en oscuro, porque la capa oscura invierte el fondo y
+                 deja la tinta donde estaba. El ícono ya dice de qué va. */
+              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+            >
+              <AlertTriangle className="w-4 h-4" />
+            </button>
+
           </div>
         </header>
 
@@ -3433,6 +3562,20 @@ const EnglishSentenceBuilder = () => {
                   <AlertTriangle className="w-3 h-3" /> {subjectValidation.warning}
                 </p>
               )}
+              {/* AMBIGÜEDAD DE LA -s. La app no puede saber si «Jans» es un
+                  nombre o un plural, así que lo dice en vez de elegir en
+                  silencio. Es además una verdad que vale la pena enseñar: esa
+                  -s final es ambigua. Se pregunta una vez por nombre. */}
+              {!esPregSujeto && sujetoAmbiguo && (
+                <p className="text-xs text-amber-600 mt-1 flex items-center gap-1 flex-wrap">
+                  <AlertTriangle className="w-3 h-3" />
+                  {t.nombreODuda.replace('{palabra}', sujetoAmbiguo)}
+                  <button
+                    onClick={() => agregarNombre(sujetoAmbiguo)}
+                    className="underline font-semibold text-amber-700"
+                  >{t.nombreSi}</button>
+                </p>
+              )}
               {spellingErrors.subject.length > 0 && subjectValidation.valid && !subjectValidation.warning && (
                 <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
                   <AlertTriangle className="w-3 h-3" /> {t.didYouMean}:
@@ -3576,8 +3719,16 @@ const EnglishSentenceBuilder = () => {
                 </p>
               )}
               {complementValidation.valid && complementValidation.warning && (
-                <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
+                <p className="text-xs text-amber-600 mt-1 flex items-center gap-1 flex-wrap">
                   <AlertTriangle className="w-3 h-3" /> {complementValidation.warning}
+                  {/* Con el arreglo a un clic: en clase, delante del curso, no
+                      hay tiempo de volver al campo y reescribirlo. */}
+                  {complementValidation.arreglo && (
+                    <button
+                      onClick={() => setComplement(complementValidation.arreglo)}
+                      className="underline font-semibold text-amber-700"
+                    >{t.aplicar}</button>
+                  )}
                 </p>
               )}
               {selectedTense && COMPLEMENT_CHIPS[selectedTense] && (

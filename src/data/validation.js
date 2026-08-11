@@ -303,9 +303,57 @@ export const validateVerb = (verb, language = 'es') => {
 };
 
 // Validar complemento (más permisivo)
-export const validateComplement = (complement, language = 'es') => {
+/* VERBOS QUE PIDEN PREPOSICIÓN. Salió en clase (2026-08-11): el profesor armó
+   una oración con `go` y un lugar, y la app la construyó sin avisar de que
+   faltaba el `to`. El validador del complemento solo miraba que las palabras
+   existieran, y ni siquiera recibía el verbo.
+
+   La tabla es CORTA a propósito, y varios candidatos obvios están fuera porque
+   la versión sin preposición también es correcta y el aviso sería falso:
+     `walk the dog`, `drive the car`, `fly a plane`, `move the table`,
+     `return the book`, `pay the bill`, `ask the teacher`, `travel the world`.
+   `look` queda fuera por lo mismo: «you look the same» es correcto, y es
+   frecuente. Se pierde el aviso de «look at», que es una pena, pero un aviso
+   que se equivoca en clase vale menos que ninguno. */
+export const PREPOSICION_DEL_VERBO = {
+  go: 'to', come: 'to', listen: 'to', belong: 'to',
+  arrive: 'at', wait: 'for', depend: 'on',
+};
+
+/* El disparo es el DETERMINANTE, no el lugar. «go the park» está mal siempre;
+   «go home», «go there», «go swimming» y «go by bus» no empiezan por
+   determinante y por eso ni se miran.
+   `a`, `an`, `this` y `that` NO están en la lista aunque sean determinantes:
+   «wait a minute» y «come this way» son correctos y darían aviso falso. */
+const DETERMINANTES_DE_OBJETO = ['the', 'my', 'your', 'his', 'her', 'its', 'our', 'their'];
+
+export const faltaPreposicion = (verb, complement) => {
+  const v = String(verb || '').toLowerCase().trim();
+  const prep = PREPOSICION_DEL_VERBO[v];
+  if (!prep) return null;
+  const primera = String(complement || '').toLowerCase().trim().split(/\s+/)[0];
+  if (!DETERMINANTES_DE_OBJETO.includes(primera)) return null;
+  return prep;
+};
+
+export const validateComplement = (complement, language = 'es', verb = '') => {
   if (!complement || complement.trim() === '') {
     return { valid: true, warning: null }; // Complemento es opcional
+  }
+
+  /* Va antes que la revisión de ortografía: si falta la preposición, eso es lo
+     que hay que decir, no que «park» no esté en el diccionario. */
+  const prep = faltaPreposicion(verb, complement);
+  if (prep) {
+    const v = verb.toLowerCase().trim();
+    const ejemplo = `${v} ${prep} ${complement.trim()}`;
+    return {
+      valid: true,                       // es un aviso, no un bloqueo
+      warning: language === 'es'
+        ? `«${v}» pide «${prep}» antes del complemento: ${ejemplo}`
+        : `"${v}" needs "${prep}" before the complement: ${ejemplo}`,
+      arreglo: `${prep} ${complement.trim()}`,
+    };
   }
 
   const words = complement.toLowerCase().trim().split(/\s+/);

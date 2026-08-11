@@ -33,6 +33,25 @@ const upperFirst = (w) => w.charAt(0).toUpperCase() + w.slice(1);
 // - palabras comunes del diccionario → minúscula (corrige el autocapitalizado
 //   del teclado móvil: "The dog" → "the dog")
 // - todo lo demás se respeta tal como lo escribió el usuario
+/* NOMBRES QUE DECLARA EL PROPIO USUARIO. Las listas traen 397 nombres, pero no
+   pueden traer el de cada alumno: «Jans» no está en ninguna, y ante una palabra
+   desconocida terminada en -s la app NO TIENE FORMA de saber si es un plural o
+   un nombre. En vez de adivinar, lo pregunta una vez y se acuerda.
+   Este módulo es puro a propósito, para poder testearse aislado, así que NO lee
+   `localStorage`: la app le pasa la lista con `registrarNombres`. */
+let nombresDeclarados = new Set();
+export const registrarNombres = (lista = []) => {
+  nombresDeclarados = new Set(lista.map(n => String(n).toLowerCase().trim()).filter(Boolean));
+};
+
+/* Mismas listas que usa `smartCase`, para que capitalizar y contar la persona
+   nunca discrepen: si la app escribe «Carlos» con mayúscula es porque sabe que
+   es un nombre, y entonces tiene que conjugar en tercera persona. */
+const esNombrePropio = (palabra) =>
+  nombresDeclarados.has(palabra)
+  || hispanicNames.includes(palabra) || hispanicNames.includes(stripAccents(palabra))
+  || englishNames.includes(palabra);
+
 export const smartCase = (raw) => {
   return raw
     .trim()
@@ -41,10 +60,11 @@ export const smartCase = (raw) => {
       const lower = word.toLowerCase();
       if (lower === 'i') return 'I';
       if (ALWAYS_CAPITAL.has(lower)) return upperFirst(lower);
-      if (hispanicNames.includes(lower) || hispanicNames.includes(stripAccents(lower))
-          || englishNames.includes(lower)) {
-        return upperFirst(lower);
-      }
+      /* `esNombrePropio` y no las listas sueltas: incluye los nombres que
+         declaró el usuario, y así capitalizar y contar la persona no pueden
+         discrepar. Sin esto, declarar «jans» lo conjugaba en singular pero lo
+         dejaba en minúscula a mitad de oración («I work with jans»). */
+      if (esNombrePropio(lower)) return upperFirst(lower);
       if (
         englishDictionary.includes(lower) ||
         validPronouns.includes(lower) ||
@@ -60,6 +80,35 @@ export const smartCase = (raw) => {
 // Mismo tratamiento para sujeto y complemento: ambos pueden traer mayúsculas
 // que el teclado del móvil metió solo. Se conserva el nombre histórico.
 export const smartCaseSubject = smartCase;
+
+
+/* Constantes compartidas por `isThirdPersonSingular` y `nombreAmbiguo`: si cada
+   una llevara su copia, arreglar un caso en una dejaría la otra mintiendo. */
+const PLURALES_IRREGULARES = ['people', 'children', 'men', 'women', 'teeth', 'feet', 'mice', 'geese', 'oxen'];
+const SINGULARES_EN_S = ['this', 'his', 'hers', 'its', 'ours', 'yours', 'theirs',
+                         'was', 'has', 'does', 'is', 'as', 'us', 'news'];
+
+/* Palabra terminada en -s que la app no sabe clasificar. Devuelve la palabra si
+   es ambigua y `null` si tiene evidencia para decidir.
+   Lo que la hace NO ambigua, en este orden: es un nombre conocido · es un
+   plural irregular o una excepción · es una palabra común del diccionario ·
+   su raíz sin la -s es una palabra común («students» → «student», así que es
+   plural y punto). Lo que queda es lo que de verdad no se puede saber. */
+export const nombreAmbiguo = (subjectText) => {
+  const subj = String(subjectText || '').toLowerCase().trim();
+  if (!subj || subj.includes(' and ') || subj.includes(',')) return null;
+  const words = subj.split(/\s+/);
+  /* Con determinante delante es un sustantivo común, no un nombre: «the Torres»
+     no lo escribe nadie y «the students» daría un aviso molesto. */
+  if (words.length > 1 && validDeterminers.includes(words[0])) return null;
+  const last = words[words.length - 1];
+  if (!last.endsWith('s') || last.endsWith('ss') || last.endsWith('us') || last.endsWith('is')) return null;
+  if (SINGULARES_EN_S.includes(last) || PLURALES_IRREGULARES.includes(last)) return null;
+  if (esNombrePropio(last) || validPronouns.includes(last)) return null;
+  if (englishDictionary.includes(last)) return null;
+  if (englishDictionary.includes(last.replace(/es$/, '')) || englishDictionary.includes(last.replace(/s$/, ''))) return null;
+  return last;
+};
 
 export const isThirdPersonSingular = (subjectText) => {
   const subj = subjectText.toLowerCase().trim();
@@ -78,19 +127,29 @@ export const isThirdPersonSingular = (subjectText) => {
   // Cuantificadores que implican plural
   if (['both', 'all', 'many', 'several', 'few', 'most', 'some'].includes(firstWord)) return false;
 
+  /* UN NOMBRE PROPIO ES SINGULAR, TERMINE EN LO QUE TERMINE, y esta comprobación
+     va ANTES de la regla del plural en -s. Sin ella, la regla se llevaba por
+     delante a treinta y un nombres que ya estaban en las listas: «Carlos work»,
+     «Lucas live», «Andrés study», «Matías», «Nicolás», «Tomás», «Marcos»,
+     «Jesús», «James», «Nicholas», «Charles», «Thomas», «Inés», «Mercedes», y
+     los apellidos Torres, Flores, Reyes, Morales, Vargas. En un curso chileno
+     eso es media lista de clase.
+     No es una heurística, es el DATO que ya teníamos consultado en el orden
+     correcto: la lista de nombres no contiene ningún plural común (se verificó
+     al crearla), así que no puede robarle casos a la regla de abajo. */
+  if (esNombrePropio(lastWord)) return true;
+
   // Plurales irregulares comunes
-  const irregularPlurals = ['people', 'children', 'men', 'women', 'teeth', 'feet', 'mice', 'geese', 'oxen'];
-  if (irregularPlurals.includes(lastWord)) return false;
+  if (PLURALES_IRREGULARES.includes(lastWord)) return false;
 
   // Plurales regulares: terminan en -s pero no en -ss, -us, -is
   // ni son palabras singulares o pronombres que terminan en -s
-  const singularExceptions = ['this', 'his', 'hers', 'its', 'ours', 'yours', 'theirs', 'was', 'has', 'does', 'is', 'as', 'us', 'news'];
   if (
     lastWord.endsWith('s') &&
     !lastWord.endsWith('ss') &&
     !lastWord.endsWith('us') &&
     !lastWord.endsWith('is') &&
-    !singularExceptions.includes(lastWord)
+    !SINGULARES_EN_S.includes(lastWord)
   ) return false;
 
   // Por defecto: sustantivo singular (he/she/it)

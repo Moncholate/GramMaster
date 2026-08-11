@@ -1,4 +1,5 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
+import { faltaPreposicion, validateComplement } from './data/validation';
 import {
   buildConditionalText,
   presentParticiple,
@@ -6,6 +7,9 @@ import {
   pastParticiple,
   conjugate3p,
   smartCaseSubject,
+  isThirdPersonSingular,
+  registrarNombres,
+  nombreAmbiguo,
   buildSentenceText,
   buildVerbPhrase,
   getAuxAndVerbForm,
@@ -468,6 +472,105 @@ describe('condicionales: negativa e interrogativa', () => {
    que «peter» escrito en minúscula se quedaba así. En el modo normal no se
    notaba —el sujeto abre la oración y se capitaliza igual— pero en una
    condicional va detrás de «If » y el fallo queda a la vista. */
+/* SALIÓ EN CLASE (2026-08-11). El profesor puso de sujeto el nombre de un
+   alumno, «Jans», y la app conjugó en plural: «Jans work». La regla del plural
+   en -s se ejecutaba ANTES de mirar si la palabra era un nombre propio, así que
+   se llevaba por delante a los 31 nombres terminados en -s que ya estaban en
+   las listas. En un curso chileno eso es media lista de clase. */
+describe('un nombre propio es singular aunque termine en -s', () => {
+  const nombres = ['carlos', 'lucas', 'andrés', 'andres', 'matías', 'nicolás',
+                   'tomás', 'marcos', 'jesús', 'luis', 'inés', 'mercedes',
+                   'james', 'nicholas', 'charles', 'thomas', 'douglas',
+                   'torres', 'flores', 'reyes', 'morales', 'vargas'];
+  it('los conjuga en tercera persona', () => {
+    const mal = nombres.filter(n => !isThirdPersonSingular(n));
+    expect(mal.join(' ')).toBe('');
+  });
+  it('y la oración sale con la -s', () => {
+    expect(buildSentenceText({ mode: 'affirmative', subject: 'carlos',
+      verb: 'work', complement: 'at home', tense: 'simple-present' }))
+      .toBe('Carlos works at home.');
+  });
+  it('sin robarle casos a la regla del plural', () => {
+    // La lista de nombres no contiene ningún plural común: se verificó al
+    // crearla y este test lo mantiene cierto.
+    for (const p of ['students', 'teachers', 'my parents', 'the books', 'people'])
+      expect(isThirdPersonSingular(p)).toBe(false);
+  });
+});
+
+/* La otra mitad del caso «Jans»: los 397 nombres de las listas no pueden cubrir
+   a cada alumno, y ante una palabra desconocida terminada en -s la app NO TIENE
+   FORMA de saber si es un plural o un nombre. Medido antes de decidir: tratar lo
+   desconocido como singular rompía 10 de 26 plurales corrientes. Así que la app
+   no adivina: lo pregunta una vez y se acuerda. */
+describe('la -s ambigua se pregunta, no se adivina', () => {
+  beforeEach(() => registrarNombres([]));
+
+  it('avisa con una palabra que no puede clasificar', () => {
+    expect(nombreAmbiguo('Jans')).toBe('jans');
+    expect(nombreAmbiguo('Sotomayors')).toBe('sotomayors');
+  });
+  it('NO avisa cuando tiene con qué decidir', () => {
+    const callados = [
+      'students',      // «student» está en el diccionario: es plural y punto
+      'the students',  // con determinante es un sustantivo común, no un nombre
+      'people',        // plural irregular
+      'Carlos',        // nombre conocido
+      'news',          // excepción: acaba en -s y es singular
+      'he', 'they',    // pronombres
+      'my brother',    // no acaba en -s
+    ];
+    expect(callados.filter(s => nombreAmbiguo(s))).toEqual([]);
+  });
+  it('al declararlo, deja de preguntar y conjuga en singular', () => {
+    expect(isThirdPersonSingular('jans')).toBe(false);   // antes: leído como plural
+    registrarNombres(['jans']);
+    expect(nombreAmbiguo('Jans')).toBe(null);
+    expect(isThirdPersonSingular('jans')).toBe(true);
+    expect(buildSentenceText({ mode: 'affirmative', subject: 'jans',
+      verb: 'work', complement: 'at home', tense: 'simple-present' }))
+      .toBe('Jans works at home.');
+    /* Y también se capitaliza a MITAD de oración. Lo destapó este test: al
+       declararlo se conjugaba en singular pero seguía en minúscula dentro del
+       complemento, porque `smartCase` miraba las listas y no el registro. */
+    expect(smartCaseSubject('with jans')).toBe('with Jans');
+  });
+});
+
+/* SALIÓ EN CLASE (2026-08-11). El profesor armó una oración con `go` y un lugar
+   y la app la construyó sin decir que faltaba el `to`: el validador no recibía
+   el verbo, así que no podía saberlo. */
+describe('verbos que piden preposición', () => {
+  it('avisa cuando falta', () => {
+    expect(faltaPreposicion('go', 'the park')).toBe('to');
+    expect(faltaPreposicion('listen', 'the music')).toBe('to');
+    expect(faltaPreposicion('wait', 'the bus')).toBe('for');
+    expect(faltaPreposicion('arrive', 'the station')).toBe('at');
+    expect(faltaPreposicion('depend', 'the weather')).toBe('on');
+  });
+  it('se calla donde la versión sin preposición es CORRECTA', () => {
+    /* Estas son las que convertirían el aviso en ruido. `home`, `there` y
+       `swimming` no llevan determinante, y por eso ni se miran. */
+    const correctas = [
+      ['go', 'home'], ['go', 'there'], ['go', 'back'], ['go', 'abroad'],
+      ['go', 'swimming'], ['go', 'by bus'], ['go', 'with friends'],
+      ['go', 'to the park'],            // ya la lleva
+      ['wait', 'a minute'],             // `a` no dispara: sería un aviso falso
+      ['come', 'this way'],             // `this` tampoco
+      ['walk', 'the dog'], ['drive', 'the car'], ['pay', 'the bill'],
+      ['return', 'the book'], ['ask', 'the teacher'], ['look', 'the same'],
+    ];
+    const falsos = correctas.filter(([v, c]) => faltaPreposicion(v, c));
+    expect(falsos.map(([v, c]) => `${v} ${c}`).join(' | ')).toBe('');
+  });
+  it('el aviso trae el arreglo listo', () => {
+    const r = validateComplement('the park', 'es', 'go');
+    expect(r.valid).toBe(true);            // avisa, no bloquea
+    expect(r.arreglo).toBe('to the park');
+  });
+});
+
 describe('smartCase: nombres ingleses', () => {
   it('capitaliza el nombre aunque venga en minúscula', () => {
     expect(smartCaseSubject('peter')).toBe('Peter');
