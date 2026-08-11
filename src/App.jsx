@@ -3264,12 +3264,18 @@ const EnglishSentenceBuilder = () => {
                  600 daba 3,07:1 sobre `bg-amber-50` en claro y el 700 daba
                  3,15:1 en oscuro, porque la capa oscura invierte el fondo y
                  deja la tinta donde estaba. */
-              /* Mismo aspecto que el botón de tema, que está justo al lado: en
-                 una cabecera, dos controles hermanos que se ven distinto se
-                 leen como cosas de distinta importancia. */
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-sm font-bold bg-slate-100 border border-slate-300 text-slate-600 hover:bg-slate-50 transition-all"
+              /* En ÁMBAR y no en gris. Con la misma piel que el botón de tema
+                 se perdía entre los controles de la cabecera, que era la queja:
+                 «la idea era que el ícono resalte más». El ámbar es el color
+                 que la app ya usa para los avisos, así que no estrena
+                 significado: dice «algo va mal» en el mismo idioma que el resto. */
+              /* `text-amber-700` y NO el 800: la capa oscura tiene una regla
+                 para el par `bg-amber-50 + text-amber-700` (la aclara a #fde68a,
+                 12,25:1) y el 800 se queda fuera, oscuro sobre oscuro a 2,15:1.
+                 En claro el 700 da 4,84 sobre el -50 y 4,51 sobre el -100. */
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-sm font-bold bg-amber-50 border border-amber-400 text-amber-700 hover:bg-amber-100 transition-all"
             >
-              <AlertTriangle className="w-4 h-4 shrink-0" />
+              <AlertTriangle className="w-[1.15rem] h-[1.15rem] shrink-0" />
               <span className="hidden sm:inline whitespace-nowrap">{t.reportarCorto}</span>
             </button>
 
