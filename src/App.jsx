@@ -2467,6 +2467,13 @@ const EnglishSentenceBuilder = () => {
                 <X className="w-5 h-5" />
               </button>
             </div>
+            {/* Los tres pasos, numerados. Aquí el número SÍ dice algo: es una
+                secuencia y hay que hacerla en ese orden. */}
+            <ol className="text-xs text-gray-700 space-y-1 list-decimal list-inside marker:font-bold marker:text-indigo-600">
+              <li>{t.reportePaso1}</li>
+              <li>{t.reportePaso2}</li>
+              <li>{t.reportePaso3}</li>
+            </ol>
             <textarea
               readOnly value={reporte} rows={11}
               onChange={() => {}}
@@ -3240,8 +3247,15 @@ const EnglishSentenceBuilder = () => {
             {/* Toggle de tema de la suite — siempre visible */}
             <ThemeToggle lang={language} />
 
-            {/* Reportar un problema. Sin ícono propio: comparte el del aviso,
-                que es lo que el alumno acaba de ver en pantalla. */}
+            {/* REPORTAR UN PROBLEMA. Primero fue un ícono suelto en gris claro y
+                el profesor no lo encontraba: «para web es casi imperceptible».
+                Tenía razón. Un ícono sin etiqueta solo funciona cuando el gesto
+                ya es conocido (el engranaje de ajustes), y este no lo es.
+                Ahora es un botón con borde y con TEXTO desde `sm`: en el móvil
+                el espacio de la cabecera manda y se queda el ícono, pero en un
+                escritorio hay sitio de sobra y esconderlo no ahorra nada.
+                El ícono es el del aviso a propósito: es el mismo que el alumno
+                acaba de ver en pantalla cuando algo salió mal. */}
             <button
               onClick={() => { setReporte(construirReporte()); setReporteCopiado(false); }}
               title={t.reportar}
@@ -3249,10 +3263,14 @@ const EnglishSentenceBuilder = () => {
               /* Hover NEUTRO, no ámbar. El ámbar chocaba en los dos temas: el
                  600 daba 3,07:1 sobre `bg-amber-50` en claro y el 700 daba
                  3,15:1 en oscuro, porque la capa oscura invierte el fondo y
-                 deja la tinta donde estaba. El ícono ya dice de qué va. */
-              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+                 deja la tinta donde estaba. */
+              /* Mismo aspecto que el botón de tema, que está justo al lado: en
+                 una cabecera, dos controles hermanos que se ven distinto se
+                 leen como cosas de distinta importancia. */
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-sm font-bold bg-slate-100 border border-slate-300 text-slate-600 hover:bg-slate-50 transition-all"
             >
-              <AlertTriangle className="w-4 h-4" />
+              <AlertTriangle className="w-4 h-4 shrink-0" />
+              <span className="hidden sm:inline whitespace-nowrap">{t.reportarCorto}</span>
             </button>
 
           </div>
