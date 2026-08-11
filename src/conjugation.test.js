@@ -564,6 +564,41 @@ describe('verbos que piden preposición', () => {
     const falsos = correctas.filter(([v, c]) => faltaPreposicion(v, c));
     expect(falsos.map(([v, c]) => `${v} ${c}`).join(' | ')).toBe('');
   });
+  /* Pregunta del profesor: «si escribo go Duoc, ¿lo reconoce?». No lo hacía: el
+     disparo era el determinante, así que «go Duoc», «go Santiago», «go school» y
+     «go work» pasaban en silencio. */
+  it('caza el nombre propio detrás de un verbo de movimiento', () => {
+    expect(faltaPreposicion('go', 'Duoc')).toBe('to');
+    expect(faltaPreposicion('go', 'Santiago')).toBe('to');
+    expect(faltaPreposicion('come', 'Chile')).toBe('to');
+    expect(faltaPreposicion('arrive', 'Valparaíso')).toBe('at');
+    expect(validateComplement('Duoc', 'es', 'go').arreglo).toBe('to Duoc');
+  });
+  it('y el lugar pelado que lleva `to` sin artículo', () => {
+    for (const l of ['school', 'work', 'university', 'class', 'bed', 'church'])
+      expect(faltaPreposicion('go', l)).toBe('to');
+    expect(validateComplement('school', 'es', 'go').arreglo).toBe('to school');
+  });
+  it('la mayúscula NO dispara donde no toca', () => {
+    /* Palabra común con mayúscula, gerundio y las excepciones de movimiento. */
+    const callados = [['go', 'Home'], ['go', 'There'], ['go', 'Swimming'],
+                      ['go', 'North'], ['go', 'Tomorrow'], ['go', 'Dutch'],
+                      ['go', 'Back'], ['go', 'Together']];
+    expect(callados.filter(([v, c]) => faltaPreposicion(v, c))
+      .map(([v, c]) => `${v} ${c}`).join(' | ')).toBe('');
+  });
+  it('el nombre propio no dispara con los verbos que NO son de movimiento', () => {
+    /* «wait for school» o «wait for Duoc» no es lo que nadie quiere decir; ahí
+       el aviso valdría menos que el silencio. */
+    expect(faltaPreposicion('wait', 'school')).toBe(null);
+    expect(faltaPreposicion('depend', 'Duoc')).toBe(null);
+  });
+  it('el arreglo NO se inventa el artículo', () => {
+    /* «go park» necesitaría «to THE park» y el arreglo solo antepone la
+       preposición, así que se calla en vez de sugerir mal. */
+    expect(faltaPreposicion('go', 'park')).toBe(null);
+    expect(faltaPreposicion('go', 'beach')).toBe(null);
+  });
   it('el aviso trae el arreglo listo', () => {
     const r = validateComplement('the park', 'es', 'go');
     expect(r.valid).toBe(true);            // avisa, no bloquea

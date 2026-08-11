@@ -327,13 +327,54 @@ export const PREPOSICION_DEL_VERBO = {
    «wait a minute» y «come this way» son correctos y darían aviso falso. */
 const DETERMINANTES_DE_OBJETO = ['the', 'my', 'your', 'his', 'her', 'its', 'our', 'their'];
 
+/* Lo que SÍ puede ir pegado a un verbo de movimiento sin preposición. Es la
+   lista de excepciones de verdad, y por eso el aviso no las mira. */
+const SEGUROS_TRAS_MOVIMIENTO = [
+  'home', 'there', 'here', 'back', 'away', 'abroad', 'downtown', 'downstairs',
+  'upstairs', 'inside', 'outside', 'somewhere', 'anywhere', 'everywhere', 'nowhere',
+  'north', 'south', 'east', 'west', 'left', 'right', 'straight', 'ahead',
+  'together', 'alone', 'first', 'again', 'anyway', 'too',
+  'today', 'tomorrow', 'yesterday', 'tonight', 'now', 'later', 'early', 'late', 'soon',
+  'dutch',   // «go Dutch» es una expresión hecha, no un lugar
+];
+
+/* Lugares que llevan `to` PELADO, sin artículo: «go to school», «go to work»,
+   «go to bed». Escritos solos («go school») les falta la preposición igual que
+   a «go the park», pero sin determinante delante nadie los veía.
+   Solo para verbos de MOVIMIENTO: «wait for school» no es lo que nadie quiere
+   decir, y sería un aviso peor que el silencio.
+   Los que además piden artículo («go to THE park») quedan fuera a propósito:
+   el arreglo sería «to park» y estaría mal, y sugerir mal es peor que callar. */
+const MOVIMIENTO = ['go', 'come', 'arrive'];
+const LUGARES_SIN_ARTICULO = ['school', 'work', 'university', 'college', 'class',
+                              'bed', 'church', 'town', 'prison', 'hospital', 'sea'];
+
+/* Un nombre propio detrás de un verbo de movimiento SIEMPRE pide preposición:
+   «go Duoc», «go Santiago», «go Chile». Se detecta por la mayúscula, y aquí eso
+   es fiable porque el campo de complemento lleva `autoCapitalize="none"`: el
+   teclado del móvil no la pone, así que una mayúscula ahí es intención.
+   Se descartan las palabras comunes escritas con mayúscula y los gerundios
+   («Go Swimming»), que no son lugares. */
+const pareceNombrePropio = (cruda) => {
+  const baja = cruda.toLowerCase();
+  return /^[A-ZÁÉÍÓÚÑÜ]/.test(cruda)
+    && !SEGUROS_TRAS_MOVIMIENTO.includes(baja)
+    && !/ing$/.test(baja)
+    && !englishDictionary.includes(baja);
+};
+
 export const faltaPreposicion = (verb, complement) => {
   const v = String(verb || '').toLowerCase().trim();
   const prep = PREPOSICION_DEL_VERBO[v];
   if (!prep) return null;
-  const primera = String(complement || '').toLowerCase().trim().split(/\s+/)[0];
-  if (!DETERMINANTES_DE_OBJETO.includes(primera)) return null;
-  return prep;
+  const cruda = String(complement || '').trim().split(/\s+/)[0] || '';
+  const primera = cruda.toLowerCase();
+  if (DETERMINANTES_DE_OBJETO.includes(primera)) return prep;
+  if (MOVIMIENTO.includes(v)) {
+    if (LUGARES_SIN_ARTICULO.includes(primera)) return prep;
+    if (pareceNombrePropio(cruda)) return prep;
+  }
+  return null;
 };
 
 export const validateComplement = (complement, language = 'es', verb = '') => {
