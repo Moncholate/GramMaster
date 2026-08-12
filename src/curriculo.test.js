@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   tenses, modals, COURSE_ORDER, UNIDADES_POR_CURSO, unidadIndice,
-  CONDICIONALES_POR_CURSO, VERBOS_REGULARES, VERBOS_REGULARES_AMPLIA, VERBOS_IRREGULARES, VERBOS_IRREGULARES_BASICO, VERBOS_IRREGULARES_INTERMEDIO, VERBOS_IRREGULARES_AVANZADO,
+  CONDICIONALES_POR_CURSO, estaVisto, VERBOS_REGULARES, VERBOS_REGULARES_AMPLIA, VERBOS_IRREGULARES, VERBOS_IRREGULARES_BASICO, VERBOS_IRREGULARES_INTERMEDIO, VERBOS_IRREGULARES_AVANZADO,
   COMPLEMENTO_DE_VERBO, VERBOS_CON_ADVERBIAL_LIBRE, VERBOS_FUERA_DE_PRACTICA, COMPLEMENTOS_TIEMPO,
 } from './data/grammar';
 import { irregularVerbs } from './data/verbs';
@@ -112,6 +112,47 @@ describe('las etapas del presente simple (Básico I)', () => {
   });
   it('en Básico II el presente simple está entero: es curso anterior', () => {
     expect([soloBe(''), hayPreguntas(''), hayTercera('')]).toEqual([false, true, true]);
+  });
+});
+
+/* UNA SOLA REGLA PARA TODAS LAS ACTIVIDADES. El modo repaso tenía la suya,
+   más floja: comparaba el curso y se saltaba la unidad. La práctica respetaba
+   el temario y el repaso no, justo en la actividad que puntúa y alimenta la
+   racha. `estaVisto` es ahora la única, vive en los datos y es pura. */
+describe('estaVisto: la regla que comparten todas las actividades', () => {
+  const t = (id) => tenses.find(x => x.id === id);
+
+  it('curso anterior: visto entero, sin mirar la unidad', () => {
+    expect(estaVisto(t('simple-present'), 'basico2', '7A')).toBe(true);
+    expect(estaVisto(t('present-perfect'), 'intermedio1', '1A')).toBe(true);
+  });
+  it('curso posterior: nunca', () => {
+    expect(estaVisto(t('past-perfect'), 'basico2', '')).toBe(false);
+  });
+  it('curso actual: hasta donde va la clase', () => {
+    /* El caso exacto que el repaso se saltaba. */
+    expect(estaVisto(t('present-continuous'), 'basico2', '7A')).toBe(false);  // es la 9A
+    expect(estaVisto(t('present-continuous'), 'basico2', '9A')).toBe(true);
+    expect(estaVisto(t('simple-past'), 'basico2', '10A')).toBe(false);        // es la 11A
+    expect(estaVisto(t('simple-past'), 'basico2', '10B')).toBe(true);         // was/were
+    expect(estaVisto(t('past-perfect'), 'intermedio2', '7A')).toBe(false);    // es la 12A
+  });
+  it('sin unidad respondida: todo el curso', () => {
+    expect(estaVisto(t('past-perfect'), 'intermedio2', '')).toBe(true);
+    expect(estaVisto(t('past-perfect'), 'intermedio2', null)).toBe(true);
+  });
+  it('un contenido que ya no existe no está visto', () => {
+    expect(estaVisto(undefined, 'avanzado', '')).toBe(false);
+    expect(estaVisto({ cefr: 'inventado', unidad: '1A' }, 'avanzado', '')).toBe(false);
+  });
+  it('NINGUNA unidad del curso deja pasar algo del curso siguiente', () => {
+    const malos = [];
+    for (const nivel of COURSE_ORDER)
+      for (const u of (UNIDADES_POR_CURSO[nivel] || []))
+        for (const item of tenses)
+          if (COURSE_ORDER.indexOf(item.cefr) > COURSE_ORDER.indexOf(nivel) && estaVisto(item, nivel, u))
+            malos.push(`${nivel} ${u} → ${item.id}`);
+    expect(malos.join(' | ')).toBe('');
   });
 });
 

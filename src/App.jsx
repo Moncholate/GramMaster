@@ -19,6 +19,7 @@ import {
   CONDICIONALES_POR_CURSO,
   UNIDADES_POR_CURSO,
   unidadIndice,
+  estaVisto,
   PARES_CONDICIONAL,
   COMPLEMENTOS_BE,
   COMPLEMENTOS_ADVERBIALES,
@@ -782,16 +783,10 @@ const EnglishSentenceBuilder = () => {
      si es del curso actual y su unidad no pasa de donde va la clase. */
   const unidadTope = unidadCurso ? unidadIndice(unidadCurso) : Infinity;
   const esCursoActual = (item) => COURSE_ORDER.indexOf(item.cefr) === COURSE_ORDER.indexOf(cefrLevel);
-  const yaVisto = (item) => {
-    if (!item) return false;
-    const i = COURSE_ORDER.indexOf(item.cefr);
-    const actual = COURSE_ORDER.indexOf(cefrLevel);
-    if (i < actual) return true;                    // curso anterior: visto entero
-    if (i > actual) return false;
-    // curso actual: hasta la unidad, contando la etapa temprana de `be`
-    return unidadIndice(item.unidad) <= unidadTope
-        || (item.unidadBe != null && unidadIndice(item.unidadBe) <= unidadTope);
-  };
+  /* La regla vive en `data/grammar.js` y es la MISMA para todas las actividades.
+     Estaba escrita aquí dentro y el modo repaso se hizo su propia versión más
+     floja; ver el comentario de `estaVisto`. */
+  const yaVisto = (item) => estaVisto(item, cefrLevel, unidadCurso);
   /* El tiempo está visto SOLO con `be`: la etapa temprana ya pasó pero la de los
      demás verbos no. Practicarlo con «work» sería preguntar por lo que aún no
      se ha enseñado; con `be` es exactamente lo que sabe. */
@@ -1447,17 +1442,26 @@ const EnglishSentenceBuilder = () => {
   };
 
   // SRS: actualizar datos tras verificar respuesta
-  const updateSRS = (tenseId, mode, isCorrect) => {
+  /* `adelantado` = el alumno pidió repasar algo que TODAVÍA NO VENCÍA.
+     La regla es ASIMÉTRICA a propósito, y es lo que permite ofrecer el adelanto
+     sin falsear el calendario:
+       · acertar algo que viste hace un rato NO prueba que lo recuerdes, así que
+         no gana intervalo y ni siquiera mueve la fecha (moverla lo RETRASARÍA,
+         que es justo lo contrario de lo que queremos);
+       · fallarlo SÍ prueba algo, y entonces se reinicia como cualquier fallo.
+     El acierto se cuenta igual en las estadísticas: pasó de verdad. */
+  const updateSRS = (tenseId, mode, isCorrect, adelantado = false) => {
     if (!tenseId || !mode) return;
     const key = `${tenseId}|${mode}`;
     setSrsData(prev => {
       const existing = prev[key] || { lastPracticed: Date.now(), timesCorrect: 0, timesWrong: 0, interval: 1 };
+      const soloCuenta = adelantado && isCorrect;
       const updated = {
         ...existing,
-        lastPracticed: Date.now(),
+        lastPracticed: soloCuenta ? existing.lastPracticed : Date.now(),
         timesCorrect: isCorrect ? existing.timesCorrect + 1 : existing.timesCorrect,
         timesWrong: isCorrect ? existing.timesWrong : existing.timesWrong + 1,
-        interval: isCorrect ? Math.min(existing.interval * 2, 30) : 1,
+        interval: soloCuenta ? existing.interval : (isCorrect ? Math.min(existing.interval * 2, 30) : 1),
       };
       return { ...prev, [key]: updated };
     });
@@ -1472,8 +1476,49 @@ const EnglishSentenceBuilder = () => {
         const [tenseId, mode] = key.split('|');
         return { key, tenseId, mode, ...entry };
       })
+      /* Las fichas NO se filtraban por nada. Quedaban de cuando el alumno
+         practicaba en otro curso —o más adelante en este— y seguían venciendo:
+         el repaso le devolvía contenido que su clase todavía no ha visto, y es
+         la actividad que puntúa. También caen las de tiempos que ya no existen
+         (`future-perfect` se quitó del currículo y sus fichas siguen ahí). */
+      .filter(p => yaVisto(tenses.find(t => t.id === p.tenseId)))
       .sort((a, b) => (a.lastPracticed + a.interval * 86400000) - (b.lastPracticed + b.interval * 86400000));
   };
+
+  /* ── EN QUÉ ESTADO ESTÁ EL REPASO ────────────────────────────────────────
+     El botón entraba a ciegas y a veces daba con una puerta cerrada: sin
+     fichas, ya repasado hoy, o nada vencido todavía. Y es la PRIMERA actividad
+     del menú. La sorpresa no se arregla moviéndolo de sitio, se arregla
+     diciendo el estado ANTES de entrar; «al día» así deja de parecer un error y
+     pasa a ser lo que es, una recompensa. */
+  const fichasVigentes = () => Object.entries(srsData)
+    .map(([key, e]) => { const [tenseId, mode] = key.split('|'); return { key, tenseId, mode, ...e }; })
+    .filter(p => yaVisto(tenses.find(t => t.id === p.tenseId)));
+  /* La más floja: peor porcentaje de acierto, y a igualdad la más antigua. Es
+     la que se ofrece cuando el alumno quiere practicar sin tener nada vencido. */
+  const masDebil = (fichas) => {
+    const conIntentos = fichas.filter(f => (f.timesCorrect + f.timesWrong) > 0);
+    if (!conIntentos.length) return null;
+    return conIntentos.slice().sort((a, b) => {
+      const ra = a.timesWrong / (a.timesCorrect + a.timesWrong);
+      const rb = b.timesWrong / (b.timesCorrect + b.timesWrong);
+      return rb - ra || a.lastPracticed - b.lastPracticed;
+    })[0];
+  };
+  const estadoRepaso = (() => {
+    const pendientes = getPendingReviews();
+    if (pendientes.length) return { tipo: 'pendientes', n: pendientes.length };
+    const fichas = fichasVigentes();
+    if (!fichas.length) return { tipo: 'sinDatos' };
+    /* Cuándo vuelve, de verdad: decir «mañana» siempre era mentira la mitad de
+       las veces, porque el intervalo llega a treinta días. */
+    const prox = Math.min(...fichas.map(f => f.lastPracticed + f.interval * 86400000));
+    const dias = Math.max(1, Math.ceil((prox - Date.now()) / 86400000));
+    return { tipo: 'alDia', dias, debil: masDebil(fichas) };
+  })();
+  const textoCuando = (dias) => dias <= 1
+    ? (language === 'es' ? 'mañana' : 'tomorrow')
+    : (language === 'es' ? `en ${dias} días` : `in ${dias} days`);
 
   // SRS: generar pregunta tipo fill forzando tenseId y mode específicos
   const generateReviewQuestion = (tenseId, mode) => {
@@ -1509,7 +1554,7 @@ const EnglishSentenceBuilder = () => {
   /* `nueva` distingue entrar al repaso desde el menú (ronda desde cero) de
      encadenar el ejercicio siguiente dentro de la ronda en curso, que también
      pasa por aquí. */
-  const startReview = (nueva = false) => {
+  const startReview = (nueva = false, adelantar = false) => {
     const pending = getPendingReviews();
     setPracticeType('review');
     if (nueva) { setAnswerStreak(0); setRonda({ hechos: 0, ok: 0, mejor: 0 }); }
@@ -1518,15 +1563,31 @@ const EnglishSentenceBuilder = () => {
     setIdentifyTenseAnswer('');
     setIdentifyModeAnswer('');
     setShowHint(false);
-    const hasPracticed = Object.keys(srsData).length > 0;
+    /* ADELANTAR: nada ha vencido pero el alumno quiere practicar igual. Se le da
+       lo que peor lleva, marcado como adelantado para que `updateSRS` no lo
+       espacie por acertarlo. Así el modo sirve todos los días sin que el
+       calendario mienta. */
+    if (adelantar && !pending.length) {
+      const d = masDebil(fichasVigentes());
+      if (d) {
+        setReviewUpToDate(false);
+        const q = generateReviewQuestion(d.tenseId, d.mode);
+        setPracticeQuestion(q && { ...q, adelantado: true });
+        return;
+      }
+    }
+    const hasPracticed = fichasVigentes().length > 0;
     if (pending.length === 0 && hasPracticed) {
       // Hay datos pero ninguno está vencido → genuinamente al día
       setReviewUpToDate(true);
       setPracticeQuestion(null);
     } else if (pending.length === 0 && !hasPracticed) {
-      // Sin datos: generar pregunta fill aleatoria del nivel actual para arrancar
-      const courseIndex = COURSE_ORDER.indexOf(cefrLevel);
-      const available = tenses.filter(t => COURSE_ORDER.indexOf(t.cefr) <= courseIndex);
+      /* Sin fichas: se improvisa una para arrancar. `yaVisto` y NO la
+         comparación de curso que había antes, que se saltaba la unidad: en
+         Intermedio II semana 1 podía salir Pasado Perfecto, que es la 12A.
+         Si en esa unidad todavía no se ha visto nada, no se inventa nada. */
+      const available = tenses.filter(yaVisto);
+      if (!available.length) { setReviewUpToDate(true); setPracticeQuestion(null); return; }
       const randomTense = available[Math.floor(Math.random() * available.length)];
       setReviewUpToDate(false);
       setPracticeQuestion(generateReviewQuestion(
@@ -1614,7 +1675,7 @@ const EnglishSentenceBuilder = () => {
       tipo: practiceQuestion.tipoCond, parte: practiceQuestion.parte,
       verb: practiceQuestion.verb, respuesta: userAns });
     const isCorrect = avisoWas || accepted.some(a => a.replace(/\.$/, '') === userAns);
-    updateSRS(practiceQuestion.tense?.id, practiceQuestion.mode, isCorrect);
+    updateSRS(practiceQuestion.tense?.id, practiceQuestion.mode, isCorrect, practiceQuestion.adelantado);
     recordGameAttempt(practiceQuestion.tense?.id, isCorrect);
     setAnswerStreak(s => isCorrect ? s + 1 : 0);
     sumaRonda(isCorrect);
@@ -2444,7 +2505,9 @@ const EnglishSentenceBuilder = () => {
        generar otro que nadie va a ver. */
     if (ronda.hechos >= RONDA) { setPracticeResult(null); return; }
     if (practiceType === 'review') {
-      startReview();
+      /* Si la ronda empezó adelantada, sigue adelantada: si no, el segundo
+         ejercicio caería en «estás al día» y la ronda se cortaría sola. */
+      startReview(false, !!practiceQuestion?.adelantado);
     } else {
       setPracticeQuestion(generatePracticeQuestion(practiceType));
       setPracticeAnswer('');
@@ -2712,34 +2775,87 @@ const EnglishSentenceBuilder = () => {
                     </div>
                   ) : !practiceQuestion ? (
                     <div className="space-y-3">
+                      {/* «Al día» es una RECOMPENSA, no un error, pero antes dejaba
+                          al alumno en una pantalla sin salida y con una fecha
+                          inventada: decía «vuelve mañana» aunque el intervalo
+                          fuera de treinta días. Ahora dice cuándo vuelve de
+                          verdad y ofrece las dos salidas.
+                          El comentario va AQUÍ y no dentro del ternario: ahí sería
+                          una segunda expresión y no compila. */}
                       {reviewUpToDate ? (
                         <div className="text-center py-10">
                           <p className="text-4xl mb-3">✅</p>
                           <p className="font-semibold text-gray-700">{language === 'es' ? '¡Estás al día!' : "You're up to date!"}</p>
-                          <p className="text-sm text-gray-400 mt-1">{language === 'es' ? 'Vuelve mañana para seguir repasando.' : 'Come back tomorrow to keep reviewing.'}</p>
-                          <button onClick={() => setReviewUpToDate(false)} className="mt-4 px-4 py-2 bg-gray-100 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-200">
-                            {language === 'es' ? 'Volver al menú' : 'Back to menu'}
-                          </button>
+                          <p className="text-sm text-gray-500 mt-1">
+                            {estadoRepaso.tipo === 'alDia'
+                              ? (language === 'es' ? `Lo próximo que toca repasar está listo ${textoCuando(estadoRepaso.dias)}.`
+                                                   : `The next review is ready ${textoCuando(estadoRepaso.dias)}.`)
+                              : (language === 'es' ? 'Practica un poco y aparecerá lo que toque repasar.'
+                                                   : 'Practise a little and what to review will show up here.')}
+                          </p>
+                          <div className="mt-4 flex flex-wrap gap-2 justify-center">
+                            {estadoRepaso.tipo === 'alDia' && estadoRepaso.debil && (
+                              <button onClick={() => { setReviewUpToDate(false); startReview(true, true); }}
+                                /* `bg-amber-50 + text-amber-700`: es el par que la
+                                   capa oscura sabe invertir. Con el -900 sobre
+                                   -200 daba 1,45:1 en oscuro. Y el hover marca
+                                   el BORDE, no el fondo, por lo mismo. */
+                                className="px-4 py-2 bg-amber-50 text-amber-700 border border-amber-400 rounded-lg text-sm font-semibold hover:border-amber-600">
+                                {language === 'es' ? 'Repasar igual lo que peor llevas' : 'Review your weakest one anyway'}
+                              </button>
+                            )}
+                            <button onClick={() => setReviewUpToDate(false)} className="px-4 py-2 bg-gray-100 text-gray-600 rounded-lg text-sm font-medium hover:bg-gray-200">
+                              {language === 'es' ? 'Elegir otra actividad' : 'Pick another activity'}
+                            </button>
+                          </div>
                         </div>
                       ) : (
                         <>
                           <p className="text-gray-600 text-sm mb-4">{t.practiceSubtitle}</p>
-                          {/* Botón Modo Repaso */}
+                          {/* MODO REPASO. El botón dice en qué estado está ANTES
+                              de entrar: es la primera actividad del menú y antes
+                              podías toparte con una puerta cerrada sin aviso.
+                              Con material se ve como acción principal; sin él,
+                              apagado y con el motivo escrito. */}
                           {(() => {
-                            const pendingCount = getPendingReviews().length;
+                            const E = estadoRepaso;
+                            const hay = E.tipo === 'pendientes';
+                            const sub = E.tipo === 'pendientes'
+                              ? (language === 'es' ? `${E.n} ${E.n === 1 ? 'estructura lista' : 'estructuras listas'} para repasar` : `${E.n} ${E.n === 1 ? 'structure' : 'structures'} ready to review`)
+                              : E.tipo === 'sinDatos'
+                                ? (language === 'es' ? 'Practica un poco y aparecerá lo que toque repasar' : 'Practise a little and what to review will show up here')
+                                : (language === 'es' ? `Al día. Lo próximo, ${textoCuando(E.dias)}` : `Up to date. Next one ${textoCuando(E.dias)}`);
                             return (
-                              <button onClick={() => startReview(true)} className="w-full p-4 bg-gray-50 hover:bg-amber-50 rounded-xl border-2 border-transparent hover:border-amber-200 text-left transition-all relative">
+                              <button
+                                onClick={() => startReview(true)}
+                                disabled={!hay}
+                                className={`w-full p-4 rounded-xl border-2 text-left transition-all relative ${
+                                  hay ? 'bg-amber-50 border-amber-300 hover:border-amber-500'
+                                      : 'bg-gray-50 border-transparent opacity-70 cursor-default'
+                                }`}
+                              >
                                 <span className="text-2xl mr-3">🔄</span>
                                 <span className="font-semibold">{language === 'es' ? 'Modo Repaso' : 'Review Mode'}</span>
-                                <p className="text-xs text-gray-500 mt-1 ml-9">{language === 'es' ? 'Repasa estructuras según repetición espaciada' : 'Review structures using spaced repetition'}</p>
-                                {pendingCount > 0 && (
+                                <p className="text-xs text-gray-600 mt-1 ml-9">{sub}</p>
+                                {hay && (
                                   <span className="absolute top-3 right-3 bg-red-600 text-white text-xs font-bold w-5 h-5 rounded-full flex items-center justify-center">
-                                    {pendingCount > 9 ? '9+' : pendingCount}
+                                    {E.n > 9 ? '9+' : E.n}
                                   </span>
                                 )}
                               </button>
                             );
                           })()}
+                          {/* Adelantar: solo cuando está al día Y hay algo flojo
+                              que ofrecer. Va como enlace y no como botón para que
+                              no compita con los modos: es una salida, no un modo. */}
+                          {estadoRepaso.tipo === 'alDia' && estadoRepaso.debil && (
+                            <button
+                              onClick={() => startReview(true, true)}
+                              className="w-full -mt-1 mb-1 px-4 py-1.5 text-xs font-semibold text-amber-700 underline text-left"
+                            >
+                              {language === 'es' ? 'Repasar igual lo que peor llevas' : 'Review your weakest one anyway'}
+                            </button>
+                          )}
                           {[
                             { type: 'fill', icon: '📝', title: t.fillInBlank, desc: language === 'es' ? 'Completa la oración' : 'Complete the sentence' },
                             /* «Corrige el error» necesita un tiempo con verbos
@@ -2837,7 +2953,13 @@ const EnglishSentenceBuilder = () => {
                           <>
                             <p className={`text-xs font-medium mb-2 uppercase tracking-wide ${practiceQuestion.type === 'review' ? 'text-amber-600' : 'text-indigo-500'}`}>
                               {practiceQuestion.type === 'review'
-                                ? (language === 'es' ? '🔄 Repaso espaciado' : '🔄 Spaced review')
+                                ? (practiceQuestion.adelantado
+                                    /* Se dice que va adelantado: acertarlo no
+                                       adelanta el calendario, y el alumno tiene
+                                       derecho a saber que esto es práctica extra
+                                       y no su repaso del día. */
+                                    ? (language === 'es' ? '🔄 Repaso adelantado · lo que peor llevas' : '🔄 Early review · your weakest one')
+                                    : (language === 'es' ? '🔄 Repaso espaciado' : '🔄 Spaced review'))
                                 : (language === 'es' ? 'Completa el verbo' : 'Fill in the verb')}
                             </p>
                             <p className="text-lg font-medium mb-1">

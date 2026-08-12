@@ -52,6 +52,28 @@ export const unidadIndice = (u) => {
   return m ? Number(m[1]) * 10 + (m[2].charCodeAt(0) - 65) : -1;
 };
 
+/* ¿La clase ya vio este contenido? Curso anterior = visto entero; curso actual =
+   hasta la unidad donde va la clase, contando la etapa temprana de `be`.
+
+   VIVE AQUÍ Y NO EN App.jsx A PROPÓSITO. Estaba escrita dentro del componente y
+   el MODO REPASO se hizo su propia versión, más floja: comparaba solo el curso
+   y se saltaba la unidad. Resultado: la práctica normal respetaba el temario y
+   el repaso no, así que un alumno de Intermedio II en la semana 1 podía recibir
+   Pasado Perfecto —la 12A— en la única actividad que además puntúa y alimenta
+   la racha. Dos filtros para la misma pregunta es la forma segura de que uno de
+   los dos se quede atrás; ahora hay uno, es puro y se puede testear. */
+export const estaVisto = (item, nivel, unidad) => {
+  if (!item) return false;
+  const i = COURSE_ORDER.indexOf(item.cefr);
+  const actual = COURSE_ORDER.indexOf(nivel);
+  if (i < 0 || actual < 0) return false;
+  if (i < actual) return true;
+  if (i > actual) return false;
+  const tope = unidad ? unidadIndice(unidad) : Infinity;
+  return unidadIndice(item.unidad) <= tope
+      || (item.unidadBe != null && unidadIndice(item.unidadBe) <= tope);
+};
+
 /* POR ETAPAS. El libro no enseña un tiempo de golpe: primero `be` y bastante
    después el resto de los verbos.
      Presente simple → be en Básico I 1A-2B, los demás verbos en 5A,
