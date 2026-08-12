@@ -20,6 +20,11 @@ export const translations = {
     condNegarCondicion: 'Negar la condición',
     condNegarAyuda: 'Negar la condición («si NO llueve») no es lo mismo que negar el resultado («NO me quedaré»).',
     aplicar: 'aplicar',
+    /* El botón muestra la forma ACTUAL y el título dice a cuál se cambia: en un
+       control de dos estados, mostrar el destino confunde tanto como mostrar el
+       estado sin decir qué hace el clic. */
+    contraerVer: 'Ver la forma entera: is not',
+    contraerVolver: 'Volver a la contraída: isn’t',
     /* La -s final es ambigua de verdad: la app no puede saber si «Jans» es un
        nombre o un plural. Decirlo enseña algo cierto; adivinar, no. */
     nombreODuda: 'Tomé «{palabra}» como plural. ¿Es un nombre propio?',
@@ -174,6 +179,8 @@ export const translations = {
     condNegarCondicion: 'Negate the condition',
     condNegarAyuda: 'Negating the condition ("if it does NOT rain") is not the same as negating the result ("I will NOT stay").',
     aplicar: 'apply',
+    contraerVer: 'Show the full form: is not',
+    contraerVolver: 'Back to the contracted form: isn’t',
     nombreODuda: 'I read "{palabra}" as a plural. Is it a proper name?',
     nombreSi: 'yes, it is a name',
     reportar: 'Report a problem',

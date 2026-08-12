@@ -45,6 +45,7 @@ import {
 import {
   smartCaseSubject,
   isThirdPersonSingular,
+  expandirNegacion,
   registrarNombres,
   nombreAmbiguo,
   getBeForm,
@@ -893,6 +894,24 @@ const EnglishSentenceBuilder = () => {
     const asunto = language === 'es' ? 'Grammaster: reporte de un problema' : 'Grammaster: problem report';
     window.location.href = `mailto:${destino}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(reporte)}`;
   };
+
+  /* CONTRAER LA NEGATIVA. Por defecto SÍ, que es lo natural y lo que enseña el
+     libro. La entera existe porque el profesor la quiere para explicar la
+     estructura, y esa es una decisión de clase, no de la app.
+     Clave compartida: si la elige aquí, Question Lab la respeta en su respuesta
+     modelo. Que las dos apps escriban distinto la misma negación es justo lo
+     que veníamos arreglando.
+     Solo afecta a lo que se MUESTRA: el corrector de la práctica acepta las dos
+     formas desde siempre, así que nadie ve un error nuevo por esto. */
+  const [contraer, setContraerState] = useState(() => {
+    try { return localStorage.getItem('gh_contraccion') !== 'entera'; } catch { return true; }
+  });
+  const setContraer = (v) => {
+    setContraerState(v);
+    try { localStorage.setItem('gh_contraccion', v ? 'contraida' : 'entera'); } catch { /* modo privado */ }
+  };
+  /* Un solo sitio por donde pasa todo lo que se enseña en pantalla. */
+  const txt = (s) => (contraer ? s : expandirNegacion(s));
 
   const [subjectValidation, setSubjectValidation] = useState({ valid: true, warning: null });
   /* Depende de `nombresPropios` aunque no lo use: el registro que consulta
@@ -2904,7 +2923,7 @@ const EnglishSentenceBuilder = () => {
                                       )}
                                     </span>
                                   ))
-                                : practiceQuestion.wrongSentence
+                                : txt(practiceQuestion.wrongSentence)
                               }
                             </p>
                             <div className="flex items-center gap-2 text-xs mt-1 mb-3">
@@ -2933,7 +2952,7 @@ const EnglishSentenceBuilder = () => {
                                 ? (language === 'es' ? '¿Qué tiempo/estructura verbal y modo es?' : 'What tense/structure and mode is this?')
                                 : (language === 'es' ? '¿Qué modo tiene esta oración?' : 'What mode is this sentence?')}
                             </p>
-                            <p className="text-xl font-semibold text-gray-800 mb-4 font-['Atkinson_Hyperlegible']">"{practiceQuestion.fullSentence}"</p>
+                            <p className="text-xl font-semibold text-gray-800 mb-4 font-['Atkinson_Hyperlegible']">"{txt(practiceQuestion.fullSentence)}"</p>
                             {/* Opciones de tiempo (solo si hay suficientes tiempos disponibles) */}
                             {practiceQuestion.askTense && (
                               <>
@@ -3354,6 +3373,22 @@ const EnglishSentenceBuilder = () => {
                     </button>
                   ))}
                 </div>
+
+                {/* CONTRACCIÓN. Solo en la negativa, que es donde significa
+                    algo: en afirmativa e interrogativa no hay nada que
+                    contraer, y un control que no hace nada es ruido.
+                    Aquí y no en la cabecera a propósito: aparece pegado a la
+                    forma que modifica, y la cabecera ya está cargada. */}
+                {selectedMode === 'negative' && (
+                  <button
+                    onClick={() => setContraer(!contraer)}
+                    aria-pressed={!contraer}
+                    title={contraer ? t.contraerVer : t.contraerVolver}
+                    className="shrink-0 px-2.5 py-1.5 text-xs font-semibold rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-all whitespace-nowrap"
+                  >
+                    {contraer ? "isn't" : 'is not'}
+                  </button>
+                )}
 
                 <button
                   onClick={resetForm}
@@ -3849,7 +3884,7 @@ const EnglishSentenceBuilder = () => {
 
                     // La puntuación no lleva explicación — se muestra como texto simple
                     if (part.type === 'punctuation') {
-                      return <span key={index} className="text-gray-500 px-1">{part.text}</span>;
+                      return <span key={index} className="text-gray-500 px-1">{txt(part.text)}</span>;
                     }
 
                     const isPinned = selectedPartIndex === index;
@@ -3864,7 +3899,7 @@ const EnglishSentenceBuilder = () => {
                         aria-expanded={isPinned}
                         className={`relative group appearance-none bg-transparent border-0 cursor-pointer transition-all duration-200 ${colorClasses} px-1 rounded ${isPinned ? 'ring-2 ring-offset-1 ring-indigo-300' : ''}`}
                       >
-                        {part.text}
+                        {txt(part.text)}
                         {/* La explicación se muestra en un panel único bajo la oración (evita el recorte en los bordes de la pantalla) */}
                         <span id={`part-desc-${index}`} className="sr-only">
                           {partLabel}. {part.explanation}
@@ -3897,7 +3932,7 @@ const EnglishSentenceBuilder = () => {
 
               </div>
             ) : (
-              <p className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-800 mb-4">{generatedSentence}</p>
+              <p className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-800 mb-4">{txt(generatedSentence)}</p>
             )}
 
             {/* Botones de acción */}

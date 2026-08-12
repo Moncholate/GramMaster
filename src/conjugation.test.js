@@ -152,7 +152,9 @@ describe('buildSentenceText — casos críticos de la revisión', () => {
   });
   it('adverbio con "be" como verbo principal: negativa (antes se perdía el adverbio)', () => {
     expect(s({ mode: 'negative', subject: 'Victor', verb: 'be', complement: 'a good teacher', tense: 'simple-present', adverb: 'always' }))
-      .toBe('Victor is not always a good teacher.');
+      /* Contraída desde 2026-08-12: la app contraía do/does/did/will y dejaba
+         enteros be y have, sin ninguna regla que lo explicara. Ver `negAux`. */
+      .toBe("Victor isn't always a good teacher.");
   });
   it('adverbio con "be" como verbo principal: interrogativa (antes se perdía el adverbio)', () => {
     expect(s({ mode: 'interrogative', subject: 'Victor', verb: 'be', complement: 'a good teacher', tense: 'simple-present', adverb: 'always' }))
@@ -160,7 +162,7 @@ describe('buildSentenceText — casos críticos de la revisión', () => {
   });
   it('adverbio con "be" en pasado simple: negativa', () => {
     expect(s({ mode: 'negative', subject: 'she', verb: 'be', complement: 'happy', tense: 'simple-past', adverb: 'always' }))
-      .toBe('She was not always happy.');
+      .toBe("She wasn't always happy.");
   });
   it('adverbio con "be" en pasado simple: interrogativa', () => {
     expect(s({ mode: 'interrogative', subject: 'she', verb: 'be', complement: 'happy', tense: 'simple-past', adverb: 'always' }))

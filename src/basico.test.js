@@ -41,11 +41,13 @@ describe('la tabla canónica', () => {
     ['simple-past', 'she', 'negative',          "She didn't work."],
     ['simple-past', 'she', 'interrogative',     'Did she work?'],
     ['present-continuous', 'she', 'affirmative',   'She is working.'],
-    /* Sin contraer, y es la app la que tiene razón: contrae el auxiliar
-       PRESTADO (don't, doesn't, didn't, won't) y deja entero el que ya estaba
-       en la oración (is not, have not, had not). Las dos formas son correctas;
-       lo que se fija aquí es que no cambie sin que alguien lo decida. */
-    ['present-continuous', 'she', 'negative',      'She is not working.'],
+    ['present-continuous', 'she', 'negative',      "She isn't working."],
+    ['present-perfect', 'she', 'negative',         "She hasn't worked."],
+    ['past-perfect', 'she', 'negative',            "She hadn't worked."],
+    ['past-continuous', 'they', 'negative',        "They weren't working."],
+    /* `am` es el único auxiliar sin negativa contraída: «amn't» no existe y
+       «aren't I» solo vale en preguntas. No es un olvido, es la excepción. */
+    ['present-continuous', 'I', 'negative',        'I am not working.'],
     ['present-continuous', 'she', 'interrogative', 'Is she working?'],
     ['present-perfect', 'she', 'affirmative',   'She has worked.'],
     ['present-perfect', 'they', 'affirmative',  'They have worked.'],

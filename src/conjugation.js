@@ -258,6 +258,46 @@ const MODAL_NEGATIONS = {
 
 export const negateModal = (modal) => MODAL_NEGATIONS[modal] || modal + ' not';
 
+/* ── LA NEGATIVA SE CONTRAE ──────────────────────────────────────────────────
+   La app producía `don't`/`doesn't`/`didn't`/`won't` contraídos y `is not`,
+   `have not`, `had not` enteros. No había regla que lo explicara: la única
+   formulable —«se contrae el auxiliar prestado»— la desmiente `won't`, porque
+   `will` es tan propio de su tiempo como `have`. El alumno veía dos piezas del
+   mismo color escritas distinto y sin motivo.
+   Se contrae SIEMPRE: es lo natural, es lo que enseña el libro desde las
+   primeras unidades y es lo que Question Lab ya hacía en su respuesta modelo.
+
+   `am` es la excepción, y no es un olvido: NO tiene contracción negativa
+   estándar. «amn't» no existe y «aren't I» solo vale en preguntas. Lo natural
+   sería «I'm not», pero eso contrae SUJETO + auxiliar y rompería el despiece de
+   la app, que pinta cada rol por separado. Que `am` sea el único auxiliar sin
+   negativa contraída es además un dato que vale la pena enseñar. */
+const NEG_CONTRAIDA = {
+  is: "isn't", are: "aren't", was: "wasn't", were: "weren't",
+  have: "haven't", has: "hasn't", had: "hadn't",
+  am: 'am not',
+};
+export const negAux = (aux) => NEG_CONTRAIDA[String(aux).toLowerCase()] || aux + ' not';
+
+/* La forma ENTERA, para cuando el profesor quiere enseñar la estructura. Es
+   decisión suya en clase, así que la app ofrece las dos y no elige por él.
+   Va sobre el texto ya armado y no sobre el motor: así el corrector de la
+   práctica —que acepta las dos formas— no se entera de nada. */
+const NEG_ENTERA = {
+  "isn't": 'is not', "aren't": 'are not', "wasn't": 'was not', "weren't": 'were not',
+  "haven't": 'have not', "hasn't": 'has not', "hadn't": 'had not',
+  "don't": 'do not', "doesn't": 'does not', "didn't": 'did not',
+  "won't": 'will not', "can't": 'cannot', "couldn't": 'could not',
+  "shouldn't": 'should not', "wouldn't": 'would not', "mustn't": 'must not',
+  "shan't": 'shall not', "mightn't": 'might not',
+};
+export const expandirNegacion = (texto) =>
+  String(texto == null ? '' : texto).replace(/\b[A-Za-z]+n['’]t\b/g, (m) => {
+    const s = NEG_ENTERA[m.toLowerCase().replace('’', "'")];
+    if (!s) return m;
+    return /^[A-Z]/.test(m) ? s.charAt(0).toUpperCase() + s.slice(1) : s;
+  });
+
 /* `have to` es el único de la lista que no se comporta como modal: se conjuga
    (he has to) y se niega/pregunta con do/does, igual que un verbo normal. Se
    trata aparte en las tres formas para no romper el resto. */
@@ -296,29 +336,29 @@ export const getAuxAndVerbForm = (subj, v, tenseId, modal, mode) => {
 
   switch (tenseId) {
     case 'simple-present':
-      if (isBe) return { auxiliary: neg ? beForm + ' not' : beForm, verbForm: beForm };
+      if (isBe) return { auxiliary: neg ? negAux(beForm) : beForm, verbForm: beForm };
       if (neg) return { auxiliary: is3p ? "doesn't" : "don't", verbForm: vLower };
       if (int) return { auxiliary: is3p ? 'does' : 'do', verbForm: vLower };
       return { auxiliary: '', verbForm: is3p ? conjugate3p(vLower) : vLower };
     case 'present-continuous':
-      return { auxiliary: beForm + (neg ? ' not' : ''), verbForm: ing };
+      return { auxiliary: (neg ? negAux(beForm) : beForm), verbForm: ing };
     case 'simple-past':
-      if (isBe) return { auxiliary: neg ? wasWere + ' not' : wasWere, verbForm: wasWere };
+      if (isBe) return { auxiliary: neg ? negAux(wasWere) : wasWere, verbForm: wasWere };
       if (neg) return { auxiliary: "didn't", verbForm: vLower };
       if (int) return { auxiliary: 'did', verbForm: vLower };
       return { auxiliary: '', verbForm: simplePast(vLower) };
     case 'past-continuous':
-      return { auxiliary: wasWere + (neg ? ' not' : ''), verbForm: ing };
+      return { auxiliary: (neg ? negAux(wasWere) : wasWere), verbForm: ing };
     case 'simple-future':
       return { auxiliary: neg ? "won't" : 'will', verbForm: vLower };
     case 'future-going-to':
-      return { auxiliary: beForm + (neg ? ' not' : '') + ' going to', verbForm: vLower };
+      return { auxiliary: (neg ? negAux(beForm) : beForm) + ' going to', verbForm: vLower };
     case 'present-perfect':
-      return { auxiliary: hasHave + (neg ? ' not' : ''), verbForm: pp };
+      return { auxiliary: (neg ? negAux(hasHave) : hasHave), verbForm: pp };
     case 'past-perfect':
-      return { auxiliary: 'had' + (neg ? ' not' : ''), verbForm: pp };
+      return { auxiliary: (neg ? negAux('had') : 'had'), verbForm: pp };
     case 'present-perfect-continuous':
-      return { auxiliary: hasHave + (neg ? ' not' : '') + ' been', verbForm: ing };
+      return { auxiliary: (neg ? negAux(hasHave) : hasHave) + ' been', verbForm: ing };
     case 'used-to':
       return { auxiliary: neg ? "didn't use to" : int ? 'did use to' : 'used to', verbForm: vLower };
     default:
@@ -388,20 +428,20 @@ export const buildSentenceText = ({ mode, subject: subjRaw, verb: vRaw, compleme
     if (isHaveTo(modal))                    return cap(subj) + ' ' + (is3p ? "doesn't" : "don't") + ' have to' + advSp + v + compStr + '.';
     if (modal)                              return cap(subj) + ' ' + negateModal(modal) + advSp + v + compStr + '.';
     if (tense === 'simple-present') {
-      if (isBeVerb)                         return cap(subj) + ' ' + beForm + ' not' + advAfter + compStr + '.';
+      if (isBeVerb)                         return cap(subj) + ' ' + negAux(beForm) + advAfter + compStr + '.';
       return cap(subj) + ' ' + (is3p ? "doesn't" : "don't") + advSp + v + compStr + '.';
     }
-    if (tense === 'present-continuous')     return cap(subj) + ' ' + beForm + ' not' + advSp + presentParticiple(v) + compStr + '.';
+    if (tense === 'present-continuous')     return cap(subj) + ' ' + negAux(beForm) + advSp + presentParticiple(v) + compStr + '.';
     if (tense === 'simple-past') {
-      if (isBeVerb)                         return cap(subj) + ' ' + wasWere + ' not' + advAfter + compStr + '.';
+      if (isBeVerb)                         return cap(subj) + ' ' + negAux(wasWere) + advAfter + compStr + '.';
       return cap(subj) + " didn't" + advSp + v + compStr + '.';
     }
-    if (tense === 'past-continuous')        return cap(subj) + ' ' + wasWere + ' not' + advSp + presentParticiple(v) + compStr + '.';
+    if (tense === 'past-continuous')        return cap(subj) + ' ' + negAux(wasWere) + advSp + presentParticiple(v) + compStr + '.';
     if (tense === 'simple-future')          return cap(subj) + " won't" + advSp + v + compStr + '.';
-    if (tense === 'future-going-to')        return cap(subj) + ' ' + beForm + ' not' + advSp + 'going to ' + v + compStr + '.';
-    if (tense === 'present-perfect')        return cap(subj) + ' ' + hasHave + ' not' + advSp + pp + compStr + '.';
-    if (tense === 'past-perfect')           return cap(subj) + ' had not' + advSp + pp + compStr + '.';
-    if (tense === 'present-perfect-continuous') return cap(subj) + ' ' + hasHave + ' not' + advSp + 'been ' + presentParticiple(v) + compStr + '.';
+    if (tense === 'future-going-to')        return cap(subj) + ' ' + negAux(beForm) + advSp + 'going to ' + v + compStr + '.';
+    if (tense === 'present-perfect')        return cap(subj) + ' ' + negAux(hasHave) + advSp + pp + compStr + '.';
+    if (tense === 'past-perfect')           return cap(subj) + ' ' + negAux('had') + advSp + pp + compStr + '.';
+    if (tense === 'present-perfect-continuous') return cap(subj) + ' ' + negAux(hasHave) + advSp + 'been ' + presentParticiple(v) + compStr + '.';
     if (tense === 'used-to')                return cap(subj) + " didn't" + advSp + 'use to ' + v + compStr + '.';
   }
   if (mode === 'interrogative') {
