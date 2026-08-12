@@ -240,6 +240,82 @@ export const CURRICULO = {
     "cefr": "intermedio2",
     "unidad": "11B"
   },
+  "wh-what": {
+    "cefr": "basico1",
+    "unidad": "2B"
+  },
+  "wh-where": {
+    "cefr": "basico1",
+    "unidad": "2B"
+  },
+  "wh-who": {
+    "cefr": "basico1",
+    "unidad": "2B"
+  },
+  "wh-whom": {
+    "cefr": "basico1",
+    "unidad": "2B"
+  },
+  "wh-when": {
+    "cefr": "basico1",
+    "unidad": "2B"
+  },
+  "wh-why": {
+    "cefr": "basico1",
+    "unidad": "2B"
+  },
+  "wh-how": {
+    "cefr": "basico1",
+    "unidad": "2B"
+  },
+  "wh-how-old": {
+    "cefr": "basico1",
+    "unidad": "2B"
+  },
+  "wh-what-time": {
+    "cefr": "basico1",
+    "unidad": "2B"
+  },
+  "wh-what-color": {
+    "cefr": "basico1",
+    "unidad": "2B"
+  },
+  "wh-which": {
+    "cefr": "basico1",
+    "unidad": "2B"
+  },
+  "wh-what-kind": {
+    "cefr": "basico1",
+    "unidad": "2B"
+  },
+  "wh-how-far": {
+    "cefr": "basico1",
+    "unidad": "2B"
+  },
+  "wh-how-fast": {
+    "cefr": "basico1",
+    "unidad": "2B"
+  },
+  "wh-how-often": {
+    "cefr": "basico1",
+    "unidad": "6B"
+  },
+  "wh-whose": {
+    "cefr": "elemental1",
+    "unidad": "4A"
+  },
+  "wh-how-much": {
+    "cefr": "elemental2",
+    "unidad": "9B"
+  },
+  "wh-how-many": {
+    "cefr": "elemental2",
+    "unidad": "9B"
+  },
+  "wh-how-long": {
+    "cefr": "intermedio2",
+    "unidad": "9B"
+  },
   "conditional-1": {
     "cefr": "intermedio2",
     "unidad": "8B"
