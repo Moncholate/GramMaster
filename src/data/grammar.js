@@ -1,4 +1,5 @@
-import { NIVELES, delCurriculo } from './curriculum.generated';
+import { NIVELES, delCurriculo, DIAS_REVISION } from './curriculum.generated';
+import { dayGap } from '../gamification.generated.js';
 
 /* Modos de oración.
    Antes cada uno traía su propio tono (emerald / rose / amber) y los dos ejes
@@ -42,6 +43,22 @@ export const modes = [
    ha visto — y como la racha y las insignias castigan el fallo, lo penaliza por
    no saber algo que nadie le ha enseñado. */
 export { UNIDADES_POR_CURSO } from './curriculum.generated';
+export { DIAS_REVISION };
+
+/* ¿Toca volver a preguntar hasta dónde va la clase? El dato caduca solo y su
+   fallo es silencioso: una unidad vieja solo puede hacer la app más chica, y
+   esconde justo lo que se vio en la última clase.
+     · sin unidad (`null` sin responder, `''` todo el curso) → no se pregunta.
+       Con `''` no hay nada escondido, así que no hay nada que envejezca.
+     · sin fecha → sí. Es quien ya tenía unidad antes de que esto existiera, y
+       su valor es el más viejo que hay.
+   Vive aquí, junto a `estaVisto`, y no dentro del componente: es una regla del
+   currículo y se prueba como tal. */
+export const unidadPorRevisar = (unidad, fecha, hoy, dias = DIAS_REVISION) => {
+  if (!unidad) return false;
+  if (!fecha) return true;
+  return dayGap(fecha, hoy) >= dias;
+};
 
 /* Orden DENTRO del curso. Comparar como texto no sirve: «10A» < «9B» carácter a
    carácter. Sin unidad (`null`) devuelve -1 = disponible desde el principio, que

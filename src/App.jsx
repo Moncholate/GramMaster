@@ -20,6 +20,7 @@ import {
   UNIDADES_POR_CURSO,
   unidadIndice,
   estaVisto,
+  unidadPorRevisar,
   PARES_CONDICIONAL,
   COMPLEMENTOS_BE,
   COMPLEMENTOS_ADVERBIALES,
@@ -69,7 +70,7 @@ import {
 import { useClipboard, useSpeechSynthesis, useLocalStorage, useSessionStats } from './hooks';
 import { ROLE_TW } from './tokens.generated.js';
 import { TENSE_FAMILIES, ASPECTS } from './tenseFamilies.generated.js';
-import { loadProgress, saveProgress, recordAttempt, recordRound, evaluateBadges, BADGES } from './gamification.generated.js';
+import { loadProgress, saveProgress, recordAttempt, recordRound, evaluateBadges, BADGES, todayISO } from './gamification.generated.js';
 
 /* Toggle de tema de la suite (auto→claro→oscuro por SO; toggle binario que ofrece
    el modo destino). Usa window.ghTheme, sincronizado same-origin entre las 4 apps. */
@@ -756,9 +757,36 @@ const EnglishSentenceBuilder = () => {
   const [unidadCurso, setUnidadCursoState] = useState(() => {
     try { return localStorage.getItem('gh_unidad'); } catch { return null; }
   });
+  /* REVISIÓN PERIÓDICA. Este dato caduca solo: el curso avanza ~una unidad por
+     clase y hay dos clases por semana (los intensivos, tres o cuatro), así que
+     a los siete días está corrido y nadie lo mueve. El alumno no tiene por qué
+     acordarse de un ajuste que puso una vez.
+     Y el fallo es SILENCIOSO Y SIEMPRE HACIA EL MISMO LADO: una unidad vieja
+     solo puede hacer la app más chica. No sale ningún error; queda una app
+     congelada en la semana 3 que esconde justo lo que se vio en la última
+     clase, que es cuando más se querría practicar.
+     A los 7 días la línea vuelve a ser tarjeta y pregunta si siguen ahí.
+     Con `''` (todo el curso) no se pregunta: ahí no hay nada escondido, así que
+     no hay nada que se pueda quedar viejo. Sin fecha guardada = por revisar,
+     que es el caso de quien ya tenía unidad antes de que esto existiera.
+     `todayISO` sale del motor de progreso y no de una copia local: es fecha
+     LOCAL y no UTC, distinción que costó encontrar con la racha del que estudia
+     de noche, y dos implementaciones del mismo día acabarían divergiendo. Por
+     lo mismo el PLAZO viene de curriculum.json y la REGLA de grammar.js, junto
+     a `estaVisto`: las dos apps deciden esto igual o no lo deciden. */
+  const [unidadFecha, setUnidadFechaState] = useState(() => {
+    try { return localStorage.getItem('gh_unidad_fecha'); } catch { return null; }
+  });
+  const sellarUnidadFecha = () => {
+    const hoy = todayISO();
+    setUnidadFechaState(hoy);
+    try { localStorage.setItem('gh_unidad_fecha', hoy); } catch { /* modo privado */ }
+  };
+  const hayQueRevisarUnidad = unidadPorRevisar(unidadCurso, unidadFecha, todayISO());
   const setUnidadCurso = (v) => {
     setUnidadCursoState(v);
     try { localStorage.setItem('gh_unidad', v); } catch { /* modo privado */ }
+    sellarUnidadFecha();
   };
   /* El nivel vigente en un ref, no solo en el estado: el `handler` del
      postMessage del Hub se registra una vez (`useEffect` con []), así que lee
@@ -2704,9 +2732,11 @@ const EnglishSentenceBuilder = () => {
                       corrige y puntúa. Preguntarlo en la portada sería una
                       segunda barrera de entrada para quien solo viene a construir
                       oraciones.
-                      Se pregunta UNA vez (unidadCurso === null) y después queda
-                      como una línea compacta, porque el curso avanza cada semana
-                      y esto se queda viejo: tiene que ser fácil de mover. */}
+                      Se pregunta la primera vez (unidadCurso === null), después
+                      queda como una línea compacta, y vuelve a preguntar cuando
+                      la respuesta caduca. Esa tercera vuelta existe porque «fácil
+                      de mover» no bastó: el curso avanza cada semana y nadie
+                      mueve un ajuste que puso una vez. */}
                   {!practiceQuestion && (() => {
                     /* UN SOLO control en los dos estados, y es un `select`: la
                        lista de unidades llega a 18 en Intermedio II, que en un
@@ -2729,11 +2759,34 @@ const EnglishSentenceBuilder = () => {
                         ))}
                       </select>
                     );
-                    return sinResponder ? (
+                    /* La revisión repite la forma de TARJETA de la primera vez a
+                       propósito: es la única forma que el alumno ya aprendió a
+                       leer como «esto te pregunta algo». La línea gris no la lee
+                       nadie, que es literalmente cómo empezó todo esto (se
+                       reportó el selector como desaparecido, y estaba ahí).
+                       Tapa el selector de contenido mientras dura, igual que la
+                       primera vez: es un toque, y así la pregunta no se puede
+                       pasar por alto. */
+                    return sinResponder || hayQueRevisarUnidad ? (
                       <div className="p-3 rounded-xl border-2 border-indigo-200 bg-indigo-50">
-                        <p className="font-semibold text-gray-800 text-sm">{t.unidadPregunta}</p>
-                        <p className="text-xs text-gray-600 mt-1 mb-2">{t.unidadPorQue}</p>
-                        {selector}
+                        <p className="font-semibold text-gray-800 text-sm">
+                          {sinResponder ? t.unidadPregunta : t.unidadRevisar.replace('{u}', unidadCurso)}
+                        </p>
+                        <p className="text-xs text-gray-600 mt-1 mb-2">
+                          {sinResponder ? t.unidadPorQue : t.unidadRevisarPorQue}
+                        </p>
+                        {sinResponder ? selector : (
+                          <div className="flex flex-wrap items-center gap-2">
+                            {/* Confirmar va primero: es lo que va a tocar la mayoría. */}
+                            <button
+                              onClick={sellarUnidadFecha}
+                              className="px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700"
+                            >
+                              {t.unidadSeguimos}
+                            </button>
+                            {selector}
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 text-xs text-gray-600">

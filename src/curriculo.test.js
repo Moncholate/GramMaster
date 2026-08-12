@@ -3,6 +3,7 @@ import {
   tenses, modals, COURSE_ORDER, UNIDADES_POR_CURSO, unidadIndice,
   CONDICIONALES_POR_CURSO, estaVisto, VERBOS_REGULARES, VERBOS_REGULARES_AMPLIA, VERBOS_IRREGULARES, VERBOS_IRREGULARES_BASICO, VERBOS_IRREGULARES_INTERMEDIO, VERBOS_IRREGULARES_AVANZADO,
   COMPLEMENTO_DE_VERBO, VERBOS_CON_ADVERBIAL_LIBRE, VERBOS_FUERA_DE_PRACTICA, COMPLEMENTOS_TIEMPO,
+  unidadPorRevisar, DIAS_REVISION,
 } from './data/grammar';
 import { irregularVerbs } from './data/verbs';
 import { simplePast, pastParticiple, conjugate3p, presentParticiple } from './conjugation';
@@ -413,5 +414,67 @@ describe('la escala de irregulares crece con el curso', () => {
       expect(lista).not.toContain('learn');
     }
     expect(VERBOS_REGULARES).toContain('learn');
+  });
+});
+
+/* ── Revisión periódica de la unidad ────────────────────────────────────────
+   El profesor reportó el selector de unidad como «desaparecido» y no había
+   desaparecido: ya lo había respondido, así que salía la línea compacta en vez
+   de la tarjeta. Eso destapó el problema real, que no es de visibilidad: el
+   dato CADUCA SOLO. Un curso avanza ~una unidad por clase, dos clases por
+   semana (3-4 los intensivos), y nadie vuelve a tocar un ajuste que puso una
+   vez. El fallo es silencioso y siempre hacia el mismo lado: una unidad vieja
+   solo puede hacer la app más chica, y esconde justo lo que se vio en la última
+   clase. Por eso se vuelve a preguntar, y por eso se prueba también lo que NO
+   debe preguntar. */
+describe('cuándo se vuelve a preguntar hasta dónde va la clase', () => {
+  const hoy = '2026-08-12';
+  const haceDias = (n) => {
+    const d = new Date(`${hoy}T12:00:00`);
+    d.setDate(d.getDate() - n);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  };
+
+  it('el plazo sale de curriculum.json y es un número de días usable', () => {
+    // Escrito a mano en cada app, los dos números acabarían diciendo cosas
+    // distintas — que es exactamente lo que pasó con el nivel de `would`.
+    expect(DIAS_REVISION).toBeGreaterThan(0);
+    expect(DIAS_REVISION).toBeLessThanOrEqual(30);
+  });
+
+  it('recién puesta no se pregunta', () => {
+    expect(unidadPorRevisar('5B', hoy, hoy)).toBe(false);
+  });
+
+  it('un día antes del plazo todavía no', () => {
+    expect(unidadPorRevisar('5B', haceDias(DIAS_REVISION - 1), hoy)).toBe(false);
+  });
+
+  it('cumplido el plazo, sí', () => {
+    expect(unidadPorRevisar('5B', haceDias(DIAS_REVISION), hoy)).toBe(true);
+    expect(unidadPorRevisar('5B', haceDias(DIAS_REVISION * 4), hoy)).toBe(true);
+  });
+
+  it('«todo el curso» no se pregunta nunca: no esconde nada', () => {
+    // Con '' no hay contenido oculto, así que no hay nada que se ponga viejo.
+    // Preguntarlo cada semana sería molestar sin motivo.
+    expect(unidadPorRevisar('', haceDias(400), hoy)).toBe(false);
+  });
+
+  it('sin responder tampoco: para eso está la tarjeta original', () => {
+    expect(unidadPorRevisar(null, null, hoy)).toBe(false);
+  });
+
+  it('con unidad y SIN fecha se pregunta', () => {
+    // Es el caso de quien ya tenía una unidad puesta antes de que esto
+    // existiera: su valor es justamente el más viejo de todos.
+    expect(unidadPorRevisar('5B', null, hoy)).toBe(true);
+  });
+
+  it('el cruce de mes y de año se cuenta en días, no en texto', () => {
+    // Comparar 'yyyy-mm-dd' como texto daría bien el orden pero no la RESTA, y
+    // el plazo es una resta. Enero contra diciembre es donde eso se rompe.
+    expect(unidadPorRevisar('5B', '2025-12-30', '2026-01-02')).toBe(false);
+    expect(unidadPorRevisar('5B', '2025-12-30', '2026-01-06')).toBe(true);
   });
 });

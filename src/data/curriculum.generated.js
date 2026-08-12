@@ -136,6 +136,11 @@ export const UNIDADES_POR_CURSO = {
   ]
 };
 
+/* Cada cuántos días se le vuelve a preguntar al alumno si su curso sigue en esa
+   unidad. Ver `$revision` en curriculum.json: el plazo es decisión del temario,
+   no de cada app. */
+export const DIAS_REVISION = 7;
+
 /* id → { cefr, unidad, unidadBe, unidadInterrogativa, unidadTerceraPersona,
    unidadIrregulares }. Solo están los campos que ese contenido usa. */
 export const CURRICULO = {

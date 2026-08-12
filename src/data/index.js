@@ -15,6 +15,8 @@ export {
   UNIDADES_POR_CURSO,
   unidadIndice,
   estaVisto,
+  unidadPorRevisar,
+  DIAS_REVISION,
   PARES_CONDICIONAL,
   COMPLEMENTOS_BE,
   COMPLEMENTOS_ADVERBIALES,
