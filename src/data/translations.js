@@ -99,7 +99,10 @@ export const translations = {
     correctError: 'Corregir errores',
     buildSentence: 'Construir oración',
     startPractice: 'Iniciar Práctica',
-    exitPractice: 'Salir de Práctica',
+    /* Decía «Salir de Práctica» y NO salía de Práctica: suelta la pregunta y
+       deja al alumno en el menú de modos. El que sale de la sección es
+       «← Constructor», arriba. La etiqueta nombra ahora lo que hace. */
+    exitPractice: 'Salir del ejercicio',
     checkAnswer: 'Verificar Respuesta',
     nextQuestion: 'Siguiente',
     correct: '¡Correcto!',
@@ -256,7 +259,7 @@ export const translations = {
     correctError: 'Correct errors',
     buildSentence: 'Build sentence',
     startPractice: 'Start Practice',
-    exitPractice: 'Exit Practice',
+    exitPractice: 'Exit exercise',
     checkAnswer: 'Check Answer',
     nextQuestion: 'Next',
     correct: 'Correct!',

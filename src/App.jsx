@@ -3235,7 +3235,16 @@ const EnglishSentenceBuilder = () => {
                             {t.nextQuestion} <span className="opacity-60 font-normal hidden sm:inline">(Enter)</span>
                           </button>
                         )}
-                        <button onClick={() => { setPracticeQuestion(null); setPracticeAnswer(''); setPracticeResult(null); setIdentifyTenseAnswer(''); setIdentifyModeAnswer(''); setReviewUpToDate(false); }} className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium">{t.exitPractice}</button>
+                        {/* Era `bg-gray-200` plano, o sea el MISMO gris que el
+                            «← Constructor» de arriba (`bg-gray-100`), siendo
+                            destinos distintos: uno suelta el ejercicio y el otro
+                            sale de la sección. Ahora va con borde marcado y texto
+                            pleno: se lee como salida sin competir con el relleno
+                            sólido de «Siguiente», que es la acción. El tono del
+                            borde es propio (`btn-salir` en index.css) porque los
+                            `border-gray-*` de Tailwind caen a #2a3042 en oscuro y
+                            ahí el borde desaparecería. */}
+                        <button onClick={() => { setPracticeQuestion(null); setPracticeAnswer(''); setPracticeResult(null); setIdentifyTenseAnswer(''); setIdentifyModeAnswer(''); setReviewUpToDate(false); }} className="btn-salir px-4 py-2 rounded-lg font-bold text-gray-800">{t.exitPractice}</button>
                       </div>
                     </div>
                     )
