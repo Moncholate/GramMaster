@@ -889,10 +889,34 @@ const EnglishSentenceBuilder = () => {
       linea('Unidad', unidadCurso || (unidadCurso === '' ? 'todo el curso' : 'sin responder')),
       linea('Idioma', language),
       p ? `— PRÁCTICA (${practiceType}) —` : '— CONSTRUCTOR —',
-      p ? linea('Ejercicio', p.fullSentence || p.wrongSentence || '') : linea('Tiempo', esCondicional ? `condicional ${tipoCond}` : selectedTense),
+      p ? linea('Tipo de ejercicio', p.type) : null,
+      p ? linea('Ejercicio', p.wrongSentence || p.fullSentence || '') : linea('Tiempo', esCondicional ? `condicional ${tipoCond}` : selectedTense),
+      /* En «corrige el error» la oración de pantalla lleva un fallo puesto a
+         propósito: sin saber CUÁL, el reporte parece decir que la app genera
+         mal. */
+      p && p.type === 'correct' ? linea('Error plantado', `${p.wrongPart} → ${p.correctAnswer}`) : null,
+      p && p.type === 'correct' ? linea('Oración buena', p.fullSentence) : null,
       p ? linea('Tiempo', p.tense && p.tense.id) : linea('Modal', selectedModal),
       p ? linea('Forma', p.mode) : linea('Forma', selectedMode),
+      /* QUÉ CONTESTÓ EL ALUMNO Y CÓMO SE CORRIGIÓ. Faltaba entero: el reporte
+         decía qué esperaba la app pero no qué le habían dado ni qué veredicto
+         puso, así que no se podía saber si el fallo era del alumno o de la
+         corrección, que es exactamente lo que se reporta desde práctica.
+         El de identificar responde con dos desplegables y no con texto, así que
+         su respuesta son otros campos. */
+      p && p.type === 'identify' ? linea('Marcó', `tiempo ${identifyTenseAnswer || '—'} · forma ${identifyModeAnswer || '—'}`) : null,
+      p && p.type !== 'identify' ? linea('Contestó', practiceAnswer || '(nada)') : null,
       p ? linea('Esperaba', p.correctAnswer) : linea('Wh', [whWord, whExtension].filter(Boolean).join(' ')),
+      /* Y las OTRAS formas que también daba por buenas: un reporte que enseña
+         una sola hace pensar que la app rechaza alternativas legítimas cuando
+         a lo mejor las acepta. */
+      p && p.acceptedAnswers && p.acceptedAnswers.length > 1
+        ? linea('También aceptaba', p.acceptedAnswers.filter(a => a !== p.correctAnswer).join(' / ')) : null,
+      p ? linea('Corregido', practiceResult
+            ? (practiceResult.correct ? 'sí, lo dio por bueno' : 'sí, lo dio por malo')
+            : 'todavía no') : null,
+      /* La ronda sitúa el fallo dentro de la sesión y dice qué racha se perdió. */
+      p ? linea('Ronda', `${ronda.hechos}/${RONDA} · ${ronda.ok} bien · racha ${answerStreak}`) : null,
       p ? null : linea('Sujeto', subject),
       p ? null : linea('Verbo', verb),
       p ? null : linea('Complemento', complement),
