@@ -3276,8 +3276,20 @@ const EnglishSentenceBuilder = () => {
                 </div>
               )}
 
-              {/* Panel de Guía de uso */}
-              {activePanel === 'guide' && <UsageGuide language={language} />}
+              {/* Panel de Guía de uso. Al final va la autoría: presente pero
+                  fuera del camino. No es información que el alumno necesite
+                  mientras practica, y una franja fija se come pantalla en un
+                  teléfono. El aviso que pesa a efectos legales es el del código
+                  y el LICENSE del repositorio; esto es para quien mire quién
+                  hizo la app. */}
+              {activePanel === 'guide' && (
+                <>
+                  <UsageGuide language={language} />
+                  <p className="mt-6 text-[11px] text-gray-400 text-center">
+                    Grammaster · © 2025-2026 Víctor Manuel Morales Muñoz · {t.derechos}
+                  </p>
+                </>
+              )}
 
               {/* Panel de Progreso */}
               {activePanel === 'progress' && (() => {
