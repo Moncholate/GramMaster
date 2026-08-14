@@ -7,6 +7,7 @@ import {
 } from './data/grammar';
 import { irregularVerbs } from './data/verbs';
 import { simplePast, pastParticiple, conjugate3p, presentParticiple } from './conjugation';
+import { todayISO, dayGap } from './gamification.generated.js';
 
 /* La práctica corrige y puntúa, así que no puede preguntar por contenido que la
    clase todavía no ha visto: la racha y las insignias castigarían al alumno por
@@ -476,5 +477,53 @@ describe('cuándo se vuelve a preguntar hasta dónde va la clase', () => {
     // el plazo es una resta. Enero contra diciembre es donde eso se rompe.
     expect(unidadPorRevisar('5B', '2025-12-30', '2026-01-02')).toBe(false);
     expect(unidadPorRevisar('5B', '2025-12-30', '2026-01-06')).toBe(true);
+  });
+});
+
+/* ── La racha de días se fecha en LOCAL ─────────────────────────────────────
+   Esta app calculaba su racha con `toISOString()`, o sea la fecha de Greenwich,
+   y llevaba tiempo así. En Chile eso mueve el cambio de día a las 20:00: quien
+   practicaba a las 22:00 quedaba anotado al día siguiente. Y como el panel
+   muestra la racha local JUNTO a la de la suite —que sí iba en local— las dos
+   discrepaban en la misma tarjeta.
+
+   Se prueba `todayISO`, que es de dónde sale ahora la fecha en las dos. No es
+   una prueba de librería: es la prueba de que las dos rachas fechan igual, que
+   es lo que se rompió. */
+describe('la fecha de la racha es local, no UTC', () => {
+  it('las 22:00 de un lunes en Chile son LUNES', () => {
+    // 2026-08-10 22:30 en un huso al oeste de Greenwich ya es día 11 en UTC.
+    const noche = new Date(2026, 7, 10, 22, 30);
+    expect(todayISO(noche)).toBe('2026-08-10');
+    // Y esto es lo que hacía antes, para que se vea la diferencia si alguien
+    // vuelve a escribirlo:
+    if (noche.getTimezoneOffset() > 0) {
+      expect(noche.toISOString().slice(0, 10)).not.toBe(todayISO(noche));
+    }
+  });
+
+  it('la medianoche y el último segundo del día caen en su día', () => {
+    expect(todayISO(new Date(2026, 7, 10, 0, 0, 0))).toBe('2026-08-10');
+    expect(todayISO(new Date(2026, 7, 10, 23, 59, 59))).toBe('2026-08-10');
+  });
+
+  it('el cambio de mes y de año no se corre', () => {
+    expect(todayISO(new Date(2026, 0, 1, 23, 0))).toBe('2026-01-01');
+    expect(todayISO(new Date(2025, 11, 31, 23, 0))).toBe('2025-12-31');
+  });
+
+  it('dos noches seguidas son DOS días', () => {
+    // El caso que el motor documenta: practicar domingo 22:00 y lunes 18:00
+    // daba UN solo día con `toISOString()`, y la racha no avanzaba.
+    const dom = todayISO(new Date(2026, 7, 9, 22, 0));
+    const lun = todayISO(new Date(2026, 7, 10, 18, 0));
+    expect(dom).not.toBe(lun);
+    expect(dayGap(dom, lun)).toBe(1);
+  });
+
+  it('el mismo día a dos horas distintas es UN día', () => {
+    // La otra mitad: lunes 18:00 y lunes 22:00 daban DOS días e inflaban la racha.
+    expect(todayISO(new Date(2026, 7, 10, 18, 0)))
+      .toBe(todayISO(new Date(2026, 7, 10, 22, 0)));
   });
 });

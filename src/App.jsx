@@ -1111,9 +1111,19 @@ const EnglishSentenceBuilder = () => {
     showNotification('success', language === 'es' ? 'Historial exportado' : 'History exported');
   };
 
-  // Registrar día de práctica en localStorage y estado
+  /* LA FECHA SALE DE `todayISO`, NO DE `toISOString()`.
+     Esto llevaba tiempo mal y era el mismo fallo que el motor compartido ya
+     documenta y corrigió: `toISOString()` da la fecha de GREENWICH, así que en
+     Chile el día cambiaba a las 20:00. Dos fallas, las dos sobre el que estudia
+     de noche:
+       · practicar lunes 22:00 quedaba anotado como martes;
+       · y con eso la racha local y la de la suite mostraban números distintos
+         para lo mismo, en la MISMA tarjeta del panel de Progreso.
+     El registro propio de días SÍ tiene motivo y se queda: `gh_progress` no
+     guarda de qué app fue cada día, y esta tarjeta dice «practicando en
+     Grammaster». Lo que sobraba no era el registro, era su forma de fechar. */
   const recordPracticeDay = () => {
-    const today = new Date().toISOString().split('T')[0];
+    const today = todayISO();
     setPracticeDays(prev => prev.includes(today) ? prev : [...prev, today]);
   };
 
@@ -1121,9 +1131,9 @@ const EnglishSentenceBuilder = () => {
   const computeStreak = (days) => {
     if (!days || days.length === 0) return 0;
     const unique = [...new Set(days)].sort().reverse();
-    const today = new Date().toISOString().split('T')[0];
-    const yesterday = new Date(); yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = yesterday.toISOString().split('T')[0];
+    const today = todayISO();
+    const ayer = new Date(); ayer.setDate(ayer.getDate() - 1);
+    const yesterdayStr = todayISO(ayer);
     if (unique[0] !== today && unique[0] !== yesterdayStr) return 0;
     let streak = 1;
     for (let i = 0; i < unique.length - 1; i++) {
@@ -1662,10 +1672,18 @@ const EnglishSentenceBuilder = () => {
     setBadgeToasts(prev => [...prev, ...items]);
     items.forEach(it => setTimeout(() => setBadgeToasts(prev => prev.filter(x => x.id !== it.id)), 3800));
   };
-  const recordGameAttempt = (tenseId, isCorrect) => {
+  /* `racha` = la que quedará TRAS esta respuesta. Se pasa porque sin ella la
+     insignia 🎯 «Puntería · 5 aciertos seguidos» era INALCANZABLE en Grammaster:
+     se evalúa contra `bestAnswerStreak` del progreso compartido y esta app
+     nunca lo enviaba, así que podías encadenar cincuenta y no contaba. La
+     insignia no lleva marca de app, o sea que se presentaba como de toda la
+     suite siendo solo de Question Lab.
+     Se calcula aquí y no se lee del estado por lo mismo que en `sumaRonda`:
+     `setAnswerStreak` es asíncrono y leerlo daría el de la respuesta anterior. */
+  const recordGameAttempt = (tenseId, isCorrect, racha) => {
     try {
       const p = loadProgress(window.localStorage);
-      recordAttempt(p, { app: 'grammaster', tenseId, correct: !!isCorrect });
+      recordAttempt(p, { app: 'grammaster', tenseId, correct: !!isCorrect, answerStreak: racha });
       const { newly } = evaluateBadges(p, BADGES, tenseId ? [tenseId] : []);
       saveProgress(window.localStorage, p);
       if (newly.length) pushBadgeToasts(newly);
@@ -1703,7 +1721,7 @@ const EnglishSentenceBuilder = () => {
       const tenseOk = !practiceQuestion.askTense || identifyTenseAnswer === practiceQuestion.tense.id;
       const modeOk = identifyModeAnswer === practiceQuestion.mode;
       const isCorrect = tenseOk && modeOk;
-      recordGameAttempt(practiceQuestion.tense?.id, isCorrect);
+      recordGameAttempt(practiceQuestion.tense?.id, isCorrect, isCorrect ? answerStreak + 1 : 0);
       setAnswerStreak(s => isCorrect ? s + 1 : 0);
       sumaRonda(isCorrect);
       setPracticeResult({
@@ -1728,7 +1746,7 @@ const EnglishSentenceBuilder = () => {
       verb: practiceQuestion.verb, respuesta: userAns });
     const isCorrect = avisoWas || accepted.some(a => a.replace(/\.$/, '') === userAns);
     updateSRS(practiceQuestion.tense?.id, practiceQuestion.mode, isCorrect, practiceQuestion.adelantado);
-    recordGameAttempt(practiceQuestion.tense?.id, isCorrect);
+    recordGameAttempt(practiceQuestion.tense?.id, isCorrect, isCorrect ? answerStreak + 1 : 0);
     setAnswerStreak(s => isCorrect ? s + 1 : 0);
     sumaRonda(isCorrect);
 
@@ -3302,9 +3320,12 @@ const EnglishSentenceBuilder = () => {
                 try { suiteStreak = loadProgress(window.localStorage)?.dayStreak?.count || 0; } catch { /* sin datos */ }
 
                 // Últimos 30 días para el calendario
+                /* `todayISO` y no `toISOString()`: si el calendario fecha en UTC
+                   y los días se guardan en local, los cuadritos se pintan
+                   corridos un día. */
                 const last30 = Array.from({ length: 30 }, (_, i) => {
                   const d = new Date(); d.setDate(d.getDate() - (29 - i));
-                  return d.toISOString().split('T')[0];
+                  return todayISO(d);
                 });
                 const daySet = new Set(practiceDays);
 
