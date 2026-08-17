@@ -540,6 +540,34 @@ describe('la -s ambigua se pregunta, no se adivina', () => {
   });
 });
 
+/* La -s no decide sola el número, y hay dos familias que lo demuestran en
+   direcciones opuestas. Salieron sondeando el generador contra una lista de
+   sujetos etiquetados a mano: de 47, estos eran los únicos que fallaban. */
+describe('sujetos donde la -s miente', () => {
+  it('las asignaturas en -ics son singulares', () => {
+    for (const s of ['mathematics', 'physics', 'economics', 'gymnastics'])
+      expect(isThirdPersonSingular(s)).toBe(true);
+    expect(buildSentenceText({ mode: 'affirmative', subject: 'physics',
+      verb: 'be', complement: 'difficult', tense: 'simple-present' }))
+      .toBe('Physics is difficult.');
+  });
+  it('«police» va en plural aunque no acabe en -s', () => {
+    expect(isThirdPersonSingular('the police')).toBe(false);
+    expect(buildSentenceText({ mode: 'affirmative', subject: 'the police',
+      verb: 'be', complement: 'here', tense: 'simple-present' }))
+      .toBe('The police are here.');
+  });
+  it('sin tocar los plurales normales ni los nombres en -s', () => {
+    for (const p of ['students', 'my parents', 'the books', 'people'])
+      expect(isThirdPersonSingular(p)).toBe(false);
+    for (const n of ['carlos', 'marcos', 'mercedes'])
+      expect(isThirdPersonSingular(n)).toBe(true);
+  });
+  it('y ninguna de las dos familias se pregunta como nombre ambiguo', () => {
+    expect(['physics', 'mathematics', 'the police'].filter(s => nombreAmbiguo(s))).toEqual([]);
+  });
+});
+
 /* SALIÓ EN CLASE (2026-08-11). El profesor armó una oración con `go` y un lugar
    y la app la construyó sin decir que faltaba el `to`: el validador no recibía
    el verbo, así que no podía saberlo. */

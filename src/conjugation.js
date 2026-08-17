@@ -84,9 +84,24 @@ export const smartCaseSubject = smartCase;
 
 /* Constantes compartidas por `isThirdPersonSingular` y `nombreAmbiguo`: si cada
    una llevara su copia, arreglar un caso en una dejaría la otra mintiendo. */
-const PLURALES_IRREGULARES = ['people', 'children', 'men', 'women', 'teeth', 'feet', 'mice', 'geese', 'oxen'];
+/* `police` no tiene forma en -s y aun así SIEMPRE va en plural («the police are
+   coming»). Sin él caía por el camino de abajo —no acaba en -s, luego singular—
+   y salía «The police is coming». Es de los que el libro enseña aparte, así que
+   un alumno lo va a escribir precisamente cuando lo esté estudiando. */
+const PLURALES_IRREGULARES = ['people', 'children', 'men', 'women', 'teeth', 'feet', 'mice', 'geese', 'oxen',
+                              'police'];
+/* Las asignaturas en -ics son SINGULARES («physics is my favorite subject»),
+   pero acaban en -s y la regla del plural se las llevaba: «physics are». Es el
+   mismo caso que `news`, que ya estaba aquí por esto mismo.
+
+   Solo van las que se leen como campo de estudio. `politics` y `statistics`
+   tienen además una lectura plural real («his politics are extreme», «the
+   statistics are clear»); en una sala de clases gana de calle la asignatura, y
+   entre equivocarse en una lectura o en la otra, esta es la que aparece. */
 const SINGULARES_EN_S = ['this', 'his', 'hers', 'its', 'ours', 'yours', 'theirs',
-                         'was', 'has', 'does', 'is', 'as', 'us', 'news'];
+                         'was', 'has', 'does', 'is', 'as', 'us', 'news',
+                         'mathematics', 'maths', 'physics', 'economics', 'politics',
+                         'statistics', 'gymnastics', 'athletics', 'linguistics'];
 
 /* Palabra terminada en -s que la app no sabe clasificar. Devuelve la palabra si
    es ambigua y `null` si tiene evidencia para decidir.
