@@ -73,44 +73,27 @@ const norm = (s) => expandirNegacion(String(s ?? ''))
 const palabras = (s) => norm(s).split(' ').filter(Boolean).sort().join(' ');
 
 // ── Discrepancias ya triadas ───────────────────────────────────────────────
-// Cada predicado describe EXACTAMENTE el conjunto que falla hoy. Si lo dejas
-// más ancho de la cuenta, la comprobación de «ya se arregló» deja de servir.
-const homonimoCompuesto = (c) => c.subject === 'Tom and Ana' && (c.verb === 'work' || c.verb === 'study');
-
-const HALLAZGOS = [
-  {
-    nombre: 'used to: al negar, el infinitivo se cae al complemento',
-    detalle: `En afirmativo el analizador agrupa bien la perífrasis completa
-      (V:「used to work」). En negativo produce V:「did not use」 y manda «to work»
-      al complemento — la misma construcción analizada de dos maneras distintas.
-      Es la familia del bug «use to / going to» de la revisión de agosto 2026.
-      El bug está en Desgramatizador, no aquí: Grammaster genera bien las dos.`,
-    aplica: {
-      V: (c) => c.tense === 'used-to' && c.mode === 'negative',
-    },
-  },
-  {
-    nombre: 'sujeto propio compuesto + verbo homónimo de sustantivo: análisis vacío',
-    detalle: `«Tom and Ana work at home.» devuelve CERO componentes — el análisis
-      colapsa entero, no es que se equivoque de etiqueta. Solo pasa con la
-      combinación de sujeto propio compuesto («X and Y») y un verbo en forma
-      desnuda que también es sustantivo (work, study). «Tom and Ana go», «Tom and
-      Ana worked» y «The dogs work» salen bien, lo que confirma que hacen falta
-      las dos condiciones a la vez.
-
-      Es el mecanismo 1 que check-analyzer.mjs de Question Lab documenta y guarda
-      («Homónimo sustantivo-verbo: stop, pass, watch, order…»). Question Lab tiene
-      la guarda; Desgramatizador no. Ese contraste entre dos apps de la misma
-      suite es justo lo que este archivo existe para encontrar.`,
-    aplica: {
-      S: (c) => homonimoCompuesto(c) &&
-        ((c.tense === 'simple-present' && c.mode === 'affirmative') ||
-         (c.tense === 'simple-future' && c.mode === 'interrogative')),
-      V: (c) => homonimoCompuesto(c) && c.tense === 'simple-present' && c.mode === 'affirmative',
-      K: (c) => homonimoCompuesto(c) && c.tense === 'simple-present' && c.mode === 'affirmative',
-    },
-  },
-];
+// Vacío: las 720 combinaciones concuerdan. Los dos hallazgos del primer barrido
+// («used to» perdiendo el infinitivo al negar, y el sujeto propio compuesto con
+// verbo homónimo de sustantivo que dejaba el análisis en cero componentes) están
+// arreglados en Desgramatizador — el detalle de cada uno quedó en el commit que
+// los cerró.
+//
+// Para añadir una entrada nueva, tríala primero: mira el desglose completo de
+// componentes y decide si es un bug o una diferencia legítima de criterio entre
+// las dos apps. Después descríbela con un predicado que cubra EXACTAMENTE el
+// conjunto que falla — si lo dejas más ancho de la cuenta, la comprobación de
+// «ya se arregló» deja de servir y la entrada se queda ahí tapando el sitio.
+//
+//   {
+//     nombre: 'resumen en una línea',
+//     detalle: `qué hace, qué debería hacer, y por qué es un bug y no criterio`,
+//     aplica: { V: (c) => c.tense === 'used-to' && c.mode === 'negative' },
+//   }
+//
+// Las claves de `aplica` son las invariantes: S (sujeto), V (frase verbal),
+// K (conservación). Cada `c` trae { tense, mode, subject, verb, texto, clave }.
+const HALLAZGOS = [];
 
 const esperado = (inv, c) => HALLAZGOS.some(h => h.aplica[inv] ? h.aplica[inv](c) : false);
 
