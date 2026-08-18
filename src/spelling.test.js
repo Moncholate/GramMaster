@@ -21,8 +21,8 @@
    silencio.
    ============================================================================ */
 import { describe, it, expect } from 'vitest';
-import { damerauLevenshtein, getSpellingSuggestions } from './spelling';
-import { englishDictionary } from './data/dictionary';
+import { damerauLevenshtein, getSpellingSuggestions, DICCIONARIO } from './spelling';
+import { VOCAB_CATEGORIA_DE } from './data/vocabulary.generated.js';
 
 describe('damerauLevenshtein', () => {
   it('cuenta las ediciones básicas', () => {
@@ -99,16 +99,27 @@ const DESLICES = {
   'letra doble': (w, i) => w.slice(0, i) + w[i] + w.slice(i),
 };
 
-// Suelo medido con Damerau, con margen. Con Levenshtein la transposición cae
-// al 52%, así que este número es el que impide volver atrás sin enterarse.
+/* Suelos medidos, con margen. Se comprueban DOS cosas y la segunda importa más:
+   la app enseña hasta tres sugerencias, así que lo que decide si el alumno se
+   desatasca es el top-3, no el top-1.
+
+   Los números bajaron cuando el diccionario pasó de 285 palabras a 620 al
+   incorporar el vocabulario del libro. NO es una regresión, es el precio
+   correcto: con más palabras hay más candidatos a distancia 1, así que el
+   primero acierta menos, pero a cambio muchísimas menos palabras correctas se
+   marcan como errata. El top-3 apenas se movió, que es lo que se nota en
+   pantalla.
+
+   El de transposición sigue siendo el centinela de Damerau: con Levenshtein cae
+   al 52% y esta prueba lo dice en voz alta en vez de degradarse en silencio. */
 const SUELO = {
-  'tecla vecina': 90,
-  'transposición': 85,
-  'omisión': 70,
-  'letra doble': 95,
+  'tecla vecina':  { top1: 85, top3: 95 },
+  'transposición': { top1: 90, top3: 95 },
+  'omisión':       { top1: 60, top3: 90 },
+  'letra doble':   { top1: 95, top3: 95 },
 };
 
-const PALABRAS = englishDictionary
+const PALABRAS = DICCIONARIO
   .filter(w => w.length >= 4 && /^[a-z]+$/.test(w))
   .slice(0, 120);
 
@@ -118,20 +129,58 @@ describe('generador de erratas — el corrector recupera la palabra original', (
   });
 
   for (const [nombre, desliz] of Object.entries(DESLICES)) {
-    it(`${nombre}: acierta al primer intento en ≥${SUELO[nombre]}% de los casos`, () => {
-      const fallos = [];
+    it(`${nombre}: ≥${SUELO[nombre].top1}% a la primera, ≥${SUELO[nombre].top3}% entre las tres`, () => {
+      const fallosTop1 = [], fallosTop3 = [];
       let n = 0;
       for (const palabra of PALABRAS) {
         const errata = desliz(palabra, Math.floor(palabra.length / 2));
-        if (!errata || errata === palabra) continue;
+        if (!errata || errata === palabra || DICCIONARIO.includes(errata)) continue;
         n++;
-        if (getSpellingSuggestions(errata)[0] !== palabra) fallos.push(`${palabra} → ${errata}`);
+        const sugerencias = getSpellingSuggestions(errata);
+        if (sugerencias[0] !== palabra) fallosTop1.push(`${palabra} → ${errata}`);
+        if (!sugerencias.includes(palabra)) fallosTop3.push(`${palabra} → ${errata} (dio ${sugerencias.join('/') || 'nada'})`);
       }
-      const acierto = Math.round((100 * (n - fallos.length)) / n);
-      expect(acierto, `\n  ${nombre}: ${acierto}% (suelo ${SUELO[nombre]}%), ${fallos.length} de ${n} fallaron.` +
-        `\n  Primeros: ${fallos.slice(0, 6).join(', ')}\n`).toBeGreaterThanOrEqual(SUELO[nombre]);
+      const top1 = Math.round((100 * (n - fallosTop1.length)) / n);
+      const top3 = Math.round((100 * (n - fallosTop3.length)) / n);
+
+      expect(top3, `\n  ${nombre} top-3: ${top3}% (suelo ${SUELO[nombre].top3}%), ${fallosTop3.length} de ${n}.` +
+        `\n  Primeros: ${fallosTop3.slice(0, 6).join(', ')}\n`).toBeGreaterThanOrEqual(SUELO[nombre].top3);
+      expect(top1, `\n  ${nombre} top-1: ${top1}% (suelo ${SUELO[nombre].top1}%), ${fallosTop1.length} de ${n}.` +
+        `\n  Primeros: ${fallosTop1.slice(0, 6).join(', ')}\n`).toBeGreaterThanOrEqual(SUELO[nombre].top1);
     });
   }
+
+  /* El desempate por categoría, medido donde sirve: erratas de adjetivo cuando
+     el hueco pide un adjetivo (detrás de `be`). Sin la categoría, la sugerencia
+     confunde de clase de palabra —«blck» daba «back», «fats» daba «cats»— y el
+     alumno recibe algo que ni siquiera cabe en la casilla que está llenando. */
+  it('la categoría del hueco mejora las sugerencias, sin pisar la distancia', () => {
+    const adjetivos = Object.entries(VOCAB_CATEGORIA_DE)
+      .filter(([w, cats]) => cats.includes('adjetivo') && w.length >= 4)
+      .map(([w]) => w);
+    expect(adjetivos.length).toBeGreaterThanOrEqual(20);
+
+    let n = 0, sin = 0, con = 0;
+    for (const palabra of adjetivos) {
+      for (const desliz of Object.values(DESLICES)) {
+        const errata = desliz(palabra, Math.floor(palabra.length / 2));
+        if (!errata || errata === palabra || DICCIONARIO.includes(errata)) continue;
+        n++;
+        if (getSpellingSuggestions(errata)[0] === palabra) sin++;
+        if (getSpellingSuggestions(errata, { categoria: 'adjetivo' })[0] === palabra) con++;
+      }
+    }
+    const pSin = Math.round((100 * sin) / n), pCon = Math.round((100 * con) / n);
+    expect(pCon, `\n  con categoría ${pCon}% vs sin categoría ${pSin}% sobre ${n} casos.` +
+      `\n  Si esto deja de mejorar, el desempate ya no se gana su sitio y sobra.\n`).toBeGreaterThan(pSin);
+  });
+
+  /* Casos concretos, para que se vea qué gana y no solo un porcentaje. */
+  it('los casos que gana la categoría', () => {
+    expect(getSpellingSuggestions('blck', { categoria: 'adjetivo' })[0]).toBe('black');
+    expect(getSpellingSuggestions('smll', { categoria: 'adjetivo' })[0]).toBe('small');
+    expect(getSpellingSuggestions('ugy',  { categoria: 'adjetivo' })[0]).toBe('ugly');
+  });
 
   /* Una errata SIEMPRE tiene que producir alguna sugerencia. Quedarse callado
      ante una palabra que no existe es el peor resultado: el alumno no se entera
@@ -143,7 +192,7 @@ describe('generador de erratas — el corrector recupera la palabra original', (
         const errata = desliz(palabra, Math.floor(palabra.length / 2));
         if (!errata || errata === palabra) continue;
         // Si el desliz produjo OTRA palabra del diccionario, callar es correcto.
-        if (englishDictionary.includes(errata)) continue;
+        if (DICCIONARIO.includes(errata)) continue;
         if (getSpellingSuggestions(errata).length === 0) mudas.push(`${palabra} → ${errata}`);
       }
     }

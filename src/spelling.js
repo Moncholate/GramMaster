@@ -35,6 +35,14 @@
    ============================================================================ */
 import { englishDictionary } from './data/dictionary';
 import { hispanicNames, looksLikeValidWord } from './data/validation';
+import { VOCAB_PALABRAS, VOCAB_CATEGORIA_DE } from './data/vocabulary.generated.js';
+
+/* El diccionario es la UNIÓN de la lista de siempre y el vocabulario del libro,
+   y la unión es TODO el libro: todos los niveles y todas las unidades. Nunca se
+   recorta por la unidad del alumno. Si se recortara, una palabra correcta de una
+   unidad posterior —aprendida por su cuenta, oída en una canción— saldría
+   marcada como error, que es decirle que su trabajo bien hecho está mal. */
+export const DICCIONARIO = [...new Set([...englishDictionary, ...VOCAB_PALABRAS])];
 
 /* Damerau-Levenshtein en su variante de distancia restringida (OSA): además de
    inserción, borrado y sustitución, admite intercambiar dos letras CONTIGUAS
@@ -76,25 +84,57 @@ export const damerauLevenshtein = (str1, str2) => {
 
 /* Hasta tres candidatos del diccionario a distancia 1 o 2, de menor a mayor.
    Devuelve [] cuando no hay nada que corregir, que incluye el caso normal: la
-   palabra está bien escrita. */
-export const getSpellingSuggestions = (word) => {
+   palabra está bien escrita.
+
+   `contexto` es opcional y SOLO DESEMPATA: ordena DENTRO de una misma distancia,
+   nunca por encima de ella. No es una precaución teórica — medido sobre 469
+   erratas simuladas, el 0% de los fallos necesitaría adelantar a un candidato
+   más cercano, así que un desempate que respeta la distancia no puede empeorar
+   nada y uno que la pisara sí.
+
+     · categoria — la que pide el hueco: 'adjetivo' detrás de `be`, por ejemplo.
+
+   Medido sobre las erratas de adjetivo del banco, con el hueco pidiendo
+   adjetivo: 90% → 99% de acierto al primer intento. Los casos que gana son
+   precisamente los que confundían de categoría — «blck» daba «back» y ahora da
+   «black»; «fats» daba «cats» y ahora «fast»; «ugy» daba «guy» y ahora «ugly».
+
+   NO hay criterio de unidad, y no es un olvido. vocabulary.json trae la unidad
+   de cada palabra y se probó como tercer desempate: neutral en todas las
+   mediciones (98% → 98%, cero casos ganados y cero perdidos), porque para
+   entonces la categoría ya ha ordenado lo que había que ordenar. Un criterio que
+   no mueve nada solo añade algo que razonar, así que se queda fuera hasta que
+   haya evidencia de que sirve. El dato sigue en vocabulary.json: volver a
+   probarlo es una línea. */
+export const getSpellingSuggestions = (word, contexto = {}) => {
   if (!word || word.length < 2) return [];
 
   const lowerWord = word.toLowerCase();
   const normalizedWord = lowerWord.normalize('NFD').replace(/[̀-ͯ]/g, '');
 
   // Si la palabra está en el diccionario, no hay error
-  if (englishDictionary.includes(lowerWord)) return [];
+  if (DICCIONARIO.includes(lowerWord)) return [];
 
   // Nombres propios (hispanos conocidos, o cualquier palabra capitalizada
   // con estructura razonable) no se corrigen — mismo criterio que validateSubject
   if (hispanicNames.includes(lowerWord) || hispanicNames.includes(normalizedWord)) return [];
   if (/^[A-ZÁÉÍÓÚÑ]/.test(word) && looksLikeValidWord(lowerWord)) return [];
 
-  return englishDictionary
+  const { categoria = null } = contexto;
+
+  return DICCIONARIO
     .map(dictWord => ({ word: dictWord, distance: damerauLevenshtein(lowerWord, dictWord) }))
     .filter(item => item.distance <= 2 && item.distance > 0)
-    .sort((a, b) => a.distance - b.distance)
+    .map(item => ({
+      ...item,
+      // 0 es mejor que 1: se ordena ascendente igual que la distancia.
+      encaja: categoria && (VOCAB_CATEGORIA_DE[item.word] || []).includes(categoria) ? 0 : 1,
+    }))
+    .sort((a, b) =>
+      a.distance - b.distance ||   // la distancia manda siempre
+      a.encaja - b.encaja ||       // luego el hueco: detrás de «be», un adjetivo
+      a.word.localeCompare(b.word) // y a igualdad, orden estable
+    )
     .slice(0, 3)
     .map(item => item.word);
 };

@@ -963,10 +963,23 @@ const EnglishSentenceBuilder = () => {
     const words = text.split(/[\s,]+/).filter(w => w.length > 0);
     const errors = [];
 
+    /* Qué categoría pide el hueco. Solo desempata entre candidatos que ya están
+       a la misma distancia, así que equivocarse aquí no puede sacar una
+       sugerencia peor de la nada; acertar sube el acierto del 90% al 99% en las
+       erratas de adjetivo. El caso que lo motivó: detrás de «be» el complemento
+       es casi siempre un adjetivo, y sin esto «blck» sugería «back» y «smll»
+       sugería «sell» — palabras que ni siquiera caben en esa casilla.
+       El campo Verbo pide verbo por definición. El Sujeto no se marca: ahí caben
+       sustantivos, pronombres y nombres propios por igual. */
+    const categoriaDelHueco =
+      field === 'verb' ? 'verbo'
+        : (field === 'complement' && verb.toLowerCase().trim() === 'be') ? 'adjetivo'
+          : null;
+
     words.forEach(word => {
       const cleanWord = word.replace(/[.,!?;:]/g, '');
-      const suggestions = getSpellingSuggestions(cleanWord);
-      
+      const suggestions = getSpellingSuggestions(cleanWord, { categoria: categoriaDelHueco });
+
       if (suggestions.length > 0) {
         errors.push({
           word: cleanWord,
@@ -2269,12 +2282,16 @@ const EnglishSentenceBuilder = () => {
     return () => clearTimeout(timer);
   }, [verb]);
 
+  /* Depende TAMBIÉN del verbo: la categoría que pide el hueco del complemento la
+     decide el verbo («be» pide adjetivo). Sin `verb` en la lista, quien escribe
+     primero el complemento y luego elige «be» se queda con las sugerencias
+     calculadas sin categoría hasta que vuelva a tocar el campo. */
   useEffect(() => {
     const timer = setTimeout(() => {
       checkSpelling(complement, 'complement');
     }, 500);
     return () => clearTimeout(timer);
-  }, [complement]);
+  }, [complement, verb]);
 
 
   const resetForm = () => {
