@@ -397,6 +397,43 @@ export const validateComplement = (complement, language = 'es', verb = '') => {
     };
   }
 
+  /* DESPUÉS DE `be`, UN VERBO EN FORMA BASE NO PUEDE SER EL COMPLEMENTO.
+     Detrás de is/are/was/were va un adjetivo («He is tall»), un sintagma nominal
+     («He is a teacher»), un -ing («He is working») o un participio. Lo que no
+     cabe es un infinitivo pelado: «He is talk» no es una oración.
+
+     Visto en clase: una alumna quiso «He is tall», escribió «talk» y la app le
+     generó «He is talk.» sin decir nada. El corrector ortográfico no puede
+     ayudar ahí, y hace bien en callarse — «talk» es una palabra correcta y bien
+     escrita. Lo que falla no es la palabra, es que no encaja en ese hueco, y eso
+     solo se ve con el verbo delante. Por eso va aquí y no en spelling.js.
+
+     Es la misma regla que el analizador de Desgramatizador ya aplica al leer
+     («be no admite infinitivo pelado»), traída al lado que ESCRIBE.
+
+     Solo una palabra: «He is talk to Maria» es otro error distinto y decirle que
+     use un adjetivo lo despistaría. Y solo si esa palabra no es también otra
+     cosa —«work» y «study» son verbo y sustantivo, así que «He is work» podría
+     ser un intento legítimo de «He is work[ing]» o de un sustantivo— por eso se
+     exige que NO esté en el diccionario general como sustantivo. */
+  const verbLimpio = String(verb || '').toLowerCase().trim();
+  const compLimpio = complement.toLowerCase().trim();
+  if (verbLimpio === 'be' && /^[a-z]+$/.test(compLimpio) && allValidVerbs.includes(compLimpio)) {
+    return {
+      valid: false,
+      /* El ejemplo de -ing es FIJO. Construirlo con la palabra del alumno
+         (`${compLimpio}ing`) parecía más útil y salía mal en cuanto el verbo
+         dobla consonante o pierde la -e: «runing», «swiming», «writeing». La
+         forma buena la sabe `presentParticiple` de conjugation.js, pero ese
+         módulo importa este, así que traerlo aquí cerraría un ciclo. Antes que
+         enseñar una forma mal escrita en una app de gramática, se enseña una
+         bien escrita que no es la suya. */
+      warning: language === 'es'
+        ? `Después de «be» no va un verbo en forma base: «${compLimpio}» es un verbo. Ahí va un adjetivo («tall»), un sustantivo («a teacher») o un verbo en -ing («talking»).`
+        : `A base verb can't follow "be": "${compLimpio}" is a verb. That slot takes an adjective ("tall"), a noun ("a teacher") or an -ing form ("talking").`,
+    };
+  }
+
   const words = complement.toLowerCase().trim().split(/\s+/);
 
   // Verificar cada palabra

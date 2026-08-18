@@ -19,6 +19,7 @@
 import { describe, it, expect } from 'vitest';
 import { buildSentenceText } from './conjugation';
 import { tenses, modals } from './data/grammar';
+import { validateComplement } from './data/validation';
 
 const SUJETOS = ['I', 'you', 'he', 'she', 'we', 'they'];
 const FORMAS = ['affirmative', 'negative', 'interrogative'];
@@ -184,5 +185,52 @@ describe('el complemento no se pierde ni se pega mal', () => {
       .toBe('She works at home.');
     expect(arma({ tense: 'simple-present', subject: 'she', verb: 'work', mode: 'interrogative', complement: 'at home' }))
       .toBe('Does she work at home?');
+  });
+});
+
+/* ── «be» no admite infinitivo pelado ────────────────────────────────────────
+   Visto en clase (agosto 2026): una alumna quiso «He is tall», tecleó «talk» en
+   el complemento y la app generó «He is talk.» sin decir nada.
+
+   El corrector ortográfico no puede ayudar ahí, y hace bien en callarse: «talk»
+   es una palabra correcta y bien escrita. Lo que falla no es la palabra sino que
+   no encaja en ese hueco, y eso solo se ve teniendo el verbo delante.
+   ------------------------------------------------------------------------- */
+describe('validateComplement — después de «be» no va un verbo en forma base', () => {
+  const av = (comp, verb = 'be') => validateComplement(comp, 'es', verb);
+
+  it('caza el caso de clase', () => {
+    expect(av('talk').valid).toBe(false);
+    expect(av('talk').warning).toMatch(/verbo en forma base/);
+  });
+
+  it('avisa con cualquier otro verbo base', () => {
+    for (const v of ['eat', 'run', 'swim', 'write', 'study']) {
+      expect(av(v).valid, `«be + ${v}» debería avisar`).toBe(false);
+    }
+  });
+
+  /* El ejemplo de -ing va FIJO en el mensaje. Construirlo con la palabra del
+     alumno salía mal en cuanto el verbo dobla consonante o pierde la -e, y una
+     app de gramática no puede imprimir «runing». */
+  it('no imprime formas -ing mal escritas', () => {
+    for (const v of ['run', 'swim', 'write']) {
+      const w = av(v).warning;
+      expect(w, `«${v}» generó una forma mal escrita`).not.toMatch(/runing|swiming|writeing/);
+    }
+  });
+
+  it('deja pasar lo que SÍ puede ir detrás de «be»', () => {
+    for (const c of ['tall', 'happy', 'tired', 'a teacher', 'talking', 'at home']) {
+      expect(av(c).valid, `«be + ${c}» no debería avisar`).toBe(true);
+    }
+  });
+
+  /* Solo con «be», y solo con una palabra suelta: «He is talk to Maria» es otro
+     error y mandarle un adjetivo lo despistaría. */
+  it('no se mete donde no le toca', () => {
+    expect(av('talk', 'like').valid).toBe(true);
+    expect(av('talk', 'want').valid).toBe(true);
+    expect(av('talk to Maria').valid).toBe(true);
   });
 });
