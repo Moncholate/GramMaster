@@ -37,13 +37,11 @@ import {
   timeMarkers,
   uncountableNouns,
   countableNouns,
-  englishDictionary,
   validateSubject,
   validateVerb,
   validateComplement,
-  hispanicNames,
-  looksLikeValidWord
 } from './data';
+import { getSpellingSuggestions } from './spelling';
 import {
   smartCaseSubject,
   isThirdPersonSingular,
@@ -541,30 +539,6 @@ const NEGATIVE_SENSE_ADVERBS = ['never', 'hardly ever', 'rarely', 'seldom'];
 
 // Distancia de edición entre dos palabras, usada por el corrector ortográfico.
 // Pura y sin dependencias de props/estado — no hace falta recrearla en cada render.
-const levenshteinDistance = (str1, str2) => {
-  const m = str1.length;
-  const n = str2.length;
-  const dp = Array(m + 1).fill(null).map(() => Array(n + 1).fill(0));
-
-  for (let i = 0; i <= m; i++) dp[i][0] = i;
-  for (let j = 0; j <= n; j++) dp[0][j] = j;
-
-  for (let i = 1; i <= m; i++) {
-    for (let j = 1; j <= n; j++) {
-      if (str1[i - 1] === str2[j - 1]) {
-        dp[i][j] = dp[i - 1][j - 1];
-      } else {
-        dp[i][j] = Math.min(
-          dp[i - 1][j - 1] + 1,
-          dp[i][j - 1] + 1,
-          dp[i - 1][j] + 1
-        );
-      }
-    }
-  }
-  return dp[m][n];
-};
-
 // Fórmulas estructurales por tiempo verbal y modo (S/V/C = sujeto/verbo/complemento)
 const TENSE_FORMULAS = {
   'simple-present':             { aff: 'S + V(s/es) + C',                          neg: 'S + do/does not + V + C',                    int: 'Do/Does + S + V + C?' },
@@ -977,34 +951,7 @@ const EnglishSentenceBuilder = () => {
     setTimeout(() => setNotification(null), 3000);
   };
 
-  // Función para obtener sugerencias de corrección
-  const getSpellingSuggestions = (word) => {
-    if (!word || word.length < 2) return [];
-
-    const lowerWord = word.toLowerCase();
-    const normalizedWord = lowerWord.normalize('NFD').replace(/[̀-ͯ]/g, '');
-
-    // Si la palabra está en el diccionario, no hay error
-    if (englishDictionary.includes(lowerWord)) return [];
-
-    // Nombres propios (hispanos conocidos, o cualquier palabra capitalizada
-    // con estructura razonable) no se corrigen — mismo criterio que validateSubject
-    if (hispanicNames.includes(lowerWord) || hispanicNames.includes(normalizedWord)) return [];
-    if (/^[A-ZÁÉÍÓÚÑ]/.test(word) && looksLikeValidWord(lowerWord)) return [];
-
-    // Buscar palabras similares
-    const suggestions = englishDictionary
-      .map(dictWord => ({
-        word: dictWord,
-        distance: levenshteinDistance(lowerWord, dictWord)
-      }))
-      .filter(item => item.distance <= 2 && item.distance > 0)
-      .sort((a, b) => a.distance - b.distance)
-      .slice(0, 3)
-      .map(item => item.word);
-
-    return suggestions;
-  };
+  // Sugerencias de corrección: la lógica vive en spelling.js, con sus pruebas.
 
   // Función para verificar ortografía en un texto
   const checkSpelling = (text, field) => {
