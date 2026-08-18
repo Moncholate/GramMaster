@@ -44,43 +44,16 @@ import { VOCAB_PALABRAS, VOCAB_CATEGORIA_DE } from './data/vocabulary.generated.
    marcada como error, que es decirle que su trabajo bien hecho está mal. */
 export const DICCIONARIO = [...new Set([...englishDictionary, ...VOCAB_PALABRAS])];
 
-/* Damerau-Levenshtein en su variante de distancia restringida (OSA): además de
-   inserción, borrado y sustitución, admite intercambiar dos letras CONTIGUAS
-   como una sola edición — la única línea que la separa de Levenshtein.
+/* La distancia y el ordenador de candidatos viven en Grammar HUB
+   (spelling-engine.js) y llegan generados, porque Question Lab los necesita
+   también: allí una errata hacía que la app dijera «te falta el verbo» con el
+   verbo delante. Copiarlos habría creado la segunda implementación que siempre
+   diverge — la lección de los frasales.
 
-   «Restringida» quiere decir que un mismo trozo no se transpone dos veces. Para
-   erratas de teclado da igual: hacen falta cuatro ediciones sobre las mismas
-   letras para notar la diferencia, y a esa distancia ninguna sugerencia sirve
-   ya. La versión no restringida cuesta bastante más y no compra nada aquí. */
-export const damerauLevenshtein = (str1, str2) => {
-  const a = String(str1 ?? '');
-  const b = String(str2 ?? '');
-  const m = a.length;
-  const n = b.length;
-  const dp = Array(m + 1).fill(null).map(() => Array(n + 1).fill(0));
-
-  for (let i = 0; i <= m; i++) dp[i][0] = i;
-  for (let j = 0; j <= n; j++) dp[0][j] = j;
-
-  for (let i = 1; i <= m; i++) {
-    for (let j = 1; j <= n; j++) {
-      if (a[i - 1] === b[j - 1]) {
-        dp[i][j] = dp[i - 1][j - 1];
-      } else {
-        dp[i][j] = Math.min(
-          dp[i - 1][j - 1] + 1,   // sustitución
-          dp[i][j - 1] + 1,       // inserción
-          dp[i - 1][j] + 1        // borrado
-        );
-      }
-      // La transposición: «wrok» → «work» en un solo paso.
-      if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) {
-        dp[i][j] = Math.min(dp[i][j], dp[i - 2][j - 2] + 1);
-      }
-    }
-  }
-  return dp[m][n];
-};
+   Lo que se queda aquí es lo que SÍ es de Grammaster: su diccionario y sus
+   guardias de nombres propios. */
+export { damerauLevenshtein } from './data/spelling.generated.js';
+import { sugerenciasDe } from './data/spelling.generated.js';
 
 /* Hasta tres candidatos del diccionario a distancia 1 o 2, de menor a mayor.
    Devuelve [] cuando no hay nada que corregir, que incluye el caso normal: la
@@ -120,21 +93,9 @@ export const getSpellingSuggestions = (word, contexto = {}) => {
   if (hispanicNames.includes(lowerWord) || hispanicNames.includes(normalizedWord)) return [];
   if (/^[A-ZÁÉÍÓÚÑ]/.test(word) && looksLikeValidWord(lowerWord)) return [];
 
-  const { categoria = null } = contexto;
-
-  return DICCIONARIO
-    .map(dictWord => ({ word: dictWord, distance: damerauLevenshtein(lowerWord, dictWord) }))
-    .filter(item => item.distance <= 2 && item.distance > 0)
-    .map(item => ({
-      ...item,
-      // 0 es mejor que 1: se ordena ascendente igual que la distancia.
-      encaja: categoria && (VOCAB_CATEGORIA_DE[item.word] || []).includes(categoria) ? 0 : 1,
-    }))
-    .sort((a, b) =>
-      a.distance - b.distance ||   // la distancia manda siempre
-      a.encaja - b.encaja ||       // luego el hueco: detrás de «be», un adjetivo
-      a.word.localeCompare(b.word) // y a igualdad, orden estable
-    )
-    .slice(0, 3)
-    .map(item => item.word);
+  return sugerenciasDe(lowerWord, {
+    diccionario: DICCIONARIO,
+    categoriaDe: VOCAB_CATEGORIA_DE,
+    categoria: contexto.categoria ?? null,
+  });
 };
