@@ -4173,12 +4173,43 @@ const EnglishSentenceBuilder = () => {
             {/* Los 3 modos */}
             {allModeSentences && (
               <div className="mt-4 pt-3 border-t border-gray-100">
+                {/* Este control es de los que más enseñan —contrastar la misma
+                    oración en sus tres formas— y estaba vestido de nota al pie:
+                    `text-xs` y `text-indigo-600` a pelo.
+
+                    El indigo era además un fallo de accesibilidad, no una
+                    cuestión de gusto: la capa de modo oscuro remapea los
+                    utilitarios de Tailwind, pero solo cubre `.bg-white` y
+                    `.text-indigo-600` en la MISMA etiqueta, y aquí el fondo lo
+                    pone un ancestro. El texto se quedaba en #4f46e5 sobre
+                    #141826, o sea 2.81:1 cuando el mínimo para 12 px es 4.5:1.
+
+                    Ahora usa la familia `--f-cap`, que es la misma que visten
+                    las tres cápsulas que despliega: funciona en los dos temas
+                    por construcción y ata visualmente el botón a lo que abre.
+                    Los tres signos van como anticipo del contenido, que da peso
+                    sin subir el tono de voz, y se colorean solos por token. */}
                 <button
                   onClick={() => setShowAllModes(!showAllModes)}
-                  className="flex items-center gap-1.5 text-xs font-medium text-indigo-600 hover:text-indigo-800 transition-colors mb-2"
+                  aria-expanded={showAllModes}
+                  className="w-full flex items-center gap-2 px-3 py-2 mb-2 rounded-lg
+                             bg-[var(--f-cap)] border border-[var(--f-cap-border)]
+                             text-sm font-semibold text-[var(--f-cap-ink)]
+                             hover:brightness-95 dark:hover:brightness-110 transition"
+                  style={{ minHeight: 'var(--tap-min)' }}
                 >
-                  <span>{showAllModes ? '▾' : '▸'}</span>
-                  {language === 'es' ? 'Ver los 3 modos' : 'See all 3 modes'}
+                  <span className="text-[var(--f-cap-ink)] opacity-70 shrink-0">{showAllModes ? '▾' : '▸'}</span>
+                  <span className="text-left">
+                    {language === 'es' ? 'Ver los 3 modos' : 'See all 3 modes'}
+                  </span>
+                  {/* Anticipo: desaparece al abrir, cuando ya se ven de verdad. */}
+                  {!showAllModes && (
+                    <span className="ml-auto flex items-center gap-1.5 shrink-0" aria-hidden="true">
+                      {['affirmative', 'negative', 'interrogative'].map(f => (
+                        <FormSign key={f} form={f} className="text-sm font-bold leading-none" />
+                      ))}
+                    </span>
+                  )}
                 </button>
                 {showAllModes && (
                   <div className="space-y-1.5">
