@@ -4156,21 +4156,31 @@ const EnglishSentenceBuilder = () => {
                   lenguaje visual para todo el resultado, y sin depender de que
                   alguien acierte con el override.
 
-                  Los estados (copiado / hablando) NO llevan color de fondo. No es
-                  pereza: los únicos tokens de color que existen son los de FORMA
-                  (--f-aff, --f-neg) y los de TIPO DE PREGUNTA, y usar el verde de
-                  «afirmativa» para decir «copiado» es exactamente el cruce de ejes
-                  que este archivo ya corrigió una vez en la barra de modos. El
-                  icono y el texto cambian, que es señal suficiente y no inventa
-                  significado. Si se quiere color de estado, el sitio es
-                  design-tokens, no un `bg-green-100` a pelo. */}
+                  Los estados (copiado / hablando) se marcan con RELLENO, no con
+                  tono: `--state-fill` sobre `--state-ink`, que salen de la
+                  sección `states` de design-tokens.
+
+                  El tono se descartó midiendo, no por gusto. Todos los hues del
+                  sistema están tomados, y el que pediría el instinto para
+                  «copiado» —verde— es el de la forma AFIRMATIVA, que vive en
+                  este mismo panel a dos centímetros: un botón verde encima de un
+                  «+» verde se lee como si tuvieran que ver. Reusar un tono solo
+                  es seguro cuando las dos cosas no comparten unidad de UI, y aquí
+                  la comparten. El relleno, en cambio, estaba libre: ningún
+                  elemento gramatical del panel se rellena, todos son cápsulas con
+                  borde. Ver `states.$porQueNoEstrenaTono` en tokens.json.
+
+                  Un solo estado para los dos botones a propósito: el icono y el
+                  texto ya los distinguen, y son excluyentes dentro de un mismo
+                  control. */}
               <div className="flex gap-2">
                 <button
                   onClick={() => copyToClipboard(generatedSentence)}
-                  className="flex-1 px-3 py-2 rounded-lg flex items-center justify-center gap-2
-                             text-sm font-semibold transition
-                             bg-[var(--f-cap)] border border-[var(--f-cap-border)] text-[var(--f-cap-ink)]
-                             hover:brightness-95 dark:hover:brightness-110"
+                  className={`flex-1 px-3 py-2 rounded-lg flex items-center justify-center gap-2 text-sm font-semibold transition border ${
+                    copied
+                      ? 'bg-[var(--state-fill)] border-[var(--state-fill)] text-[var(--state-ink)]'
+                      : 'bg-[var(--f-cap)] border-[var(--f-cap-border)] text-[var(--f-cap-ink)] hover:brightness-95 dark:hover:brightness-110'
+                  }`}
                   style={{ minHeight: 'var(--tap-min)' }}
                 >
                   {copied ? <Check className="w-4 h-4 shrink-0" /> : <Copy className="w-4 h-4 shrink-0" />}
@@ -4178,10 +4188,11 @@ const EnglishSentenceBuilder = () => {
                 </button>
                 <button
                   onClick={() => isSpeaking ? stopSpeaking() : speak(generatedSentence, { rate: speechRate, lang: 'en-US' })}
-                  className="flex-1 px-3 py-2 rounded-lg flex items-center justify-center gap-2
-                             text-sm font-semibold transition
-                             bg-[var(--f-cap)] border border-[var(--f-cap-border)] text-[var(--f-cap-ink)]
-                             hover:brightness-95 dark:hover:brightness-110"
+                  className={`flex-1 px-3 py-2 rounded-lg flex items-center justify-center gap-2 text-sm font-semibold transition border ${
+                    isSpeaking
+                      ? 'bg-[var(--state-fill)] border-[var(--state-fill)] text-[var(--state-ink)]'
+                      : 'bg-[var(--f-cap)] border-[var(--f-cap-border)] text-[var(--f-cap-ink)] hover:brightness-95 dark:hover:brightness-110'
+                  }`}
                   style={{ minHeight: 'var(--tap-min)' }}
                 >
                   {isSpeaking ? <VolumeX className="w-4 h-4 shrink-0" /> : <Volume2 className="w-4 h-4 shrink-0" />}
