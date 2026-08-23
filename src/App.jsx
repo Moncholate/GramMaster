@@ -4143,25 +4143,61 @@ const EnglishSentenceBuilder = () => {
             {/* Botones de acción */}
             <div className="space-y-2">
               {/* Fila principal: Copiar + Escuchar + velocidad */}
+              {/* Los tres vestían distinto sin que la diferencia significara nada.
+                  «Copiar» era `bg-gray-100`, que la capa de oscuro sí convierte;
+                  «Escuchar» era `bg-indigo-100`, que a propósito NO se convierte
+                  (ver la nota de los tintes -100 en index.css). Resultado: en
+                  oscuro, un botón oscuro al lado de una pastilla clara que ADEMÁS
+                  se invertía a oscura al pasar el mouse, porque el hover sí está
+                  cubierto. No era jerarquía, era media conversión.
+
+                  Ahora los tres comparten la familia `--f-cap`, la misma del
+                  control de los 3 modos y de las cápsulas del panel: un solo
+                  lenguaje visual para todo el resultado, y sin depender de que
+                  alguien acierte con el override.
+
+                  Los estados (copiado / hablando) NO llevan color de fondo. No es
+                  pereza: los únicos tokens de color que existen son los de FORMA
+                  (--f-aff, --f-neg) y los de TIPO DE PREGUNTA, y usar el verde de
+                  «afirmativa» para decir «copiado» es exactamente el cruce de ejes
+                  que este archivo ya corrigió una vez en la barra de modos. El
+                  icono y el texto cambian, que es señal suficiente y no inventa
+                  significado. Si se quiere color de estado, el sitio es
+                  design-tokens, no un `bg-green-100` a pelo. */}
               <div className="flex gap-2">
                 <button
                   onClick={() => copyToClipboard(generatedSentence)}
-                  className={`flex-1 px-3 py-2 rounded-lg flex items-center justify-center gap-2 text-sm font-medium transition-all ${copied ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+                  className="flex-1 px-3 py-2 rounded-lg flex items-center justify-center gap-2
+                             text-sm font-semibold transition
+                             bg-[var(--f-cap)] border border-[var(--f-cap-border)] text-[var(--f-cap-ink)]
+                             hover:brightness-95 dark:hover:brightness-110"
+                  style={{ minHeight: 'var(--tap-min)' }}
                 >
-                  {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                  {copied ? <Check className="w-4 h-4 shrink-0" /> : <Copy className="w-4 h-4 shrink-0" />}
                   {copied ? t.copied : t.copyToClipboard}
                 </button>
                 <button
                   onClick={() => isSpeaking ? stopSpeaking() : speak(generatedSentence, { rate: speechRate, lang: 'en-US' })}
-                  className={`flex-1 px-3 py-2 rounded-lg flex items-center justify-center gap-2 text-sm font-medium transition-all ${isSpeaking ? 'bg-red-100 text-red-700' : 'bg-indigo-100 text-indigo-700 hover:bg-indigo-200'}`}
+                  className="flex-1 px-3 py-2 rounded-lg flex items-center justify-center gap-2
+                             text-sm font-semibold transition
+                             bg-[var(--f-cap)] border border-[var(--f-cap-border)] text-[var(--f-cap-ink)]
+                             hover:brightness-95 dark:hover:brightness-110"
+                  style={{ minHeight: 'var(--tap-min)' }}
                 >
-                  {isSpeaking ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                  {isSpeaking ? <VolumeX className="w-4 h-4 shrink-0" /> : <Volume2 className="w-4 h-4 shrink-0" />}
                   {isSpeaking ? t.stop : t.listen}
                 </button>
+                {/* El selector modifica a «Escuchar», así que se le parece en vez
+                    de ser un `<select>` del sistema sin estilar. Y lleva nombre
+                    accesible: sin él, un lector de pantalla anuncia «Normal» sin
+                    decir normal DE QUÉ. */}
                 <select
                   value={speechRate}
                   onChange={(e) => setSpeechRate(parseFloat(e.target.value))}
-                  className="px-2 py-2 border border-gray-200 rounded-lg text-sm bg-white"
+                  aria-label={language === 'es' ? 'Velocidad de la voz' : 'Speech speed'}
+                  className="px-2 py-2 rounded-lg text-sm font-medium shrink-0
+                             bg-[var(--f-cap)] border border-[var(--f-cap-border)] text-[var(--f-cap-ink)]"
+                  style={{ minHeight: 'var(--tap-min)' }}
                 >
                   <option value="0.7">{t.slow}</option>
                   <option value="0.9">{t.normal}</option>
