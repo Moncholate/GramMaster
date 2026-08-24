@@ -3609,12 +3609,39 @@ const EnglishSentenceBuilder = () => {
               const formula = TENSE_FORMULAS[selectedTense];
               if (!tenseData || !formula) return null;
               const modeKey = selectedMode === 'affirmative' ? 'aff' : selectedMode === 'negative' ? 'neg' : 'int';
+
+              /* La fórmula CRECE cuando el alumno elige adverbio, y solo entonces.
+                 Sin adverbio se ve la estructura básica de tres piezas, que es lo
+                 que se quiere enseñar; al elegir uno, la fórmula muestra dónde
+                 cae. Así el cuarto elemento deja de aparecer en la oración sin
+                 haber sido anunciado — antes la fórmula prometía S+V+C y salían
+                 cuatro cosas de colores.
+
+                 Va SIEMPRE justo antes del término V, y eso no es una regla
+                 nueva: es la que ya aplica el generador. Sus tres casos
+                 —«Sujeto + Adverbio + Verbo» sin auxiliar, «Sujeto + Auxiliar +
+                 Adverbio + Verbo» con él, y tras el sujeto en interrogativo—
+                 colapsan todos en «antes de V» sobre estas fórmulas. Si algún día
+                 cambia el orden allá, esto tiene que cambiar aquí o la fórmula
+                 pasa a enseñar algo falso. */
+              const advSel = selectedAdverb
+                ? frequencyAdverbs.find(a => a.id === selectedAdverb)
+                : null;
+              const conAdverbio = (f) => {
+                if (!advSel) return f;
+                const partes = f.split(' + ');
+                const iV = partes.findIndex(p => /^V\b|^V\(/.test(p));
+                if (iV === -1) return f;                       // sin término V: no se toca
+                partes.splice(iV, 0, advSel.name.toLowerCase());
+                return partes.join(' + ');
+              };
+
               return (
                 <div className="mt-2 p-2.5 bg-indigo-50 border border-indigo-100 rounded-lg">
                   <div className="flex items-start gap-1.5">
                     <Info className="w-3.5 h-3.5 text-indigo-400 mt-0.5 shrink-0" />
                     <div>
-                      <div className="font-mono font-semibold text-indigo-700 text-xs tracking-wide">{formula[modeKey]}</div>
+                      <div className="font-mono font-semibold text-indigo-700 text-xs tracking-wide">{conAdverbio(formula[modeKey])}</div>
                       <div className="text-gray-500 text-xs mt-0.5">{language === 'es' ? tenseData.descEs : tenseData.descEn}</div>
                       <div className="text-gray-400 text-xs italic mt-0.5">{language === 'es' ? 'Ej.: ' : 'Ex.: '}{tenseData.example}</div>
                     </div>
@@ -3853,8 +3880,18 @@ const EnglishSentenceBuilder = () => {
             {/* Adverbio de frecuencia - solo para Simple Present y Simple Past */}
             {(selectedTense === 'simple-present' || selectedTense === 'simple-past') && !selectedModal && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                  {t.adverbLabel} <span className="text-gray-400 text-xs">({t.optional})</span>
+                {/* Insignia A, como S/V/C. Era el ÚNICO campo sin ella, y esa
+                    ausencia lo dejaba en tierra de nadie: ni parecía parte de la
+                    estructura ni se entendía por qué estaba ahí. El adverbio de
+                    frecuencia SÍ es contenido del temario y tiene regla de
+                    posición propia, así que se declara igual que los demás y la
+                    fórmula de arriba muestra dónde cae cuando se elige.
+                    El ámbar es `roles.adverb`, el mismo con el que se pinta luego
+                    en la oración. */}
+                <label className="flex items-center gap-1.5 mb-1.5">
+                  <span className="text-[10px] font-bold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded">A</span>
+                  <span className="text-sm font-medium text-amber-700">{t.adverbLabel}</span>
+                  <span className="text-gray-400 text-xs">({t.optional})</span>
                 </label>
                 <select
                   value={selectedAdverb}
@@ -4046,7 +4083,13 @@ const EnglishSentenceBuilder = () => {
                   {sentenceAnalysis.parts.some(p => p.type === 'complement') && (
                     <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-600 inline-block"></span>C</span>
                   )}
-                  {sentenceAnalysis.parts.some(p => p.type === 'adverbial') && (
+                  {/* Una sola entrada A para los DOS: el adverbio de frecuencia
+                      («always») y el complemento adverbial («at home»). No es un
+                      atajo — son la misma categoría funcional, adjuntos los dos,
+                      y darles entradas separadas diría que son cosas distintas.
+                      Antes «always» no figuraba en la leyenda en absoluto, así que
+                      salía coloreado sin que nada lo declarara. */}
+                  {sentenceAnalysis.parts.some(p => p.type === 'adverbial' || p.type === 'adverb') && (
                     <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-amber-500 inline-block"></span>A</span>
                   )}
                 </div>
@@ -4080,7 +4123,12 @@ const EnglishSentenceBuilder = () => {
                       part.type === 'wh-subject' ? ROLE_TW['wh-word'] :
                       part.type === 'wh-word' ? ROLE_TW['wh-word'] :
                       part.type === 'subject' ? ROLE_TW.subject :
-                      part.type === 'adverb' ? 'text-indigo-500 hover:bg-indigo-50' :
+                      /* Sale del rol y ya no a pelo. Estaba en `text-indigo-500`,
+                         a una parada del modal (`text-indigo-600`): la app pintaba
+                         «always» con el tono de otro rol, y de uno que sí figura
+                         en la leyenda. `roles.adverb` ya existía en design-tokens
+                         y las otras dos apps lo usaban; solo faltaba traerlo. */
+                      part.type === 'adverb' ? ROLE_TW.adverb :
                       part.type === 'auxiliary' ? ROLE_TW.auxiliary :
                       part.type === 'verb' ? ROLE_TW.verb :
                       part.type === 'complement' ? ROLE_TW.complement :

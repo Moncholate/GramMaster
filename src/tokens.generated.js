@@ -8,4 +8,5 @@ export const ROLE_TW = {
   "verb": "text-red-700 hover:bg-red-50",
   "complement": "text-slate-600 hover:bg-slate-50",
   "modal": "text-indigo-600 hover:bg-indigo-50",
+  "adverb": "text-amber-700 hover:bg-amber-50",
 };
