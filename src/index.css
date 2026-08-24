@@ -244,3 +244,28 @@ button:disabled { cursor: not-allowed; }
 :root[data-theme="dark"] .bg-transparent.text-amber-700  { color:#fbbf24 !important; }  /* 10.59:1 */
 :root[data-theme="dark"] .bg-transparent.text-amber-600  { color:#fbbf24 !important; }  /* 10.59:1 · complemento adverbial */
 :root[data-theme="dark"] .bg-transparent.text-pink-700   { color:#f9a8d4 !important; }  /*  8.70:1 · conector condicional */
+
+/* ── Índigo de marca sobre superficies oscuras ───────────────────────────────
+   Tres sitios que la auditoría de contraste renderizado encontró en oscuro y
+   que ninguna regla anterior alcanzaba. Los tres son de marca —índigo— y los
+   tres estaban en su valor claro sobre fondo oscuro.
+
+   La FÓRMULA es el peor: 2,04:1. Es el texto que enseña la estructura del
+   tiempo verbal, o sea de lo más importante que hay en pantalla después de la
+   propia oración. El override existente para ese recuadro cubría
+   `.text-indigo-600` y la fórmula usa `-700`, así que se quedaba fuera por una
+   parada de tono. */
+:root[data-theme="dark"] .bg-indigo-50 .text-indigo-700 { color:#a5b4fc !important; }  /*  8.08:1 sobre #1a2036 */
+/* La pista de dónde va el adverbio de frecuencia: pasa en claro (6,29:1) y
+   fallaba solo en oscuro. */
+:root[data-theme="dark"] p.text-xs.text-indigo-600      { color:#a5b4fc !important; }  /*  8.86:1 */
+/* La pestaña ACTIVA de la barra inferior. Va acotada a `nav` porque
+   `text-indigo-600` lo usan también chips sobre tinte índigo, que conservan su
+   tinta oscura a propósito. */
+:root[data-theme="dark"] nav button.text-indigo-600     { color:#a5b4fc !important; }  /*  8.86:1 */
+/* El asterisco de campo obligatorio. En claro pedía un rojo más oscuro
+   (red-500 daba 3,76:1) y en oscuro ese mismo rojo se queda corto (3,66:1): el
+   requisito se invierte con el tema, como pasa con `accent.ink` en los tokens.
+   Es el ÚNICO indicador de que un campo es obligatorio, así que no puede quedar
+   a medias en ninguno de los dos. */
+:root[data-theme="dark"] .text-red-600 { color:#f87171 !important; }  /* 6.39:1 */
