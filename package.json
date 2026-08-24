@@ -8,7 +8,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "check-contraste": "node check-contraste-render.mjs"
   },
   "dependencies": {
     "lucide-react": "^0.294.0",
