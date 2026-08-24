@@ -191,3 +191,56 @@ button:disabled { cursor: not-allowed; }
 .btn-salir:hover { background: rgba(100, 116, 139, .12); }
 :root[data-theme="dark"] .btn-salir { border-color: #8b94a7 !important; }
 :root[data-theme="dark"] .btn-salir:hover { background: rgba(139, 148, 167, .16); }
+
+/* ── LOS ROLES EN OSCURO ─────────────────────────────────────────────────────
+   Los colores de rol nunca entraron en esta capa, así que se quedaban en su
+   valor claro sobre la tarjeta #141826. Medido antes de tocar nada:
+
+     etiquetas de campo (14px, AA pide 4.5)   la oración (30px negrita, pide 3.0)
+       Complemento  4.69:1  ✓                   at home  11.09:1  ✓
+       Verbo        3.76:1  ✗                   She       3.42:1  ✓ (justo)
+       Adverbio     3.52:1  ✗                   always    3.52:1  ✓ (justo)
+       Sujeto       2.81:1  ✗                   works     2.73:1  ✗
+
+   El verbo era el peor de los dos lados, que en una app de gramática es el peor
+   sitio posible para que falle.
+
+   POR QUÉ NO UN OVERRIDE GENERAL. La misma clase vive en tres sitios con fondos
+   distintos: la INSIGNIA (`bg-amber-100 text-amber-700`, tinte que se queda
+   claro a propósito), la ETIQUETA (`text-sm font-medium`, sobre la tarjeta) y la
+   PALABRA de la oración (`bg-transparent`, sobre la tarjeta). Aclarar la clase a
+   secas dejaría la insignia lavada — es la trampa que ya documenta el bloque de
+   `text-green-700` más arriba. Por eso cada regla va compuesta con lo que
+   identifica a su elemento: `font-medium` la etiqueta, `bg-transparent` la
+   palabra. La insignia no encaja en ninguna y se queda como está, que es lo
+   correcto.
+
+   Los valores son los `dark` de cada rol en design-tokens, no elegidos aquí.
+   ------------------------------------------------------------------------- */
+/* Etiquetas de campo. Van dentro de `label` y no sueltas por `.text-sm
+   .font-medium`: esa pareja la usan también los botones del modo práctica, y
+   uno de ellos es `bg-teal-100 text-teal-700`. Aclararle la tinta lo dejó en
+   1,65:1 — texto claro sobre tinte claro, justo el fallo que esta capa viene a
+   evitar. Lo cazó `check-contraste-tw`, que por eso existe. */
+:root[data-theme="dark"] label .text-sm.font-medium.text-teal-700    { color:#2dd4bf !important; }  /*  9.49:1 */
+:root[data-theme="dark"] label .text-sm.font-medium.text-indigo-600  { color:#a5b4fc !important; }  /*  8.86:1 */
+:root[data-theme="dark"] label .text-sm.font-medium.text-rose-600    { color:#fb7185 !important; }  /*  6.57:1 */
+:root[data-theme="dark"] label .text-sm.font-medium.text-amber-700   { color:#fbbf24 !important; }  /* 10.59:1 */
+/* La etiqueta del complemento pasó de emerald-600 a emerald-700 en el JSX: en
+   CLARO el -600 daba 3,77:1 y tampoco pasaba, así que arreglarlo solo en oscuro
+   habría dejado la mitad del problema. El -700 da 5,48:1 sobre blanco.
+   Se mantiene la familia emerald aunque el rol del complemento sea slate:
+   corregir un contraste no es el momento de cambiarle el tono a nadie. Ese
+   cruce queda anotado aparte. */
+:root[data-theme="dark"] label .text-sm.font-medium.text-emerald-700 { color:#34d399 !important; }  /*  9.19:1 */
+
+/* Las palabras de la oración analizada */
+:root[data-theme="dark"] .bg-transparent.text-teal-700   { color:#2dd4bf !important; }  /*  9.49:1 */
+:root[data-theme="dark"] .bg-transparent.text-blue-600   { color:#60a5fa !important; }  /*  6.95:1 */
+:root[data-theme="dark"] .bg-transparent.text-rose-600   { color:#fb7185 !important; }  /*  6.57:1 */
+:root[data-theme="dark"] .bg-transparent.text-red-700    { color:#ef4444 !important; }  /*  4.70:1 */
+:root[data-theme="dark"] .bg-transparent.text-slate-600  { color:#cbd5e1 !important; }  /* 11.90:1 */
+:root[data-theme="dark"] .bg-transparent.text-indigo-600 { color:#a5b4fc !important; }  /*  8.86:1 */
+:root[data-theme="dark"] .bg-transparent.text-amber-700  { color:#fbbf24 !important; }  /* 10.59:1 */
+:root[data-theme="dark"] .bg-transparent.text-amber-600  { color:#fbbf24 !important; }  /* 10.59:1 · complemento adverbial */
+:root[data-theme="dark"] .bg-transparent.text-pink-700   { color:#f9a8d4 !important; }  /*  8.70:1 · conector condicional */

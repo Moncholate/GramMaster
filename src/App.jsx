@@ -3994,7 +3994,7 @@ const EnglishSentenceBuilder = () => {
             <div>
               <label className="flex items-center gap-1.5 mb-1.5">
                 <span className="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded">C</span>
-                <span className="text-sm font-medium text-emerald-600">{t.complement}</span>
+                <span className="text-sm font-medium text-emerald-700">{t.complement}</span>
                 <span className="text-gray-400 text-xs">({t.optional})</span>
               </label>
               <input
