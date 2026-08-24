@@ -224,7 +224,7 @@ button:disabled { cursor: not-allowed; }
    evitar. Lo cazó `check-contraste-tw`, que por eso existe. */
 :root[data-theme="dark"] label .text-sm.font-medium.text-teal-700    { color:#2dd4bf !important; }  /*  9.49:1 */
 :root[data-theme="dark"] label .text-sm.font-medium.text-indigo-600  { color:#a5b4fc !important; }  /*  8.86:1 */
-:root[data-theme="dark"] label .text-sm.font-medium.text-rose-600    { color:#fb7185 !important; }  /*  6.57:1 */
+:root[data-theme="dark"] label .text-sm.font-medium.text-rose-600    { color:#fda4af !important; }  /*  9.35:1 */
 :root[data-theme="dark"] label .text-sm.font-medium.text-amber-700   { color:#fbbf24 !important; }  /* 10.59:1 */
 /* La etiqueta del complemento pasó de emerald-600 a emerald-700 en el JSX: en
    CLARO el -600 daba 3,77:1 y tampoco pasaba, así que arreglarlo solo en oscuro
@@ -237,8 +237,13 @@ button:disabled { cursor: not-allowed; }
 /* Las palabras de la oración analizada */
 :root[data-theme="dark"] .bg-transparent.text-teal-700   { color:#2dd4bf !important; }  /*  9.49:1 */
 :root[data-theme="dark"] .bg-transparent.text-blue-600   { color:#60a5fa !important; }  /*  6.95:1 */
-:root[data-theme="dark"] .bg-transparent.text-rose-600   { color:#fb7185 !important; }  /*  6.57:1 */
-:root[data-theme="dark"] .bg-transparent.text-red-700    { color:#ef4444 !important; }  /*  4.70:1 */
+:root[data-theme="dark"] .bg-transparent.text-rose-600   { color:#fda4af !important; }  /*  9.35:1 */
+/* red-400 y no red-500. El verbo se aclaró en los tokens porque #ef4444 daba
+   4,04:1 sobre su propio tinte oscuro, y ARRASTRÓ al auxiliar a rose-300: si se
+   sube solo el verbo, los dos rojos quedan en ΔE 10,5 (el mismo color) y se
+   pierde la separación por luminosidad, que es la guardia de daltonismo de la
+   familia roja. Se cambian los dos o ninguno — ver `roles.verb.darkNote`. */
+:root[data-theme="dark"] .bg-transparent.text-red-700    { color:#f87171 !important; }  /*  6.39:1 */
 :root[data-theme="dark"] .bg-transparent.text-slate-600  { color:#cbd5e1 !important; }  /* 11.90:1 */
 :root[data-theme="dark"] .bg-transparent.text-indigo-600 { color:#a5b4fc !important; }  /*  8.86:1 */
 :root[data-theme="dark"] .bg-transparent.text-amber-700  { color:#fbbf24 !important; }  /* 10.59:1 */
