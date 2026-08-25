@@ -221,9 +221,32 @@ const shouldDoubleFinal = (v) =>
   DOUBLE_FINAL.has(v) || (!NO_DOUBLE_FINAL.has(v) && isCVCVerb(v));
 
 // Gerundios que no siguen ninguna regla ortográfica general
+/* ── Verbos de dos palabras ──────────────────────────────────────────────────
+   En un phrasal verb la que se conjuga es la CABEZA, no la partícula: «gets up»,
+   «got up», «getting up». La app conjugaba la última palabra y producía «She
+   get ups», «She get upped», «She look fors» — inglés roto, y encima con verbos
+   que el propio vocabulario del curso enseña: get up, wake up, look for, wait
+   for, sit down, put on, get dressed y seis más.
+
+   El envoltorio va en las CUATRO funciones de conjugación y no en
+   `buildSentenceText` a propósito: ahí lo heredan de golpe los doce tiempos por
+   sus tres modos, más las preguntas wh-, sin repetir la regla catorce veces ni
+   dejarse una.
+
+   Se aplica a CUALQUIER entrada de varias palabras, no solo a los phrasals
+   reconocidos. Si alguien escribe dos verbos —«work study»— eso es un error que
+   avisa `validateVerb`, pero mientras tanto «She works study» deja el fallo a la
+   vista en la palabra que sobra, mientras que «She work studies» lo esconde
+   detrás de una conjugación que parece correcta. */
+const conjugarNucleo = (fn) => (v) => {
+  const s = String(v ?? '').trim().toLowerCase();
+  const corte = s.indexOf(' ');
+  return corte === -1 ? fn(s) : fn(s.slice(0, corte)) + s.slice(corte);
+};
+
 const ING_EXCEPTIONS = { be: 'being' };
 
-export const presentParticiple = (v) => {
+const presentParticipleBase = (v) => {
   const lower = v.toLowerCase();
   if (ING_EXCEPTIONS[lower]) return ING_EXCEPTIONS[lower];
   if (lower.endsWith('ie')) return lower.slice(0, -2) + 'ying'; // die → dying
@@ -232,7 +255,7 @@ export const presentParticiple = (v) => {
   return lower + 'ing';
 };
 
-export const simplePast = (v) => {
+const simplePastBase = (v) => {
   const lower = v.toLowerCase();
   if (irregularVerbs[lower]) return irregularVerbs[lower].past;
   if (lower.endsWith('e')) return lower + 'd'; // live → lived
@@ -241,22 +264,30 @@ export const simplePast = (v) => {
   return lower + 'ed';
 };
 
-export const pastParticiple = (v) => {
+const pastParticipleBase = (v) => {
   const lower = v.toLowerCase();
   if (irregularVerbs[lower]) return irregularVerbs[lower].participle;
-  return simplePast(lower);
+  return simplePastBase(lower);
 };
 
 // 3ª persona singular con irregulares que no siguen las reglas de -s/-es
 const THIRD_PERSON_EXCEPTIONS = { have: 'has', be: 'is' };
 
-export const conjugate3p = (v) => {
+const conjugate3pBase = (v) => {
   const lower = v.toLowerCase();
   if (THIRD_PERSON_EXCEPTIONS[lower]) return THIRD_PERSON_EXCEPTIONS[lower];
   if (lower.endsWith('y') && !lower.match(/[aeiou]y$/)) return lower.slice(0, -1) + 'ies'; // study → studies
   if (lower.match(/(s|sh|ch|x|z|o)$/)) return lower + 'es'; // watch → watches, go → goes
   return lower + 's';
 };
+
+/* Las cuatro, envueltas. Este es el único sitio donde hay que acordarse de los
+   verbos de dos palabras: a partir de aquí, los doce tiempos por sus tres modos
+   y las preguntas wh- lo heredan sin saberlo. */
+export const presentParticiple = conjugarNucleo(presentParticipleBase);
+export const simplePast = conjugarNucleo(simplePastBase);
+export const pastParticiple = conjugarNucleo(pastParticipleBase);
+export const conjugate3p = conjugarNucleo(conjugate3pBase);
 
 // ---------------------------------------------------------------------------
 // Modales

@@ -61,7 +61,12 @@ const TENSES = [
 ];
 const MODES = ['affirmative', 'negative', 'interrogative'];
 const SUBJECTS = ['I', 'you', 'she', 'maria', 'the dogs', 'Tom and Ana'];
-const VERBS = ['work', 'study', 'go', 'have'];
+/* «get up» entra desde que el campo Verbo acepta frasales: Grammaster empezó a
+   generar una FORMA de oración que Desgramatizador nunca había tenido que
+   analizar, y el oráculo existe justo para eso — para que la app que produce y
+   la que identifica no se separen sin que nadie lo note. Se elige uno con la
+   cabeza irregular (get/got) para que además cruce el eje de la conjugación. */
+const VERBS = ['work', 'study', 'go', 'have', 'get up'];
 const COMPLEMENTO = 'at home';
 
 /* El analizador expande contracciones antes de trabajar («doesn't» → «does

@@ -1,5 +1,6 @@
 import { commonVerbs, irregularVerbs } from './verbs';
 import { englishDictionary } from './dictionary';
+import { PHRASAL_VERB_LIST } from './phrasal.generated.js';
 
 // Pronombres personales válidos como sujeto
 export const validPronouns = [
@@ -261,6 +262,45 @@ export const validateSubject = (subject, language = 'es') => {
 };
 
 // Validar verbo
+/* ── El campo Verbo con más de una palabra ───────────────────────────────────
+   Antes todas caían en el mismo mensaje —«no está en nuestra lista de verbos»—,
+   que es cierto y no sirve: no dice QUÉ arreglar. Y peor: metía en el mismo saco
+   tres cosas distintas, una de ellas correcta.
+
+     get up          phrasal verb. NO es un error: está en el vocabulario del
+                     curso y la app lo enseña. Se acepta.
+     study english   verbo + complemento. La segunda palabra tiene casilla
+                     propia, así que se ofrece moverla.
+     work study      dos verbos. Una oración lleva uno.
+
+   La distinción sale de datos que ya existen (la lista de frasales del Hub y la
+   de verbos), no de una lista nueva escrita a mano.
+
+   Por qué importa hacerlo bien: un aviso de «solo un verbo por campo» a secas le
+   diría al alumno que «get up» está mal, que es falso. La app afirmando algo
+   falso es peor que la app callada. */
+const esFrasal = (palabras) =>
+  PHRASAL_VERB_LIST.some(p => p.length === palabras.length && p.every((w, i) => w === palabras[i]));
+
+export const analizarVerboMultiple = (lowerVerb) => {
+  const palabras = lowerVerb.split(/\s+/).filter(Boolean);
+  if (palabras.length < 2) return null;
+
+  if (esFrasal(palabras)) return { tipo: 'frasal' };
+
+  const [cabeza, ...resto] = palabras;
+  if (!allValidVerbs.includes(cabeza)) return null;   // la cabeza no es verbo: el flujo normal lo dirá
+
+  /* `to` NO cuenta como segundo verbo: «want to eat» es una perífrasis, no dos
+     verbos sueltos, y decirle a quien la escribe que sobra un verbo sería
+     confundirlo. Se trata como complemento, que es donde de verdad va. */
+  const segundo = resto[0] === 'to' ? resto[1] : resto[0];
+  if (segundo && allValidVerbs.includes(segundo) && resto[0] !== 'to')
+    return { tipo: 'dosVerbos', cabeza, sobra: resto.join(' ') };
+
+  return { tipo: 'conComplemento', cabeza, sobra: resto.join(' ') };
+};
+
 export const validateVerb = (verb, language = 'es') => {
   if (!verb || verb.trim() === '') {
     return { valid: false, warning: null };
@@ -271,6 +311,30 @@ export const validateVerb = (verb, language = 'es') => {
   // Verificar si es un verbo conocido
   if (allValidVerbs.includes(lowerVerb)) {
     return { valid: true, warning: null };
+  }
+
+  const multiple = analizarVerboMultiple(lowerVerb);
+  if (multiple) {
+    const es = language === 'es';
+    if (multiple.tipo === 'frasal') return { valid: true, warning: null };
+    if (multiple.tipo === 'dosVerbos') {
+      return {
+        valid: false,
+        arreglo: multiple.cabeza,
+        warning: es
+          ? `Una oración lleva un solo verbo, y aquí hay dos: «${multiple.cabeza}» y «${multiple.sobra}»`
+          : `A sentence takes one verb, and there are two here: "${multiple.cabeza}" and "${multiple.sobra}"`,
+      };
+    }
+    // conComplemento
+    return {
+      valid: false,
+      arreglo: multiple.cabeza,
+      alComplemento: multiple.sobra,
+      warning: es
+        ? `«${multiple.sobra}» va en el complemento, no en el verbo`
+        : `"${multiple.sobra}" belongs in the complement, not in the verb`,
+    };
   }
 
   // Verificar si parece una palabra válida

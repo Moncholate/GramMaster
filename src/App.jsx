@@ -4032,8 +4032,26 @@ const EnglishSentenceBuilder = () => {
               ) : (
                 <>
                   {!verbValidation.valid && verbValidation.warning && (
-                    <p className="text-xs text-red-600 mt-1 flex items-center gap-1">
-                      <AlertTriangle className="w-3 h-3" /> {verbValidation.warning}
+                    <p className="text-xs text-red-600 mt-1 flex items-center gap-1 flex-wrap">
+                      <AlertTriangle className="w-3 h-3 shrink-0" /> {verbValidation.warning}
+                      {/* Arreglo a un clic. Con `alComplemento` la palabra que
+                          sobra no se tira: se MUEVE a su casilla, que es lo que
+                          enseña dónde iba. Si el complemento ya tiene algo, se
+                          antepone en vez de pisarlo — borrar lo que el alumno
+                          escribió para «ayudarle» es el peor arreglo posible. */}
+                      {verbValidation.arreglo && (
+                        <button
+                          onClick={() => {
+                            if (verbValidation.alComplemento) {
+                              setComplement(prev => prev.trim()
+                                ? `${verbValidation.alComplemento} ${prev.trim()}`
+                                : verbValidation.alComplemento);
+                            }
+                            setVerb(verbValidation.arreglo);
+                          }}
+                          className="underline font-semibold"
+                        >{verbValidation.alComplemento ? t.moverAlComplemento : t.dejarSolo} </button>
+                      )}
                     </p>
                   )}
                   {verbValidation.valid && verbValidation.warning && (

@@ -93,6 +93,8 @@ export const translations = {
     spellingError: 'Posible error ortográfico',
     didYouMean: '¿Quisiste decir',
     capitalHint: 'En inglés va con mayúscula',
+    moverAlComplemento: 'Moverla al complemento',
+    dejarSolo: 'Dejar solo el primero',
     ignoreSuggestion: 'Ignorar',
     // Fase 2
     practiceTitle: 'Modo Práctica',
@@ -255,6 +257,8 @@ export const translations = {
     spellingError: 'Possible spelling error',
     didYouMean: 'Did you mean',
     capitalHint: 'This word takes a capital in English',
+    moverAlComplemento: 'Move it to the complement',
+    dejarSolo: 'Keep only the first',
     ignoreSuggestion: 'Ignore',
     // Fase 2
     practiceTitle: 'Practice Mode',
