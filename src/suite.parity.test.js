@@ -60,14 +60,24 @@ const TENSES = [
   'present-perfect-continuous', 'used-to',
 ];
 const MODES = ['affirmative', 'negative', 'interrogative'];
-const SUBJECTS = ['I', 'you', 'she', 'maria', 'the dogs', 'Tom and Ana'];
+/* «the dog» —determinante + sustantivo SINGULAR— faltaba, y su ausencia tapaba
+   un fallo grave: compromise lee «the dog runs» como frase nominal y
+   Desgramatizador devolvía CERO componentes. Todos los sujetos de esta lista
+   eran pronombres, nombres propios o plurales, o sea justo los que NO disparan
+   la ambigüedad. */
+const SUBJECTS = ['I', 'you', 'she', 'maria', 'the dog', 'the dogs', 'Tom and Ana'];
 /* «get up» entra desde que el campo Verbo acepta frasales: Grammaster empezó a
    generar una FORMA de oración que Desgramatizador nunca había tenido que
    analizar, y el oráculo existe justo para eso — para que la app que produce y
    la que identifica no se separen sin que nadie lo note. Se elige uno con la
    cabeza irregular (get/got) para que además cruce el eje de la conjugación. */
 const VERBS = ['work', 'study', 'go', 'have', 'get up'];
-const COMPLEMENTO = 'at home';
+/* El complemento VACÍO es el segundo punto ciego que hacía falta cerrar. Con
+   «at home» siempre puesto, el verbo nunca cerraba la oración — y ahí es donde
+   estaban tanto el análisis vacío de «The dog runs.» como la fuga del punto
+   final dentro del último componente. Un eje que solo se prueba con un valor no
+   es un eje. */
+const COMPLEMENTOS = ['at home', ''];
 
 /* El analizador expande contracciones antes de trabajar («doesn't» → «does
    not»), así que los dos lados se normalizan con el MISMO expansor, que es el
@@ -109,12 +119,13 @@ const barrido = () => {
   for (const tense of TENSES)
     for (const mode of MODES)
       for (const subject of SUBJECTS)
-        for (const verb of VERBS) {
-          const texto = buildSentenceText({ mode, subject, verb, complement: COMPLEMENTO, tense });
+        for (const verb of VERBS)
+        for (const complement of COMPLEMENTOS) {
+          const texto = buildSentenceText({ mode, subject, verb, complement, tense });
           const comps = analyzeSentenceStructure(texto, 'Básico').components || [];
           casos.push({
             tense, mode, subject, verb, texto,
-            clave: `${tense}/${mode}/${subject}/${verb}`,
+            clave: `${tense}/${mode}/${subject}/${verb}${complement ? '' : '/sin-compl'}`,
             S: comps.filter(x => x.type === 'S').map(x => x.text).join(' '),
             V: comps.filter(x => x.type === 'V' || x.type === 'AUX').map(x => x.text).join(' '),
             todo: comps.map(x => x.text).join(' '),
