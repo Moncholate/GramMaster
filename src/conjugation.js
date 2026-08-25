@@ -3,6 +3,7 @@
 import { commonVerbs, irregularVerbs } from './data/verbs';
 import { englishDictionary } from './data/dictionary';
 import { validPronouns, validDeterminers, hispanicNames, englishNames } from './data/validation';
+import { CAPS_CANONICO, CAPS_AMBIGUAS, revisarMayusculas, corregirMayusculas } from './data/capitals.generated.js';
 
 // ---------------------------------------------------------------------------
 // Sujeto
@@ -14,16 +15,18 @@ const stripAccents = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, ''); // quita
    es un error sistemático de los hispanohablantes. Se fuerzan en mayúscula para
    que la oración generada modele la regla en vez de reproducir el error.
    Va ANTES del diccionario a propósito: monday, january y sunday están ahí y si
-   no, terminarían en minúscula ("on monday"). */
-const ALWAYS_CAPITAL = new Set([
-  'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday',
-  'january', 'february', 'march', 'april', 'may', 'june', 'july', 'august',
-  'september', 'october', 'november', 'december',
-  'english', 'spanish', 'french', 'german', 'italian', 'portuguese', 'chinese',
-  'japanese', 'korean', 'russian', 'arabic',
-  'chilean', 'american', 'british', 'mexican', 'argentinian', 'brazilian',
-  'colombian', 'peruvian', 'canadian', 'australian',
-]);
+   no, terminarían en minúscula ("on monday").
+
+   LA LISTA VIENE DE `CAPS_CANONICO`, la misma que usa el aviso del formulario.
+   Antes había una escrita a mano aquí y ya se habían separado: capitalizaba
+   `italian` y `colombian`, que el aviso no conocía, y NO capitalizaba `turkish`,
+   `irish`, `thai` y diez más, que el aviso sí marcaba. O sea que la app le pedía
+   al alumno una mayúscula y luego generaba la oración sin ella. Son dos mitades
+   del mismo trabajo —enseñar la regla en la entrada, modelarla en la salida— y
+   tienen que salir del mismo sitio o se contradicen.
+
+   Se usa el valor canónico y no `upperFirst`: así una entrada con mayúscula
+   interna se escribiría como toca sin tener que acordarse de nada aquí. */
 
 const upperFirst = (w) => w.charAt(0).toUpperCase() + w.slice(1);
 
@@ -52,14 +55,26 @@ const esNombrePropio = (palabra) =>
   || hispanicNames.includes(palabra) || hispanicNames.includes(stripAccents(palabra))
   || englishNames.includes(palabra);
 
+const CAPS_AMB = new Set(CAPS_AMBIGUAS);
+
 export const smartCase = (raw) => {
-  return raw
-    .trim()
+  const texto = raw.trim();
+  /* Las ambiguas —may, march, august— las decide el MOTOR, que mira la palabra
+     de al lado: «in march» es el mes y «the march» no lo es. Este bucle ve una
+     palabra por vez y no puede saberlo, así que antes capitalizaba las dos y
+     escribía «the March». Que la regla la aplique quien tiene el contexto. */
+  const base = corregirMayusculas(
+    texto,
+    revisarMayusculas(texto, { canonico: CAPS_CANONICO, ambiguas: CAPS_AMBIGUAS })
+  );
+  return base
     .split(/\s+/)
     .map((word) => {
       const lower = word.toLowerCase();
       if (lower === 'i') return 'I';
-      if (ALWAYS_CAPITAL.has(lower)) return upperFirst(lower);
+      // Ambigua: se queda como la dejó el motor, con contexto o sin él.
+      if (CAPS_AMB.has(lower)) return word;
+      if (CAPS_CANONICO[lower]) return CAPS_CANONICO[lower];
       /* `esNombrePropio` y no las listas sueltas: incluye los nombres que
          declaró el usuario, y así capitalizar y contar la persona no pueden
          discrepar. Sin esto, declarar «jans» lo conjugaba en singular pero lo

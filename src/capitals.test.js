@@ -109,6 +109,39 @@ describe('la lista y el diccionario ven el mismo mundo', () => {
       .toEqual([]);
   });
 
+  /* `conjugation.js` tenía su PROPIA lista para capitalizar la oración generada
+     y ya se habían separado: capitalizaba `italian` y `colombian`, que el aviso
+     no conocía, y NO capitalizaba `turkish`, `irish`, `thai` y diez más, que el
+     aviso sí marcaba. O sea que la app le pedía al alumno una mayúscula y luego
+     generaba la oración sin ella. Ahora las dos salen de `CAPS_CANONICO`. */
+  it('lo que el aviso pide, la oración generada lo escribe', async () => {
+    const { smartCase } = await import('./conjugation.js');
+    for (const p of Object.keys(CAPS_CANONICO)) {
+      if (CAPS_AMBIGUAS.includes(p)) continue;   // esas piden contexto, ver abajo
+      expect(smartCase(p), `«${p}» se avisa pero no se capitaliza al generar`)
+        .toBe(CAPS_CANONICO[p]);
+    }
+  });
+
+  it('las ambiguas las decide el contexto también al generar', async () => {
+    const { smartCase } = await import('./conjugation.js');
+    // Antes se capitalizaban a ciegas y salía «the March».
+    expect(smartCase('the march')).toBe('the march');
+    expect(smartCase('in march')).toBe('in March');
+    expect(smartCase('she may')).toBe('she may');
+    expect(smartCase('in may')).toBe('in May');
+  });
+
+  /* «North America» se partía en palabras y `north` acababa exigiendo mayúscula
+     por su cuenta: «go south» salía marcado como error. Una oración correcta
+     señalada como incorrecta es el fallo caro. */
+  it('las direcciones no exigen mayúscula', () => {
+    for (const d of ['north', 'south', 'east', 'west'])
+      expect(CAPS_CANONICO[d], `«${d}» no debería exigir mayúscula`).toBeUndefined();
+    expect(marcadas('go south and turn left')).toEqual([]);
+    expect(marcadas('the north wind')).toEqual([]);
+  });
+
   it('«may» sigue declarada como ambigua', () => {
     // Cerrojo explícito: si alguien la saca de la lista, este test cae antes de
     // que la app empiece a corregir modales.

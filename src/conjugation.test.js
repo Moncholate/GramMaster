@@ -653,11 +653,30 @@ describe('smartCase: nombres ingleses', () => {
   });
 
   it('no rompe los modales ni las palabras que también son nombre', () => {
-    // `will`, `mark`, `rose`, `may`, `bill`… quedaron FUERA de la lista a
-    // propósito: capitalizar «will» rompería el futuro.
+    // `will`, `mark`, `rose`, `may`, `bill`… quedaron FUERA de la lista de
+    // nombres a propósito: capitalizar «will» rompería el futuro.
     expect(smartCaseSubject('will')).toBe('will');
-    // may/june siguen capitalizándose, pero por ser MESES, no por ser nombres.
-    expect(smartCaseSubject('may')).toBe('May');
+    // Los meses que NO son otra cosa se capitalizan solos.
+    expect(smartCaseSubject('june')).toBe('June');
+  });
+
+  /* `may`, `march` y `august` son meses Y son otra palabra. Antes se
+     capitalizaban a ciegas y salía «She works the March». Ahora las decide el
+     motor de mayúsculas, que mira la palabra de al lado.
+
+     Que «may» suelto se quede en minúscula no le quita la mayúscula a nada: si
+     va de sujeto abre la oración y se capitaliza igual («May works.»), y si va
+     de complemento con una preposición de tiempo delante el motor la reconoce
+     («in May»). El único caso que pierde es «may» suelto como complemento, que
+     además nadie sabría decir si es el mes o el modal. */
+  it('los meses ambiguos esperan a tener contexto', () => {
+    expect(smartCaseSubject('may')).toBe('may');
+    expect(smartCaseSubject('in may')).toBe('in May');
+    expect(smartCaseSubject('the march')).toBe('the march');
+    expect(smartCaseSubject('in march')).toBe('in March');
+    // Y en la oración completa el sujeto se capitaliza igual.
+    expect(buildSentenceText({ mode: 'affirmative', subject: 'may', verb: 'work',
+                               complement: '', tense: 'simple-present' })).toBe('May works.');
   });
 
   it('el nombre se capitaliza dentro de una condicional', () => {
