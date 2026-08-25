@@ -3816,9 +3816,9 @@ const EnglishSentenceBuilder = () => {
 
             <div>
               <label className="flex items-center gap-1.5 mb-1.5">
-                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${esPregSujeto ? 'bg-teal-100 text-teal-700' : 'bg-indigo-100 text-indigo-600'}`}>
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${esPregSujeto ? 'bg-teal-100 text-teal-700' : 'bg-blue-100 text-blue-700'}`}>
                   S</span>
-                <span className={`text-sm font-medium ${esPregSujeto ? 'text-teal-700' : 'text-indigo-600'}`}>{t.subject}</span>
+                <span className={`text-sm font-medium ${esPregSujeto ? 'text-teal-700' : 'text-blue-600'}`}>{t.subject}</span>
                 {!esPregSujeto && <span className="text-red-600 text-xs">*</span>}
               </label>
               {esPregSujeto ? (
@@ -3844,7 +3844,7 @@ const EnglishSentenceBuilder = () => {
                 className={`w-full px-4 py-2.5 border-y border-r rounded-lg border-l-4 focus:ring-2 focus:ring-indigo-500 outline-none transition-all ${
                   !subjectValidation.valid ? 'border-red-400 bg-red-50' :
                   subjectValidation.warning ? 'border-amber-400 bg-amber-50 border-l-amber-400' :
-                  'border-gray-300 border-l-indigo-400 focus:border-indigo-500'
+                  'border-gray-300 border-l-blue-400 focus:border-indigo-500'
                 }`}
               />
               )}
@@ -3922,8 +3922,8 @@ const EnglishSentenceBuilder = () => {
             {/* Verbo */}
             <div className="relative">
               <label className="flex items-center gap-1.5 mb-1.5">
-                <span className="text-[10px] font-bold bg-rose-100 text-rose-700 px-1.5 py-0.5 rounded">V</span>
-                <span className="text-sm font-medium text-rose-600">{t.verb}</span>
+                <span className="text-[10px] font-bold bg-red-100 text-red-700 px-1.5 py-0.5 rounded">V</span>
+                <span className="text-sm font-medium text-red-700">{t.verb}</span>
                 <span className="text-red-600 text-xs">*</span>
               </label>
               <input
@@ -3946,7 +3946,7 @@ const EnglishSentenceBuilder = () => {
                 className={`w-full px-4 py-2.5 border-y border-r rounded-lg border-l-4 focus:ring-2 focus:ring-indigo-500 outline-none transition-all ${
                   verbBaseSuggestion || !verbValidation.valid ? 'border-red-400 bg-red-50' :
                   verbValidation.warning ? 'border-amber-400 bg-amber-50 border-l-amber-400' :
-                  'border-gray-300 border-l-rose-400 focus:border-indigo-500'
+                  'border-gray-300 border-l-red-400 focus:border-indigo-500'
                 }`}
               />
               {showVerbSuggestions && verbSuggestions.length > 0 && (
@@ -3998,8 +3998,8 @@ const EnglishSentenceBuilder = () => {
             {/* Complemento */}
             <div>
               <label className="flex items-center gap-1.5 mb-1.5">
-                <span className="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded">C</span>
-                <span className="text-sm font-medium text-emerald-700">{t.complement}</span>
+                <span className="text-[10px] font-bold bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded">C</span>
+                <span className="text-sm font-medium text-slate-600">{t.complement}</span>
                 <span className="text-gray-500 text-xs">({t.optional})</span>
               </label>
               <input
@@ -4016,7 +4016,7 @@ const EnglishSentenceBuilder = () => {
                 className={`w-full px-4 py-2.5 border-y border-r rounded-lg border-l-4 focus:ring-2 focus:ring-indigo-500 outline-none transition-all ${
                   !complementValidation.valid ? 'border-red-400 bg-red-50' :
                   complementValidation.warning ? 'border-amber-400 bg-amber-50 border-l-amber-400' :
-                  'border-gray-300 border-l-emerald-400 focus:border-indigo-500'
+                  'border-gray-300 border-l-slate-400 focus:border-indigo-500'
                 }`}
               />
               {!complementValidation.valid && complementValidation.warning && (

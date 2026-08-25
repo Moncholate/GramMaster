@@ -222,17 +222,23 @@ button:disabled { cursor: not-allowed; }
    uno de ellos es `bg-teal-100 text-teal-700`. Aclararle la tinta lo dejó en
    1,65:1 — texto claro sobre tinte claro, justo el fallo que esta capa viene a
    evitar. Lo cazó `check-contraste-tw`, que por eso existe. */
-:root[data-theme="dark"] label .text-sm.font-medium.text-teal-700    { color:#2dd4bf !important; }  /*  9.49:1 */
-:root[data-theme="dark"] label .text-sm.font-medium.text-indigo-600  { color:#a5b4fc !important; }  /*  8.86:1 */
-:root[data-theme="dark"] label .text-sm.font-medium.text-rose-600    { color:#fda4af !important; }  /*  9.35:1 */
-:root[data-theme="dark"] label .text-sm.font-medium.text-amber-700   { color:#fbbf24 !important; }  /* 10.59:1 */
-/* La etiqueta del complemento pasó de emerald-600 a emerald-700 en el JSX: en
-   CLARO el -600 daba 3,77:1 y tampoco pasaba, así que arreglarlo solo en oscuro
-   habría dejado la mitad del problema. El -700 da 5,48:1 sobre blanco.
-   Se mantiene la familia emerald aunque el rol del complemento sea slate:
-   corregir un contraste no es el momento de cambiarle el tono a nadie. Ese
-   cruce queda anotado aparte. */
-:root[data-theme="dark"] label .text-sm.font-medium.text-emerald-700 { color:#34d399 !important; }  /*  9.19:1 */
+/* Cada etiqueta lleva AHORA el color de SU rol. Antes tres de las cuatro
+   llevaban el de otro: Sujeto iba en indigo (el del MODAL), Verbo en rose (el
+   del AUXILIAR) y Complemento en emerald (que no es de nadie — el suyo es
+   slate). No era cuestión de gusto: indigo y rose aparecen en la MISMA pantalla
+   queriendo decir otra cosa, así que el alumno escribía en la casilla «Verbo»
+   rotulada en rose y luego veía el verbo en rojo y el rose en el auxiliar. La
+   app enseñaba un código de colores y se lo desmentía en el formulario.
+   El teal del Sujeto NO es un error y se queda: solo sale en preguntas de
+   sujeto, donde el hueco lo ocupa la palabra wh- y el teal es justo su color. */
+:root[data-theme="dark"] label .text-sm.font-medium.text-teal-700    { color:#2dd4bf !important; }  /*  9.49:1 · wh (pregunta de sujeto) */
+:root[data-theme="dark"] label .text-sm.font-medium.text-blue-600    { color:#60a5fa !important; }  /*  6.95:1 · sujeto */
+:root[data-theme="dark"] label .text-sm.font-medium.text-red-700     { color:#f87171 !important; }  /*  6.39:1 · verbo */
+:root[data-theme="dark"] label .text-sm.font-medium.text-amber-700   { color:#fbbf24 !important; }  /* 10.59:1 · adverbio */
+/* El complemento lo cazaría igual la regla general de neutros, pero con #c7cdda
+   en vez del #cbd5e1 del rol. Son indistinguibles a ojo; se pone explícito para
+   que la etiqueta y la palabra de la oración salgan del mismo sitio. */
+:root[data-theme="dark"] label .text-sm.font-medium.text-slate-600   { color:#cbd5e1 !important; }  /* 11.90:1 · complemento */
 
 /* Las palabras de la oración analizada */
 :root[data-theme="dark"] .bg-transparent.text-teal-700   { color:#2dd4bf !important; }  /*  9.49:1 */
