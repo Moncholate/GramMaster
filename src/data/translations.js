@@ -92,6 +92,7 @@ export const translations = {
     recentVerbs: 'Verbos recientes',
     spellingError: 'Posible error ortográfico',
     didYouMean: '¿Quisiste decir',
+    capitalHint: 'En inglés va con mayúscula',
     ignoreSuggestion: 'Ignorar',
     // Fase 2
     practiceTitle: 'Modo Práctica',
@@ -253,6 +254,7 @@ export const translations = {
     recentVerbs: 'Recent verbs',
     spellingError: 'Possible spelling error',
     didYouMean: 'Did you mean',
+    capitalHint: 'This word takes a capital in English',
     ignoreSuggestion: 'Ignore',
     // Fase 2
     practiceTitle: 'Practice Mode',

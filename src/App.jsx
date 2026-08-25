@@ -42,6 +42,9 @@ import {
   validateComplement,
 } from './data';
 import { getSpellingSuggestions } from './spelling';
+/* Mayúsculas: meses, días y nacionalidades. Motor y lista generados desde
+   Grammar HUB — ver capitals-engine.js para por qué es una regla aparte. */
+import { revisarMayusculas, CAPS_CANONICO, CAPS_AMBIGUAS } from './data/capitals.generated.js';
 import {
   smartCaseSubject,
   isThirdPersonSingular,
@@ -701,6 +704,17 @@ const EnglishSentenceBuilder = () => {
     complement: []
   });
 
+  /* Mayúsculas, en su propio estado y no dentro de spellingErrors. Son dos
+     avisos distintos y decirlo mal enseña mal: «¿quisiste decir…?» supone que
+     la palabra está mal escrita, y «january» está perfectamente escrita — lo
+     que falla es que el español no capitaliza los meses y el inglés sí. Ver la
+     cabecera de capitals-engine.js. */
+  const [capsErrors, setCapsErrors] = useState({
+    subject: [],
+    verb: [],
+    complement: []
+  });
+
   // FASE 2: Nuevos estados
   const [practiceMode, setPracticeMode] = useState(false);
   const [practiceType, setPracticeType] = useState('');
@@ -964,6 +978,15 @@ const EnglishSentenceBuilder = () => {
 
   // Función para verificar ortografía en un texto
   const checkSpelling = (text, field) => {
+    /* La capitalización se mira sobre el texto ENTERO y no palabra a palabra,
+       porque para las ambiguas hace falta el vecino: «may» solo es el mes si
+       trae delante una preposición de tiempo. Partiendo por espacios primero,
+       esa prueba se pierde. */
+    setCapsErrors(prev => ({
+      ...prev,
+      [field]: revisarMayusculas(text, { canonico: CAPS_CANONICO, ambiguas: CAPS_AMBIGUAS }),
+    }));
+
     if (!text || text.trim().length === 0) {
       setSpellingErrors(prev => ({ ...prev, [field]: [] }));
       return;
@@ -1128,6 +1151,29 @@ const EnglishSentenceBuilder = () => {
   // Escapar caracteres especiales en RegExp
   const escapeRegExp = (string) => {
     return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  };
+
+  /* El aviso de mayúscula, igual en los tres campos. Va en un componente y no
+     copiado tres veces por lo de siempre: copiado, uno de los tres se queda
+     atrás. Índigo y no ámbar: el ámbar de esta app avisa de que algo puede
+     estar MAL, y aquí la palabra está bien escrita — solo le falta la capital.
+     Se ofrece el arreglo a un clic porque en clase, delante del curso, no hay
+     tiempo de volver al campo a reescribirlo. */
+  const AvisoMayuscula = ({ campo }) => {
+    const hallazgos = capsErrors[campo];
+    if (!hallazgos || !hallazgos.length) return null;
+    return (
+      <p className="aviso-mayuscula text-xs mt-1 flex items-center gap-1 flex-wrap">
+        <AlertTriangle className="w-3 h-3 shrink-0" /> {t.capitalHint}:
+        {hallazgos.slice(0, 2).map((h, i) => (
+          <button
+            key={i}
+            onClick={() => applySuggestion(campo, h.palabra, h.sugerida)}
+            className="underline font-semibold ml-1"
+          >{h.sugerida}</button>
+        ))}
+      </p>
+    );
   };
 
   // Aplicar sugerencia de corrección
@@ -3889,6 +3935,7 @@ const EnglishSentenceBuilder = () => {
                   ))}
                 </p>
               )}
+              <AvisoMayuscula campo="subject" />
             </div>
 
             {/* Adverbio de frecuencia - solo para Simple Present y Simple Past */}
@@ -4002,6 +4049,7 @@ const EnglishSentenceBuilder = () => {
                   {t.irregularDetected}: {irregularVerbs[verb.toLowerCase()].past}/{irregularVerbs[verb.toLowerCase()].participle}
                 </p>
               )}
+              <AvisoMayuscula campo="verb" />
             </div>
 
             {/* Complemento */}
@@ -4046,6 +4094,7 @@ const EnglishSentenceBuilder = () => {
                   )}
                 </p>
               )}
+              <AvisoMayuscula campo="complement" />
               {selectedTense && COMPLEMENT_CHIPS[selectedTense] && (
                 <div className="flex flex-wrap gap-1 mt-1.5">
                   {COMPLEMENT_CHIPS[selectedTense].map(chip => (

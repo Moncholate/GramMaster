@@ -29,7 +29,11 @@ correr({
   conducir: async (page) => {
     await page.getByPlaceholder(/I, you, he, she/).fill('she');
     await page.getByPlaceholder(/work, study, play/).fill('work');
-    await page.getByPlaceholder(/yesterday, at home/).fill('at home');
+    /* «in january» y no «at home»: además de servir de complemento, dispara el
+       aviso de mayúscula, que si no no existiría en el DOM y se quedaría sin
+       medir. Un elemento que solo aparece cuando el alumno se equivoca es justo
+       el que nadie mira. */
+    await page.getByPlaceholder(/yesterday, at home/).fill('in january');
     await page.getByRole('button', { name: /Selecciona un tiempo/ }).click();
     await page.waitForTimeout(300);
     await page.locator('button:has-text("Presente Simple")').first().click();

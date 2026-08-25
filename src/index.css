@@ -293,3 +293,13 @@ button:disabled { cursor: not-allowed; }
    Es el ÚNICO indicador de que un campo es obligatorio, así que no puede quedar
    a medias en ninguno de los dos. */
 :root[data-theme="dark"] .text-red-600 { color:#f87171 !important; }  /* 6.39:1 */
+
+/* ── Aviso de mayúscula ──────────────────────────────────────────────────────
+   Va con `--marca` y no con una clase de Tailwind porque el requisito se
+   invierte con el tema y la variable ya lo resuelve sola: indigo-700 da 7,90:1
+   sobre la tarjeta blanca y 2,24:1 sobre la oscura, así que una clase fija
+   habría necesitado su override y una parada más en la lista de las que se
+   desfasan. Medido: 5,56:1 en claro y 5,70:1 en oscuro.
+   Es índigo de MARCA, no ámbar: el ámbar de esta app avisa de que algo puede
+   estar mal, y aquí la palabra está bien escrita — solo le falta la capital. */
+.aviso-mayuscula { color: var(--marca); }
