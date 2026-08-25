@@ -2,6 +2,10 @@
 @import './dua.generated.css';
 /* Chip de forma (+ − ?) y tipo de pregunta — el mismo objeto en las 4 apps. */
 @import './forms.generated.css';
+/* Un color por rol gramatical, generado desde design-tokens. Los SELECTORES de
+   la capa oscura se quedan abajo —son conocimiento de esta app— pero los
+   VALORES vienen de aquí: copiarlos fue lo que desvió el verbo y el auxiliar. */
+@import './colores.generated.css';
 
 @font-face{font-family:'Lexend';font-style:normal;font-weight:400 700;font-display:swap;src:url('./fonts/Lexend.woff2') format('woff2');}
 @font-face{font-family:'Atkinson Hyperlegible';font-style:normal;font-weight:400;font-display:swap;src:url('./fonts/AtkinsonHyperlegible-Regular.woff2') format('woff2');}
@@ -231,29 +235,29 @@ button:disabled { cursor: not-allowed; }
    app enseñaba un código de colores y se lo desmentía en el formulario.
    El teal del Sujeto NO es un error y se queda: solo sale en preguntas de
    sujeto, donde el hueco lo ocupa la palabra wh- y el teal es justo su color. */
-:root[data-theme="dark"] label .text-sm.font-medium.text-teal-700    { color:#2dd4bf !important; }  /*  9.49:1 · wh (pregunta de sujeto) */
-:root[data-theme="dark"] label .text-sm.font-medium.text-blue-600    { color:#60a5fa !important; }  /*  6.95:1 · sujeto */
-:root[data-theme="dark"] label .text-sm.font-medium.text-red-700     { color:#f87171 !important; }  /*  6.39:1 · verbo */
-:root[data-theme="dark"] label .text-sm.font-medium.text-amber-700   { color:#fbbf24 !important; }  /* 10.59:1 · adverbio */
+:root[data-theme="dark"] label .text-sm.font-medium.text-teal-700    { color:var(--rol-wh) !important; }  /*  9.49:1 · wh (pregunta de sujeto) */
+:root[data-theme="dark"] label .text-sm.font-medium.text-blue-600    { color:var(--rol-subject) !important; }  /*  6.95:1 · sujeto */
+:root[data-theme="dark"] label .text-sm.font-medium.text-red-700     { color:var(--rol-verb) !important; }  /*  6.39:1 · verbo */
+:root[data-theme="dark"] label .text-sm.font-medium.text-amber-700   { color:var(--rol-adverb) !important; }  /* 10.59:1 · adverbio */
 /* El complemento lo cazaría igual la regla general de neutros, pero con #c7cdda
    en vez del #cbd5e1 del rol. Son indistinguibles a ojo; se pone explícito para
    que la etiqueta y la palabra de la oración salgan del mismo sitio. */
-:root[data-theme="dark"] label .text-sm.font-medium.text-slate-600   { color:#cbd5e1 !important; }  /* 11.90:1 · complemento */
+:root[data-theme="dark"] label .text-sm.font-medium.text-slate-600   { color:var(--rol-complement) !important; }  /* 11.90:1 · complemento */
 
 /* Las palabras de la oración analizada */
-:root[data-theme="dark"] .bg-transparent.text-teal-700   { color:#2dd4bf !important; }  /*  9.49:1 */
-:root[data-theme="dark"] .bg-transparent.text-blue-600   { color:#60a5fa !important; }  /*  6.95:1 */
-:root[data-theme="dark"] .bg-transparent.text-rose-600   { color:#fda4af !important; }  /*  9.35:1 */
+:root[data-theme="dark"] .bg-transparent.text-teal-700   { color:var(--rol-wh) !important; }  /*  9.49:1 */
+:root[data-theme="dark"] .bg-transparent.text-blue-600   { color:var(--rol-subject) !important; }  /*  6.95:1 */
+:root[data-theme="dark"] .bg-transparent.text-rose-600   { color:var(--rol-auxiliary) !important; }  /*  9.35:1 */
 /* red-400 y no red-500. El verbo se aclaró en los tokens porque #ef4444 daba
    4,04:1 sobre su propio tinte oscuro, y ARRASTRÓ al auxiliar a rose-300: si se
    sube solo el verbo, los dos rojos quedan en ΔE 10,5 (el mismo color) y se
    pierde la separación por luminosidad, que es la guardia de daltonismo de la
    familia roja. Se cambian los dos o ninguno — ver `roles.verb.darkNote`. */
-:root[data-theme="dark"] .bg-transparent.text-red-700    { color:#f87171 !important; }  /*  6.39:1 */
-:root[data-theme="dark"] .bg-transparent.text-slate-600  { color:#cbd5e1 !important; }  /* 11.90:1 */
-:root[data-theme="dark"] .bg-transparent.text-indigo-600 { color:#a5b4fc !important; }  /*  8.86:1 */
-:root[data-theme="dark"] .bg-transparent.text-amber-700  { color:#fbbf24 !important; }  /* 10.59:1 */
-:root[data-theme="dark"] .bg-transparent.text-amber-600  { color:#fbbf24 !important; }  /* 10.59:1 · complemento adverbial */
+:root[data-theme="dark"] .bg-transparent.text-red-700    { color:var(--rol-verb) !important; }  /*  6.39:1 */
+:root[data-theme="dark"] .bg-transparent.text-slate-600  { color:var(--rol-complement) !important; }  /* 11.90:1 */
+:root[data-theme="dark"] .bg-transparent.text-indigo-600 { color:var(--rol-modal) !important; }  /*  8.86:1 */
+:root[data-theme="dark"] .bg-transparent.text-amber-700  { color:var(--rol-adverb) !important; }  /* 10.59:1 */
+:root[data-theme="dark"] .bg-transparent.text-amber-600  { color:var(--rol-adverb) !important; }  /* 10.59:1 · complemento adverbial */
 :root[data-theme="dark"] .bg-transparent.text-pink-700   { color:#f9a8d4 !important; }  /*  8.70:1 · conector condicional */
 
 /* ── Índigo de marca sobre superficies oscuras ───────────────────────────────
@@ -266,7 +270,7 @@ button:disabled { cursor: not-allowed; }
    propia oración. El override existente para ese recuadro cubría
    `.text-indigo-600` y la fórmula usa `-700`, así que se quedaba fuera por una
    parada de tono. */
-:root[data-theme="dark"] .bg-indigo-50 .text-indigo-700 { color:#a5b4fc !important; }  /*  8.08:1 sobre #1a2036 */
+:root[data-theme="dark"] .bg-indigo-50 .text-indigo-700 { color:var(--marca) !important; }  /*  5.19:1 sobre #1a2036 · marca, no rol */
 /* La pareja azul de la de arriba, que faltaba. Los dos rótulos de las tarjetas
    de estadística (Total histórico e Hoy) iban en el peso -500 y no pasaban en
    NINGÚN tema: 3,99 y 3,38 en claro, 3,61 y 4,38 en oscuro. Pasan al -700, que
@@ -278,11 +282,11 @@ button:disabled { cursor: not-allowed; }
 :root[data-theme="dark"] .bg-blue-50 .text-blue-700   { color:#93c5fd !important; }  /*  8.93:1 sobre #1a2036 */
 /* La pista de dónde va el adverbio de frecuencia: pasa en claro (6,29:1) y
    fallaba solo en oscuro. */
-:root[data-theme="dark"] p.text-xs.text-indigo-600      { color:#a5b4fc !important; }  /*  8.86:1 */
+:root[data-theme="dark"] p.text-xs.text-indigo-600      { color:var(--marca) !important; }  /*  5.70:1 · marca, no rol */
 /* La pestaña ACTIVA de la barra inferior. Va acotada a `nav` porque
    `text-indigo-600` lo usan también chips sobre tinte índigo, que conservan su
    tinta oscura a propósito. */
-:root[data-theme="dark"] nav button.text-indigo-600     { color:#a5b4fc !important; }  /*  8.86:1 */
+:root[data-theme="dark"] nav button.text-indigo-600     { color:var(--marca) !important; }  /*  5.70:1 · marca, no rol */
 /* El asterisco de campo obligatorio. En claro pedía un rojo más oscuro
    (red-500 daba 3,76:1) y en oscuro ese mismo rojo se queda corto (3,66:1): el
    requisito se invierte con el tema, como pasa con `accent.ink` en los tokens.
