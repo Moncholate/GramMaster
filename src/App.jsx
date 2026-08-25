@@ -66,7 +66,7 @@ import {
   getVerbChangeType,
 } from './conjugation';
 import { useClipboard, useSpeechSynthesis, useLocalStorage, useSessionStats } from './hooks';
-import { ROLE_TW } from './tokens.generated.js';
+import { ROLE_TW, ROLE_FILL } from './tokens.generated.js';
 import { TENSE_FAMILIES, ASPECTS } from './tenseFamilies.generated.js';
 import { loadProgress, saveProgress, recordAttempt, recordRound, evaluateBadges, BADGES, todayISO } from './gamification.generated.js';
 
@@ -225,7 +225,7 @@ function TensePicker({ value, modalValue, condValue, onSelectTense, onSelectModa
           <>
             <span className="text-base leading-none shrink-0" style={{ color: modalFam.color[v] }} aria-hidden="true">{modalFam.icon}</span>
             <span className="truncate">{selModal.name}</span>
-            <span className="text-xs font-normal text-gray-500 truncate hidden sm:inline">
+            <span className="text-xs font-normal text-muted truncate hidden sm:inline">
               {language === 'es' ? selModal.descEs : selModal.descEn}
             </span>
           </>
@@ -235,9 +235,9 @@ function TensePicker({ value, modalValue, condValue, onSelectTense, onSelectModa
             <span className="truncate">{language === 'es' ? sel.nameEs : sel.nameEn}</span>
           </>
         ) : (
-          <span className="text-gray-500 font-medium truncate">{language === 'es' ? 'Selecciona un tiempo, modal o condicional...' : 'Select a tense, modal or conditional...'}</span>
+          <span className="text-muted font-medium truncate">{language === 'es' ? 'Selecciona un tiempo, modal o condicional...' : 'Select a tense, modal or conditional...'}</span>
         )}
-        <ChevronDown className={`w-4 h-4 ml-auto shrink-0 text-gray-500 transition-transform ${open ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`w-4 h-4 ml-auto shrink-0 text-muted transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
 
       {/* En escritorio el panel NO hereda el ancho del disparador: ahí comparte
@@ -308,7 +308,7 @@ function TensePicker({ value, modalValue, condValue, onSelectTense, onSelectModa
                   Aquí queda mejor: es justo donde nace la duda —«¿por qué esta
                   opción no me deja elegir el tiempo?»— y en un tooltip no la
                   veía nadie en móvil. */}
-              <p className="text-[11px] text-gray-500 px-1.5 pb-1 leading-tight">{condHelp}</p>
+              <p className="text-[11px] text-muted px-1.5 pb-1 leading-tight">{condHelp}</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-1">
                 {condItems.map(c => {
                   const selected = c.n === condValue;
@@ -406,12 +406,21 @@ function UsageGuide({ language }) {
        ['Fill in the pieces', 'Subject and verb are required; the complement is optional. Type the verb in base form (work, not worked): the app conjugates it.'],
        ['Hit Generate', "You'll see the finished sentence and, below it, each part painted in its colour."]];
 
+  /* El relleno sale de ROLE_FILL, generado desde design-tokens, y no escrito
+     aquí. Estaba a mano y se había desviado justo donde más duele: el Sujeto
+     llevaba `bg-indigo-600`, que es el color del MODAL; el Verbo `bg-rose-600`,
+     que es el del AUXILIAR; y el Complemento `bg-emerald-600`, que no es de
+     ningún rol. Esta es la pantalla donde el alumno se aprende el código de
+     colores, así que le estaba enseñando uno distinto del que usa la app al
+     pintar la oración. Además tres de las cinco no pasaban AA con el blanco
+     encima —el ámbar en 2,15:1— y no era casualidad: los pesos inventados eran
+     claros porque nadie los había medido contra nada. */
   const roles = [
-    { dot: 'bg-indigo-600', k: 'S', es: 'Sujeto', en: 'Subject', dEs: 'quién realiza la acción', dEn: 'who performs the action' },
-    { dot: 'bg-rose-600', k: 'V', es: 'Verbo', en: 'Verb', dEs: 'la acción o el estado', dEn: 'the action or state' },
-    { dot: 'bg-emerald-600', k: 'C', es: 'Complemento', en: 'Complement', dEs: 'el resto de la información', dEn: 'the rest of the information' },
-    { dot: 'bg-teal-600', k: 'WH', es: 'Palabra WH', en: 'WH word', dEs: 'abre una pregunta abierta', dEn: 'opens an open question' },
-    { dot: 'bg-amber-500', k: 'A', es: 'Adverbio', en: 'Adverb', dEs: 'frecuencia: always, never…', dEn: 'frequency: always, never…' },
+    { dot: ROLE_FILL.subject, k: 'S', es: 'Sujeto', en: 'Subject', dEs: 'quién realiza la acción', dEn: 'who performs the action' },
+    { dot: ROLE_FILL.verb, k: 'V', es: 'Verbo', en: 'Verb', dEs: 'la acción o el estado', dEn: 'the action or state' },
+    { dot: ROLE_FILL.complement, k: 'C', es: 'Complemento', en: 'Complement', dEs: 'el resto de la información', dEn: 'the rest of the information' },
+    { dot: ROLE_FILL['wh-word'], k: 'WH', es: 'Palabra WH', en: 'WH word', dEs: 'abre una pregunta abierta', dEn: 'opens an open question' },
+    { dot: ROLE_FILL.adverb, k: 'A', es: 'Adverbio', en: 'Adverb', dEs: 'frecuencia: always, never…', dEn: 'frequency: always, never…' },
   ];
 
   const activities = es
@@ -450,7 +459,7 @@ function UsageGuide({ language }) {
             <li key={r.k} className="flex items-center gap-2">
               <span className={`shrink-0 w-6 text-center text-[10px] font-bold text-white rounded ${r.dot}`}>{r.k}</span>
               <span className="text-gray-800 font-medium">{es ? r.es : r.en}</span>
-              <span className="text-gray-500 text-xs truncate">{es ? r.dEs : r.dEn}</span>
+              <span className="text-muted text-xs truncate">{es ? r.dEs : r.dEn}</span>
             </li>
           ))}
         </ul>
@@ -480,7 +489,7 @@ function UsageGuide({ language }) {
                 <span className="shrink-0 inline-flex items-center justify-center w-5 h-5 rounded text-[11px] font-bold"
                       style={{ background: step, color: readableInk(step) }} aria-hidden="true">{a.icon}</span>
                 <b className="text-gray-800">{a.label}</b>
-                <span className="text-gray-500 text-xs">
+                <span className="text-muted text-xs">
                   {es
                     ? ['(un solo verbo: works, played)', '(en curso: is working)', '(con have/has/had: has worked)', '(ambas cosas: has been working)'][i]
                     : ['(a single verb: works, played)', '(in progress: is working)', '(with have/has/had: has worked)', '(both at once: has been working)'][i]}
@@ -2672,7 +2681,7 @@ const EnglishSentenceBuilder = () => {
               {activePanel === 'history' && (
                 <div className="space-y-3">
                   {sentenceHistory.length === 0 ? (
-                    <div className="text-center py-12 text-gray-500">
+                    <div className="text-center py-12 text-muted">
                       <History className="w-12 h-12 mx-auto mb-3 opacity-50" />
                       <p>{t.noHistory}</p>
                     </div>
@@ -2845,7 +2854,7 @@ const EnglishSentenceBuilder = () => {
                         <div className="text-center py-10">
                           <p className="text-4xl mb-3">✅</p>
                           <p className="font-semibold text-gray-700">{language === 'es' ? '¡Estás al día!' : "You're up to date!"}</p>
-                          <p className="text-sm text-gray-500 mt-1">
+                          <p className="text-sm text-muted mt-1">
                             {estadoRepaso.tipo === 'alDia'
                               ? (language === 'es' ? `Lo próximo que toca repasar está listo ${textoCuando(estadoRepaso.dias)}.`
                                                    : `The next review is ready ${textoCuando(estadoRepaso.dias)}.`)
@@ -2937,7 +2946,7 @@ const EnglishSentenceBuilder = () => {
                             <button key={p.type} onClick={() => startPractice(p.type)} className="w-full p-4 bg-gray-50 hover:bg-indigo-50 rounded-xl border-2 border-transparent hover:border-indigo-200 text-left transition-all">
                               <span className="text-2xl mr-3">{p.icon}</span>
                               <span className="font-semibold">{p.title}</span>
-                              <p className="text-xs text-gray-500 mt-1 ml-9">{p.desc}</p>
+                              <p className="text-xs text-muted mt-1 ml-9">{p.desc}</p>
                             </button>
                           ))}
                         </>
@@ -2949,7 +2958,7 @@ const EnglishSentenceBuilder = () => {
                          practicar en una app y en otra se sienta igual. */
                       <div className="text-center py-8 px-4">
                         <p className="text-5xl font-extrabold text-indigo-600 leading-none">{ronda.ok} / {RONDA}</p>
-                        <p className="text-sm text-gray-500 mt-2">
+                        <p className="text-sm text-muted mt-2">
                           {language === 'es' ? 'Ronda terminada' : 'Round complete'}
                         </p>
                         {ronda.mejor > 1 && (
@@ -2994,7 +3003,7 @@ const EnglishSentenceBuilder = () => {
                           />
                         </div>
                         <div className="flex items-center justify-between mt-1.5">
-                          <span className="text-xs font-semibold text-gray-500">
+                          <span className="text-xs font-semibold text-muted">
                             {language === 'es' ? 'Ejercicio' : 'Exercise'} {rondaEnPantalla} {language === 'es' ? 'de' : 'of'} {RONDA}
                           </span>
                           {answerStreak > 0 && (
@@ -3070,9 +3079,9 @@ const EnglishSentenceBuilder = () => {
                                   : (language === 'es' ? 'Completa el resultado' : 'Complete the result')}
                               </p>
                               <p className="text-lg font-medium mb-1">
-                                <span className="text-gray-500">If </span>
+                                <span className="text-muted">If </span>
                                 {q.parte === 'condicion' ? hueco : <span className="text-gray-800">{hecha}</span>}
-                                <span className="text-gray-500">, </span>
+                                <span className="text-muted">, </span>
                                 {q.parte === 'resultado' ? hueco : <span className="text-gray-800">{hecha}</span>}
                                 <span className="text-gray-800">.</span>
                               </p>
@@ -3137,7 +3146,7 @@ const EnglishSentenceBuilder = () => {
                             {/* Opciones de tiempo (solo si hay suficientes tiempos disponibles) */}
                             {practiceQuestion.askTense && (
                               <>
-                                <p className="text-xs font-medium text-gray-500 mb-2">{language === 'es' ? 'Tiempo/Estructura verbal:' : 'Tense/Structure:'}</p>
+                                <p className="text-xs font-medium text-muted mb-2">{language === 'es' ? 'Tiempo/Estructura verbal:' : 'Tense/Structure:'}</p>
                                 <div className="flex flex-wrap gap-2 mb-4">
                                   {practiceQuestion.tenseOptions.map(opt => (
                                     <button
@@ -3165,7 +3174,7 @@ const EnglishSentenceBuilder = () => {
                               </>
                             )}
                             {/* Opciones de modo (siempre) */}
-                            <p className="text-xs font-medium text-gray-500 mb-2">{language === 'es' ? 'Modo:' : 'Mode:'}</p>
+                            <p className="text-xs font-medium text-muted mb-2">{language === 'es' ? 'Modo:' : 'Mode:'}</p>
                             <div className="flex gap-2">
                               {[
                                 { id: 'affirmative',   label: language === 'es' ? 'Afirmativa'   : 'Affirmative' },
@@ -3267,7 +3276,7 @@ const EnglishSentenceBuilder = () => {
               {activePanel === 'guide' && (
                 <>
                   <UsageGuide language={language} />
-                  <p className="mt-6 text-[11px] text-gray-500 text-center">
+                  <p className="mt-6 text-[11px] text-muted text-center">
                     Grammaster · © 2025-2026 Víctor Manuel Morales Muñoz · {t.derechos}
                   </p>
                 </>
@@ -3306,7 +3315,7 @@ const EnglishSentenceBuilder = () => {
                 return (
                   <div className="space-y-5">
                     {!hasData ? (
-                      <div className="text-center py-12 text-gray-500">
+                      <div className="text-center py-12 text-muted">
                         <BarChart2 className="w-12 h-12 mx-auto mb-3 opacity-40" />
                         <p className="text-sm">{t.noDataYet}</p>
                       </div>
@@ -3326,10 +3335,10 @@ const EnglishSentenceBuilder = () => {
                               </>
                             ) : (
                               <>
-                                <p className="text-lg font-bold text-gray-500">0 {t.dayStreak}</p>
-                                <p className="text-xs text-gray-500">{t.noStreakYet}</p>
+                                <p className="text-lg font-bold text-muted">0 {t.dayStreak}</p>
+                                <p className="text-xs text-muted">{t.noStreakYet}</p>
                                 {suiteStreak > 0 && (
-                                  <p className="text-xs text-gray-500 mt-0.5">{language === 'es' ? `Toda la suite: ${suiteStreak} días` : `Whole suite: ${suiteStreak} days`}</p>
+                                  <p className="text-xs text-muted mt-0.5">{language === 'es' ? `Toda la suite: ${suiteStreak} días` : `Whole suite: ${suiteStreak} days`}</p>
                                 )}
                               </>
                             )}
@@ -3340,7 +3349,7 @@ const EnglishSentenceBuilder = () => {
                         <div>
                           <div className="flex items-center justify-between mb-2">
                             <p className="text-sm font-semibold text-gray-700">{t.practiceCalendar}</p>
-                            <p className="text-xs text-gray-500">{t.last30Days}</p>
+                            <p className="text-xs text-muted">{t.last30Days}</p>
                           </div>
                           <div className="grid grid-cols-10 gap-1">
                             {last30.map(day => (
@@ -3353,9 +3362,9 @@ const EnglishSentenceBuilder = () => {
                           </div>
                           <div className="flex items-center gap-2 mt-2 justify-end">
                             <div className="w-3 h-3 rounded-sm bg-gray-100 border border-gray-200" />
-                            <span className="text-xs text-gray-500">{language === 'es' ? 'Sin práctica' : 'No practice'}</span>
+                            <span className="text-xs text-muted">{language === 'es' ? 'Sin práctica' : 'No practice'}</span>
                             <div className="w-3 h-3 rounded-sm bg-indigo-500 ml-2" />
-                            <span className="text-xs text-gray-500">{language === 'es' ? 'Practicó' : 'Practiced'}</span>
+                            <span className="text-xs text-muted">{language === 'es' ? 'Practicó' : 'Practiced'}</span>
                           </div>
                         </div>
 
@@ -3370,7 +3379,7 @@ const EnglishSentenceBuilder = () => {
                               const statusColors = {
                                 dominated: 'bg-emerald-100 text-emerald-700',
                                 practicing: 'bg-blue-100 text-blue-700',
-                                unexplored: 'bg-gray-100 text-gray-500',
+                                unexplored: 'bg-gray-100 text-muted',
                               };
                               const barColors = {
                                 dominated: 'bg-emerald-500',
@@ -3384,7 +3393,7 @@ const EnglishSentenceBuilder = () => {
                                       {language === 'es' ? tenseItem.nameEs : tenseItem.nameEn}
                                     </span>
                                     <div className="flex items-center gap-2">
-                                      <span className="text-xs text-gray-500">{count}</span>
+                                      <span className="text-xs text-muted">{count}</span>
                                       <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusColors[status]}`}>
                                         {t[status]}
                                       </span>
@@ -3405,19 +3414,19 @@ const EnglishSentenceBuilder = () => {
                           <div className="grid grid-cols-2 gap-3">
                             <div className="bg-indigo-50 rounded-xl p-3 text-center">
                               <p className="text-2xl font-bold text-indigo-600">{totalAllTime}</p>
-                              <p className="text-xs text-indigo-500 mt-0.5">{t.totalAllTime}</p>
+                              <p className="text-xs text-indigo-700 mt-0.5">{t.totalAllTime}</p>
                             </div>
                             <div className="bg-blue-50 rounded-xl p-3 text-center">
                               <p className="text-2xl font-bold text-blue-600">{sessionStats.today}</p>
-                              <p className="text-xs text-blue-500 mt-0.5">{t.todayCount}</p>
+                              <p className="text-xs text-blue-700 mt-0.5">{t.todayCount}</p>
                             </div>
                           </div>
                           {topTense && (
                             <div className="mt-3 bg-gray-50 rounded-xl p-3">
-                              <p className="text-xs text-gray-500 mb-1">{t.mostUsedTense}</p>
+                              <p className="text-xs text-muted mb-1">{t.mostUsedTense}</p>
                               <p className="font-semibold text-gray-800">
                                 {language === 'es' ? topTense.nameEs : topTense.nameEn}
-                                <span className="text-xs font-normal text-gray-500 ml-2">({topEntry[1]} {t.sentences})</span>
+                                <span className="text-xs font-normal text-muted ml-2">({topEntry[1]} {t.sentences})</span>
                               </p>
                             </div>
                           )}
@@ -3439,7 +3448,7 @@ const EnglishSentenceBuilder = () => {
             <img src="/GramMaster/logo.svg" alt="Grammaster" className="w-9 h-9 sm:w-10 sm:h-10 shrink-0 rounded-[22%]" />
             <div>
               <h1 className="text-lg sm:text-xl font-bold text-gray-800">{t.title}</h1>
-              <p className="text-xs text-gray-500 hidden sm:block">{language === 'es' ? 'Los tiempos en la palma de tu mano.' : 'English tenses at your fingertips.'}</p>
+              <p className="text-xs text-muted hidden sm:block">{language === 'es' ? 'Los tiempos en la palma de tu mano.' : 'English tenses at your fingertips.'}</p>
             </div>
           </div>
 
@@ -3522,7 +3531,7 @@ const EnglishSentenceBuilder = () => {
                   según hubiera condicional o no, porque abajo cambiaba el
                   control entero; ahora el control es siempre el mismo. */}
               <label className={`text-xs font-semibold tracking-wide uppercase shrink-0 ${
-                !selectedTense && !selectedModal && !esCondicional ? 'text-indigo-600' : 'text-gray-500'}`}>
+                !selectedTense && !selectedModal && !esCondicional ? 'text-indigo-600' : 'text-muted'}`}>
                 {language === 'es' ? 'Tiempo, modal o condicional' : 'Tense, modal or conditional'} <span className="text-red-600">*</span>
               </label>
               {/* Los tres son excluyentes: elegir uno limpia los otros dos.
@@ -3559,7 +3568,7 @@ const EnglishSentenceBuilder = () => {
                       className={`flex flex-1 sm:flex-none items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-medium transition-all border-r last:border-r-0 border-gray-200 ${
                         selectedMode === mode.id
                           ? 'bg-[var(--f-cap)] text-[var(--f-cap-ink)] shadow-inner font-semibold'
-                          : 'bg-white text-gray-500 hover:bg-gray-50'
+                          : 'bg-white text-muted hover:bg-gray-50'
                       }`}
                     >
                       {/* Sin `opacity` en el inactivo: atenuar el signo lo dejaba
@@ -3661,7 +3670,7 @@ const EnglishSentenceBuilder = () => {
             <div className="space-y-2">
               {/* Fila de chips base */}
               <div className="flex flex-wrap items-center gap-1.5">
-                <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide shrink-0 w-6">WH</span>
+                <span className="text-xs font-semibold text-muted uppercase tracking-wide shrink-0 w-6">WH</span>
                 {whDisponibles.map(wh => {
                   const pide = whAsks[wh.id];
                   const elegida = whWord === wh.id;
@@ -3718,7 +3727,7 @@ const EnglishSentenceBuilder = () => {
                 const pide = whAsks[clave] || whAsks[whWord];
                 if (!pide) return null;
                 return (
-                  <p className="pl-8 text-xs text-gray-500">
+                  <p className="pl-8 text-xs text-muted">
                     <span className="font-semibold text-teal-700">{nombre}{whExtension.trim() ? ' ' + whExtension.trim() : ''}</span>
                     {' '}{language === 'es' ? 'pide' : 'asks for'}{' '}
                     <span className="font-medium text-gray-700">{language === 'es' ? pide.es : pide.en}</span>
@@ -3736,7 +3745,7 @@ const EnglishSentenceBuilder = () => {
                       className={`px-2.5 py-0.5 rounded-full text-xs border transition-all ${
                         whExtension === ext
                           ? 'bg-teal-100 text-teal-800 border-teal-400 font-medium'
-                          : 'bg-white text-gray-500 border-gray-200 hover:border-teal-300 hover:text-teal-700'
+                          : 'bg-white text-muted border-gray-200 hover:border-teal-300 hover:text-teal-700'
                       }`}
                     >
                       {whWords.find(w => w.id === whWord)?.name} {ext}
@@ -3896,7 +3905,7 @@ const EnglishSentenceBuilder = () => {
                 <label className="flex items-center gap-1.5 mb-1.5">
                   <span className="text-[10px] font-bold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded">A</span>
                   <span className="text-sm font-medium text-amber-700">{t.adverbLabel}</span>
-                  <span className="text-gray-500 text-xs">({t.optional})</span>
+                  <span className="text-muted text-xs">({t.optional})</span>
                 </label>
                 <select
                   value={selectedAdverb}
@@ -4000,7 +4009,7 @@ const EnglishSentenceBuilder = () => {
               <label className="flex items-center gap-1.5 mb-1.5">
                 <span className="text-[10px] font-bold bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded">C</span>
                 <span className="text-sm font-medium text-slate-600">{t.complement}</span>
-                <span className="text-gray-500 text-xs">({t.optional})</span>
+                <span className="text-muted text-xs">({t.optional})</span>
               </label>
               <input
                 ref={complementRef}
@@ -4047,7 +4056,7 @@ const EnglishSentenceBuilder = () => {
                       className={`px-2 py-0.5 rounded-full text-xs border transition-all ${
                         complement === chip
                           ? 'bg-emerald-700 text-white border-emerald-700'
-                          : 'bg-white text-gray-500 border-gray-300 hover:border-emerald-400 hover:text-emerald-700'
+                          : 'bg-white text-muted border-gray-300 hover:border-emerald-400 hover:text-emerald-700'
                       }`}
                     >
                       {chip}
@@ -4079,7 +4088,7 @@ const EnglishSentenceBuilder = () => {
               </div>
               {/* Leyenda de colores — solo las partes presentes en la oración */}
               {sentenceAnalysis && (
-                <div className="flex items-center gap-1.5 text-xs text-gray-500 shrink-0">
+                <div className="flex items-center gap-1.5 text-xs text-muted shrink-0">
                   {sentenceAnalysis.parts.some(p => p.type === 'wh-word' || p.type === 'wh-subject') && (
                     <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-teal-600 inline-block"></span>WH</span>
                   )}
@@ -4102,7 +4111,7 @@ const EnglishSentenceBuilder = () => {
             </div>
             {/* Aviso de interactividad: cómo descubrir el desglose por palabra */}
             {sentenceAnalysis && (
-              <p className="text-xs text-gray-500 mb-3 flex items-center gap-1">
+              <p className="text-xs text-muted mb-3 flex items-center gap-1">
                 💡 {language === 'es'
                   ? 'Toca o pasa el mouse sobre cada palabra para ver su función en la oración.'
                   : 'Tap or hover each word to see its role in the sentence.'}
@@ -4142,7 +4151,7 @@ const EnglishSentenceBuilder = () => {
 
                     // La puntuación no lleva explicación — se muestra como texto simple
                     if (part.type === 'punctuation') {
-                      return <span key={index} className="text-gray-500 px-1">{txt(part.text)}</span>;
+                      return <span key={index} className="text-muted px-1">{txt(part.text)}</span>;
                     }
 
                     const isPinned = selectedPartIndex === index;
@@ -4385,7 +4394,7 @@ const EnglishSentenceBuilder = () => {
                 /* hover:text-gray-800 y no -600: QL salta de gris apagado a
                    texto pleno y por eso se nota. El salto a -600 era tan chico
                    que parecía que no pasaba nada. */
-                activePanel === panel ? 'text-indigo-600' : 'text-gray-500 hover:text-gray-800'
+                activePanel === panel ? 'text-indigo-600' : 'text-muted hover:text-ink'
               }`}
             >
               <span className="text-xl leading-none" aria-hidden="true">{icon}</span>

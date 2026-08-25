@@ -10,3 +10,13 @@ export const ROLE_TW = {
   "modal": "text-indigo-600 hover:bg-indigo-50",
   "adverb": "text-amber-700 hover:bg-amber-50",
 };
+// part.type → clase de RELLENO, para las insignias que llevan tinta blanca.
+export const ROLE_FILL = {
+  "wh-word": "bg-teal-700",
+  "subject": "bg-blue-600",
+  "auxiliary": "bg-rose-600",
+  "verb": "bg-red-700",
+  "complement": "bg-slate-600",
+  "modal": "bg-indigo-600",
+  "adverb": "bg-amber-700",
+};

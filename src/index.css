@@ -267,6 +267,15 @@ button:disabled { cursor: not-allowed; }
    `.text-indigo-600` y la fórmula usa `-700`, así que se quedaba fuera por una
    parada de tono. */
 :root[data-theme="dark"] .bg-indigo-50 .text-indigo-700 { color:#a5b4fc !important; }  /*  8.08:1 sobre #1a2036 */
+/* La pareja azul de la de arriba, que faltaba. Los dos rótulos de las tarjetas
+   de estadística (Total histórico e Hoy) iban en el peso -500 y no pasaban en
+   NINGÚN tema: 3,99 y 3,38 en claro, 3,61 y 4,38 en oscuro. Pasan al -700, que
+   en claro da 7,07 y 6,16 — y eso solo, sin esta regla, los habría hundido a
+   2,04 y 2,40 en oscuro. Es la trampa de siempre: el peso que arregla el tema
+   claro es justo el que rompe el oscuro, así que van las dos mitades o ninguna.
+   Desgramatizador ya tenía esta regla y aquí no estaba: otra vez la capa
+   copiada a mano desviándose de su gemela. */
+:root[data-theme="dark"] .bg-blue-50 .text-blue-700   { color:#93c5fd !important; }  /*  8.93:1 sobre #1a2036 */
 /* La pista de dónde va el adverbio de frecuencia: pasa en claro (6,29:1) y
    fallaba solo en oscuro. */
 :root[data-theme="dark"] p.text-xs.text-indigo-600      { color:#a5b4fc !important; }  /*  8.86:1 */

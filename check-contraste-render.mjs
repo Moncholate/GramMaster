@@ -42,6 +42,22 @@ correr({
     await page.waitForTimeout(400);
   },
 
+  /* Las cinco pestañas, no solo Construye. Auditar únicamente donde quedó
+     `conducir` daba un verde que valía para un quinto de la app: en
+     Desgramatizador ese mismo punto ciego escondía 33 elementos bajo AA, y la
+     mayoría en la Guía — la pantalla donde el alumno se aprende el código de
+     colores.
+     Se navega DESPUÉS de generar, así que Historial y Progreso llegan con datos
+     de verdad en vez de con su estado vacío, que es el que no tiene nada que
+     medir. */
+  pantallas: [
+    { nombre: 'Construye', ir: (page) => page.locator('nav button, footer button').filter({ hasText: 'Construye' }).first().click().then(() => page.waitForTimeout(500)) },
+    { nombre: 'Guía',      ir: (page) => page.locator('nav button, footer button').filter({ hasText: 'Guía' }).first().click().then(() => page.waitForTimeout(500)) },
+    { nombre: 'Práctica',  ir: (page) => page.locator('nav button, footer button').filter({ hasText: 'Práctica' }).first().click().then(() => page.waitForTimeout(500)) },
+    { nombre: 'Progreso',  ir: (page) => page.locator('nav button, footer button').filter({ hasText: 'Progreso' }).first().click().then(() => page.waitForTimeout(500)) },
+    { nombre: 'Historial', ir: (page) => page.locator('nav button, footer button').filter({ hasText: 'Historial' }).first().click().then(() => page.waitForTimeout(500)) },
+  ],
+
   cambiarTema: async (page) => {
     await page.locator('button:has-text("Oscuro")').first().click();
     await page.waitForTimeout(600);
