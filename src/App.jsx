@@ -3489,7 +3489,12 @@ const EnglishSentenceBuilder = () => {
       )}
 
       {/* Header full-width */}
-      <header className="flex-shrink-0 bg-white border-b border-gray-200 shadow-sm z-10 px-4 sm:px-8 py-3 flex items-center justify-between">
+      {/* `px-4` a secas y no `px-4 sm:px-8`: con el salto a 32px en pantalla
+          ancha, esta era la única cabecera de la suite con la marca despegada
+          del borde — 32px contra los 16 de Desgramatizador y Question Lab. Se
+          nota al saltar de una app a otra dentro del Hub, que es como se usan.
+          El contenido no se ve afectado: va en su propio `max-w-5xl` centrado. */}
+      <header className="flex-shrink-0 bg-white border-b border-gray-200 shadow-sm z-10 px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img src="/GramMaster/logo.svg" alt="Grammaster" className="w-9 h-9 sm:w-10 sm:h-10 shrink-0 rounded-[22%]" />
             <div>
