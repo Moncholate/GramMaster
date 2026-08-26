@@ -87,7 +87,11 @@ html, body { font-family: 'Lexend', system-ui, -apple-system, 'Segoe UI', Roboto
 :root[data-theme="dark"] .bg-indigo-50 .text-indigo-600 { color: #c7d2fe !important; } /* 10.80:1 */
 /* El borde vivo del campo Sujeto se apaga con el fondo, si no queda de neón. */
 :root[data-theme="dark"] .border-teal-300 { border-color: #1c4e4d !important; }
-:root[data-theme="dark"] .border-l-teal-400 { border-left-color: #2a6f6b !important; }
+/* La barra de acento del campo NO lleva override: se quitó el que había.
+   Apagaba el teal a #2a6f6b, que sobre el tinte oscuro del propio campo da
+   2,56:1 — por debajo del 3:1 que pide un elemento gráfico. En teal-600 crudo
+   da 4,00 en oscuro y 3,59 en claro, así que el mismo valor sirve para los dos
+   temas y no hace falta declarar nada aquí. Menos apagado y más legible. */
 
 
 /* ── Afordancia de clic en escritorio ──────────────────────────────────────

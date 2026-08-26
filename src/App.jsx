@@ -3901,7 +3901,7 @@ const EnglishSentenceBuilder = () => {
                 {!esPregSujeto && <span className="text-red-600 text-xs">*</span>}
               </label>
               {esPregSujeto ? (
-                <div className="w-full px-4 py-2.5 border-y border-r rounded-lg border-l-4 border-teal-300 border-l-teal-400 bg-teal-50 text-teal-800 text-sm flex items-center gap-2">
+                <div className="w-full px-4 py-2.5 border-y border-r rounded-lg border-l-4 border-teal-300 border-l-teal-600 bg-teal-50 text-teal-800 text-sm flex items-center gap-2">
                   <UserCircle className="w-4 h-4 shrink-0" />
                   <span className="font-semibold">{whWords.find(w => w.id === whWord)?.name || 'Who'}{whExtUsable ? ' ' + whExtUsable : ''}</span>
                   <span className="text-teal-700 text-xs">· {t.subjectNotNeeded}</span>
@@ -3922,8 +3922,8 @@ const EnglishSentenceBuilder = () => {
                 placeholder="I, you, he, she, we..."
                 className={`w-full px-4 py-2.5 border-y border-r rounded-lg border-l-4 focus:ring-2 focus:ring-indigo-500 outline-none transition-all ${
                   !subjectValidation.valid ? 'border-red-400 bg-red-50' :
-                  subjectValidation.warning ? 'border-amber-400 bg-amber-50 border-l-amber-400' :
-                  'border-gray-300 border-l-blue-400 focus:border-indigo-500'
+                  subjectValidation.warning ? 'border-amber-600 bg-amber-50 border-l-amber-600' :
+                  'border-gray-300 border-l-blue-500 focus:border-indigo-500'
                 }`}
               />
               )}
@@ -4025,8 +4025,8 @@ const EnglishSentenceBuilder = () => {
                 placeholder="work, study, play..."
                 className={`w-full px-4 py-2.5 border-y border-r rounded-lg border-l-4 focus:ring-2 focus:ring-indigo-500 outline-none transition-all ${
                   verbBaseSuggestion || !verbValidation.valid ? 'border-red-400 bg-red-50' :
-                  verbValidation.warning ? 'border-amber-400 bg-amber-50 border-l-amber-400' :
-                  'border-gray-300 border-l-red-400 focus:border-indigo-500'
+                  verbValidation.warning ? 'border-amber-600 bg-amber-50 border-l-amber-600' :
+                  'border-gray-300 border-l-red-500 focus:border-indigo-500'
                 }`}
               />
               {showVerbSuggestions && verbSuggestions.length > 0 && (
@@ -4114,8 +4114,8 @@ const EnglishSentenceBuilder = () => {
                 placeholder="yesterday, at home..."
                 className={`w-full px-4 py-2.5 border-y border-r rounded-lg border-l-4 focus:ring-2 focus:ring-indigo-500 outline-none transition-all ${
                   !complementValidation.valid ? 'border-red-400 bg-red-50' :
-                  complementValidation.warning ? 'border-amber-400 bg-amber-50 border-l-amber-400' :
-                  'border-gray-300 border-l-slate-400 focus:border-indigo-500'
+                  complementValidation.warning ? 'border-amber-600 bg-amber-50 border-l-amber-600' :
+                  'border-gray-300 border-l-slate-500 focus:border-indigo-500'
                 }`}
               />
               {!complementValidation.valid && complementValidation.warning && (
