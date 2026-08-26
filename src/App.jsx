@@ -108,7 +108,11 @@ function ThemeToggle({ lang = 'es' }) {
       aria-label={`${lang === 'es' ? 'Cambiar a modo' : 'Switch to'} ${name.toLowerCase()}`}
     >
       <span className="text-base leading-none">{target === 'dark' ? '🌙' : '☀️'}</span>
-      <span>{name}</span>
+      {/* El rótulo se va en pantalla de teléfono, como ya hace el de Reportar.
+          Era el control más ancho de la cabecera y empujaba a «Reportar» fuera
+          de la pantalla: acababa en x=501 sobre un viewport de 375. El `title` y
+          el `aria-label` siguen diciendo la acción entera. */}
+      <span className="hidden sm:inline">{name}</span>
     </button>
   );
 }
@@ -3494,16 +3498,31 @@ const EnglishSentenceBuilder = () => {
           del borde — 32px contra los 16 de Desgramatizador y Question Lab. Se
           nota al saltar de una app a otra dentro del Hub, que es como se usan.
           El contenido no se ve afectado: va en su propio `max-w-5xl` centrado. */}
-      <header className="flex-shrink-0 bg-white border-b border-gray-200 shadow-sm z-10 px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+      {/* En TELÉFONO y fuera del Hub la cabecera pasa a dos filas. Medido: con
+          los cuatro controles puestos, la marca se queda con ~52px y
+          «Grammaster» salía como «G…» — o, antes de dejarla encoger, el botón
+          de Reportar terminaba en x=501 sobre un viewport de 375, o sea fuera
+          de la pantalla y con scroll horizontal. No es cuestión de apretar más:
+          no cabe.
+          Dentro del Hub NO se parte, y por eso va condicionado a `fromHub`: allí
+          el nivel y el idioma los lleva el Hub y el botón de tema no se pinta,
+          así que solo queda Reportar y la fila entra de sobra. Lo que decide es
+          cuántos controles hay, no el ancho. */}
+      <header className={`flex-shrink-0 bg-white border-b border-gray-200 shadow-sm z-10 px-4 py-3 flex items-center justify-between gap-y-2 ${fromHub ? '' : 'flex-wrap sm:flex-nowrap'}`}>
+          {/* `min-w-0` en los dos niveles y `truncate` en el nombre: sin eso la
+              marca no puede encogerse y toda la falta de sitio se la come el
+              lado de los controles, que acaba saliéndose de la pantalla. Antes
+              de que el botón de Reportar se vaya fuera del borde, que ceda el
+              título. */}
+          <div className="flex items-center gap-3 min-w-0">
             <img src="/GramMaster/logo.svg" alt="Grammaster" className="w-9 h-9 sm:w-10 sm:h-10 shrink-0 rounded-[22%]" />
-            <div>
-              <h1 className="text-lg sm:text-xl font-bold text-gray-800">{t.title}</h1>
+            <div className="min-w-0">
+              <h1 className="text-lg sm:text-xl font-bold text-gray-800 truncate">{t.title}</h1>
               <p className="text-xs text-muted hidden sm:block">{language === 'es' ? 'Los tiempos en la palma de tu mano.' : 'English tenses at your fingertips.'}</p>
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5">
+          <div className={`flex items-center gap-1.5 ${fromHub ? '' : 'w-full justify-start sm:w-auto sm:justify-end'}`}>
             {!fromHub && <>
               {/* NIVEL selector */}
               <select
