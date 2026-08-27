@@ -42,9 +42,18 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          # 24 como las otras tres. En 20 vitest 4 se queda al filo de su mínimo
+          # (^20.19), y no hay motivo para que la app que más pruebas tiene sea
+          # la que corre en el Node más viejo.
+          node-version: 24
           cache: npm
       - run: npm ci
+
+      # Los 1225 tests antes de publicar. Incluyen los dos oráculos que cruzan
+      # esta app con Desgramatizador y con Question Lab, así que aquí es donde
+      # se ve si la suite se separó.
+      - run: npm test
+
       - run: npm run build
       - uses: actions/upload-pages-artifact@v3
         with:
