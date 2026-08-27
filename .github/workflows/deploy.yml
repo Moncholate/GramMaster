@@ -3,6 +3,10 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [main]
+  # Para poder relanzar el despliegue sin ensuciar el historial con un commit
+  # vacío. Question Lab y Grammar HUB ya lo tenían; aquí faltaba, y se notó el
+  # día que hizo falta.
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -19,7 +23,16 @@ concurrency:
   # se quedaba 10 minutos esperandolo y abortaba con "Timeout reached".
   # Es lo que dice la plantilla oficial de Pages, y por eso el arreglo de los
   # ojos nunca llego a publicarse.
-  group: pages
+  #
+  # El nombre del grupo es ARBITRARIO: lo único que importa es que todos los
+  # runs compartan uno. Se renombró de "pages" a "pages-deploy" el 27-ago-2026
+  # para escapar de una ejecución ZOMBI: se quedó en "queued" sin llegar nunca a
+  # un runner, y GitHub no dejaba cancelarla, forzarla ni borrarla — la API se
+  # contradecía sola (decía "queued" y a la vez "no ha llegado a encolarse").
+  # Con cancel-in-progress en false esa ejecución tenía tomado el grupo, así que
+  # CUALQUIER push posterior se habría encolado detrás de ella para siempre.
+  # Si vuelve a pasar, el arreglo es este mismo: cambiarle el nombre al grupo.
+  group: pages-deploy
   cancel-in-progress: false
 
 jobs:
