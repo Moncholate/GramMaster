@@ -41,6 +41,7 @@ export { englishDictionary } from './dictionary';
 export {
   validateSubject,
   validateVerb,
+  revisarVerboAntesDeGenerar,
   validateComplement,
   validPronouns,
   validSubjectNouns,

@@ -366,6 +366,36 @@ export const validateVerb = (verb, language = 'es') => {
   };
 };
 
+/* ¿Hay que CONFIRMAR antes de generar con este verbo?
+   ----------------------------------------------------------------------------
+   El aviso bajo el campo se lee poco. En clase (2026-08-27) un alumno escribió
+   «somebody» en la casilla del verbo, la app se lo dijo en rojo —«no está en
+   nuestra lista de verbos»— y aun así generó la oración, porque el botón seguía
+   igual de disponible que siempre. Un aviso que no cuesta nada ignorar termina
+   siendo decorativo.
+
+   Devuelve el TIPO y no el texto: el texto es cosa de la UI, que es donde vive
+   el idioma. Tres motivos, en orden de certeza:
+
+     · `conjugado`  — el motor reconoció una forma conjugada («worked» → work).
+                      Es el más seguro de los tres y trae arreglo de un clic.
+     · `noEsVerbo`  — la validación lo da por inválido.
+     · `dudoso`     — es palabra inglesa conocida, pero no como verbo.
+
+   NO se bloquea la generación, y es deliberado: la lista de verbos es finita
+   (234 formas base) y un verbo legítimo que no esté en ella no puede dejar al
+   alumno sin poder trabajar. Se le cobra un segundo toque, que es lo que
+   obliga a leer.
+
+   La contraparte —que ningún verbo del propio pozo dispare el aviso— está
+   medida en `verbo-dudoso.test.js`: los 234 pasan sin pedir confirmación. */
+export const revisarVerboAntesDeGenerar = (validacion, baseSugerida) => {
+  if (baseSugerida) return { confirmar: true, tipo: 'conjugado' };
+  if (!validacion || validacion.valid === false) return { confirmar: true, tipo: 'noEsVerbo' };
+  if (validacion.warning) return { confirmar: true, tipo: 'dudoso' };
+  return { confirmar: false, tipo: null };
+};
+
 // Validar complemento (más permisivo)
 /* VERBOS QUE PIDEN PREPOSICIÓN. Salió en clase (2026-08-11): el profesor armó
    una oración con `go` y un lugar, y la app la construyó sin avisar de que

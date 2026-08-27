@@ -60,6 +60,20 @@ correr({
     { nombre: 'Práctica',  ir: (page) => page.locator('nav button, footer button').filter({ hasText: 'Práctica' }).first().click().then(() => page.waitForTimeout(500)) },
     { nombre: 'Progreso',  ir: (page) => page.locator('nav button, footer button').filter({ hasText: 'Progreso' }).first().click().then(() => page.waitForTimeout(500)) },
     { nombre: 'Historial', ir: (page) => page.locator('nav button, footer button').filter({ hasText: 'Historial' }).first().click().then(() => page.waitForTimeout(500)) },
+    /* El aviso de verbo dudoso, con el botón armado. Va al final porque deja el
+       campo Verbo con basura a propósito, y las otras cinco ya se midieron.
+       Existe por el mismo motivo que «in january» en `conducir`: un elemento que
+       solo aparece cuando el alumno se equivoca es justo el que nadie mira, y
+       este además estrena un color de botón (ámbar) que no sale en ninguna otra
+       pantalla. */
+    { nombre: 'Aviso de verbo', ir: async (page) => {
+      await page.locator('nav button, footer button').filter({ hasText: 'Construye' }).first().click();
+      await page.waitForTimeout(400);
+      await page.getByPlaceholder(/work, study, play/).fill('somebody');
+      await page.waitForTimeout(500);   // la validación va con 300 ms de espera
+      await page.getByRole('button', { name: /Generar/ }).first().click();
+      await page.waitForTimeout(400);
+    } },
   ],
 
   cambiarTema: async (page) => {

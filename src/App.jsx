@@ -39,6 +39,7 @@ import {
   countableNouns,
   validateSubject,
   validateVerb,
+  revisarVerboAntesDeGenerar,
   validateComplement,
 } from './data';
 import { getSpellingSuggestions } from './spelling';
@@ -967,6 +968,9 @@ const EnglishSentenceBuilder = () => {
      sin esta dependencia el aviso no desaparecería al declarar el nombre. */
   const sujetoAmbiguo = useMemo(() => nombreAmbiguo(subject), [subject, nombresPropios]);
   const [verbValidation, setVerbValidation] = useState({ valid: true, warning: null });
+  /* El primer toque a Generar con un verbo dudoso no genera: arma el botón y
+     pone el motivo encima. Ver `revisarVerboAntesDeGenerar` en validation.js. */
+  const [confirmVerbo, setConfirmVerbo] = useState(false);
   const [verbBaseSuggestion, setVerbBaseSuggestion] = useState(null);
   const [complementValidation, setComplementValidation] = useState({ valid: true, warning: null });
 
@@ -2282,6 +2286,10 @@ const EnglishSentenceBuilder = () => {
     setIsIrregular(!!irregularVerbs[lowerVerb]);
   }, [verb]);
 
+  /* Cualquier cambio en el verbo desarma la confirmación: si lo corrigió, el
+     aviso ya no toca; y si sigue dudoso, que lo vuelva a leer. */
+  useEffect(() => { setConfirmVerbo(false); }, [verb, condVerb]);
+
   // La parte seleccionada/enfocada de la oración pierde sentido si se regenera
   useEffect(() => {
     setSelectedPartIndex(null);
@@ -2368,6 +2376,7 @@ const EnglishSentenceBuilder = () => {
     setSubjectValidation({ valid: true, warning: null });
     setVerbValidation({ valid: true, warning: null });
     setComplementValidation({ valid: true, warning: null });
+    setConfirmVerbo(false);
   };
 
   // Calcula la oración, las 3 variantes de modo y el análisis visual, y los
@@ -2523,6 +2532,18 @@ const EnglishSentenceBuilder = () => {
     sentenceRef.current.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
   }, [genTick]);
 
+  /* La regla vive en validation.js y tiene sus pruebas; aquí solo se consulta.
+     Los DOS verbos pasan por ella: el de la oración y el de la condición. Dejar
+     fuera el de la condición habría dejado el agujero justo donde hay dos
+     casillas de verbo y es más fácil equivocarse de casilla. */
+  const revisionVerbo = revisarVerboAntesDeGenerar(verbValidation, verbBaseSuggestion);
+  const revisionCondVerbo = useMemo(() => {
+    if (!esCondicional || !condVerb.trim()) return { confirmar: false, tipo: null, aviso: null };
+    const v = validateVerb(condVerb, language);
+    return { ...revisarVerboAntesDeGenerar(v, detectConjugatedVerbBase(condVerb)), aviso: v.warning };
+  }, [esCondicional, condVerb, language]);
+  const avisoVerbo = confirmVerbo && (revisionVerbo.confirmar || revisionCondVerbo.confirmar);
+
   const generateSentence = () => {
     /* La condicional NO pasa por el selector de tiempos —el tipo los fija—, así
        que exigir tiempo o modal la bloqueaba con todo relleno. Y el aviso dice
@@ -2544,6 +2565,16 @@ const EnglishSentenceBuilder = () => {
     // En la pregunta de sujeto no hay campo Sujeto: lo ocupa la wh.
     if ((!subject && !esPregSujeto) || !verb || (!selectedModal && !selectedTense)) {
       showNotification('error', language === 'es' ? 'Por favor completa todos los campos' : 'Please complete all fields');
+      return;
+    }
+
+    /* Verbo dudoso: el primer toque avisa, el segundo genera. Pasó en clase el
+       27-ago-2026 — «somebody» en la casilla del verbo, aviso en rojo bajo el
+       campo, y oración generada igual porque el botón no cambiaba. No se
+       BLOQUEA a propósito: la lista de verbos es finita y dejar al alumno sin
+       poder trabajar sería peor que una oración rara. Se le cobra un toque. */
+    if ((revisionVerbo.confirmar || revisionCondVerbo.confirmar) && !confirmVerbo) {
+      setConfirmVerbo(true);
       return;
     }
 
@@ -4005,6 +4036,10 @@ const EnglishSentenceBuilder = () => {
                 <span className="text-[10px] font-bold bg-red-100 text-red-700 px-1.5 py-0.5 rounded">V</span>
                 <span className="text-sm font-medium text-red-700">{t.verb}</span>
                 <span className="text-red-600 text-xs">*</span>
+                {/* Antes solo se decía cuando la app YA había detectado una forma
+                    conjugada, o sea después del error. Dicho desde el principio,
+                    el error no llega a ocurrir. */}
+                <span className="text-muted text-xs">({t.verbBaseHint})</span>
               </label>
               <input
                 ref={verbRef}
@@ -4042,9 +4077,7 @@ const EnglishSentenceBuilder = () => {
               {verbBaseSuggestion ? (
                 <p className="text-xs text-red-600 mt-1 flex items-center gap-1.5 flex-wrap">
                   <AlertTriangle className="w-3 h-3 shrink-0" />
-                  {language === 'es'
-                    ? <>Escribe el verbo en forma base, no conjugada.</>
-                    : <>Type the verb in base form, not conjugated.</>}
+                  {t.verbBaseForm}
                   <button
                     type="button"
                     onClick={() => setVerb(verbBaseSuggestion)}
@@ -4158,13 +4191,36 @@ const EnglishSentenceBuilder = () => {
             </div>
           </div>
 
-          {/* Botón Generar */}
+          {/* Botón Generar. Con el verbo dudoso se pone ámbar y dice POR QUÉ:
+              el motivo va aquí, pegado al botón que el alumno está tocando, y no
+              solo bajo el campo —que es donde nadie lo leía—. `role="alert"` para
+              que un lector de pantalla también lo anuncie al armarse. */}
+          {avisoVerbo && (
+            <p role="alert" className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mb-2 flex items-start gap-2">
+              <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+              <span>
+                {/* Con la condicional activa hay DOS verbos, así que cada aviso
+                    dice de cuál habla; sin ella sobra el rótulo. */}
+                {revisionCondVerbo.confirmar && (
+                  <>{esCondicional && <b>{t.condCondicion}: </b>}
+                    {revisionCondVerbo.tipo === 'conjugado' ? t.verbBaseForm : revisionCondVerbo.aviso}{' '}</>
+                )}
+                {revisionVerbo.confirmar && (
+                  <>{esCondicional && <b>{t.condResultado}: </b>}
+                    {revisionVerbo.tipo === 'conjugado' ? t.verbBaseForm : verbValidation.warning}{' '}</>
+                )}
+                {t.verbConfirmHint}
+              </span>
+            </p>
+          )}
           <button
             onClick={generateSentence}
-            className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-semibold hover:shadow-lg transition-all flex items-center justify-center gap-2"
+            className={`w-full py-3 text-white rounded-xl font-semibold hover:shadow-lg transition-all flex items-center justify-center gap-2 ${
+              avisoVerbo ? 'bg-amber-700 hover:bg-amber-800' : 'bg-indigo-600 hover:bg-indigo-700'
+            }`}
           >
-            <Play className="w-5 h-5" />
-            {t.generate}
+            {avisoVerbo ? <AlertTriangle className="w-5 h-5" /> : <Play className="w-5 h-5" />}
+            {avisoVerbo ? t.generateAnyway : t.generate}
           </button>
         </div>
 
