@@ -9,6 +9,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "test": "vitest run",
+    "test:app": "vitest run --exclude \"**/{suite,ql}.parity.test.js\"",
     "check-contraste": "node check-contraste-render.mjs"
   },
   "dependencies": {

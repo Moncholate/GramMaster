@@ -49,10 +49,19 @@ jobs:
           cache: npm
       - run: npm ci
 
-      # Los 1225 tests antes de publicar. Incluyen los dos oráculos que cruzan
-      # esta app con Desgramatizador y con Question Lab, así que aquí es donde
-      # se ve si la suite se separó.
-      - run: npm test
+      # Los tests que esta app puede correr SOLA: 1211 de los 1225.
+      #
+      # Los otros 14 son los dos oráculos diferenciales, y no caben aquí por
+      # diseño: `suite.parity` importa el analizador de Desgramatizador y
+      # `ql.parity` el de Question Lab, con rutas `../../` que solo existen
+      # donde están las cuatro carpetas juntas. Revientan a propósito si el
+      # vecino no está —lo dice su cabecera— en vez de saltarse solos y dar un
+      # verde que no significa nada.
+      #
+      # Corren en `guardias.yml` del repo de tokens, que es el único sitio donde
+      # la suite entera está montada. Mismo criterio que las tres guardias de
+      # contraste: lo que compara apps no vive dentro de una app.
+      - run: npm run test:app
 
       - run: npm run build
       - uses: actions/upload-pages-artifact@v3
