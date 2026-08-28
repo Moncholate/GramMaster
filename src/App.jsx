@@ -71,6 +71,7 @@ import {
 } from './conjugation';
 import { useClipboard, useSpeechSynthesis, useLocalStorage, useSessionStats } from './hooks';
 import { ROLE_TW, ROLE_FILL } from './tokens.generated.js';
+import { tablaDeTiempos, MODOS } from './tablaTiempos';
 import { TENSE_FAMILIES, ASPECTS } from './tenseFamilies.generated.js';
 import { loadProgress, saveProgress, recordAttempt, recordRound, evaluateBadges, BADGES, todayISO } from './gamification.generated.js';
 
@@ -389,13 +390,156 @@ function TensePicker({ value, modalValue, condValue, onSelectTense, onSelectModa
   );
 }
 
+/* ── Qué le pasa al verbo, en dos palabras ───────────────────────────────────
+   La explicación larga ya existe (`SENTENCE_PART_EXPLANATIONS.verbChanges`) y se
+   usa en el desglose de la oración, pero dentro de una celda no cabe: aquí va la
+   etiqueta corta y la larga queda en el `title`. */
+const CAMBIO_CORTO = {
+  base:              { es: 'forma base',  en: 'base form' },
+  'third-person-s':  { es: '+ -s',        en: '+ -s' },
+  ing:               { es: '+ -ing',      en: '+ -ing' },
+  past:              { es: 'pasado',      en: 'past' },
+  participle:        { es: 'participio',  en: 'participle' },
+  irregular:         { es: 'irregular',   en: 'irregular' },
+};
+
+/**
+ * LA TABLA DE TIEMPOS.
+ *
+ * El resumen que el profesor arma a mano al cerrar un curso: cada tiempo con su
+ * uso, su auxiliar y qué le pasa al verbo en las tres formas. Las filas las
+ * construye `tablaDeTiempos` con el MISMO motor que genera las oraciones, así
+ * que no puede desviarse de lo que la app enseña al practicar.
+ *
+ * Lo que el papel no puede hacer, y por eso vale la pena que sea interactiva:
+ * cambiar el sujeto y el verbo y ver la tabla entera reescribirse. Ahí está la
+ * mitad de la dificultad (does/do, has/have, is/are) y con un verbo irregular la
+ * columna del cambio deja de ser decorativa.
+ */
+function TablaTiempos({ language, cefrLevel }) {
+  const es = language === 'es';
+  const [sujeto, setSujeto] = useState('she');
+  const [verbo, setVerbo] = useState('work');
+  const [soloCurso, setSoloCurso] = useState(true);
+
+  const filas = useMemo(
+    () => tablaDeTiempos({ sujeto, verbo, nivel: soloCurso ? cefrLevel : null }),
+    [sujeto, verbo, soloCurso, cefrLevel]);
+
+  /* «I» aparte de «she» y «they» porque es el único que lleva `am`. */
+  const SUJETOS = ['I', 'she', 'they'];
+  const COLUMNAS = [
+    ['affirmative', '+', es ? 'Afirmativa' : 'Affirmative'],
+    ['negative', '−', es ? 'Negativa' : 'Negative'],
+    ['interrogative', '?', es ? 'Interrogativa' : 'Interrogative'],
+  ];
+
+  return (
+    <div>
+      <p className="text-gray-600 mb-2">
+        {es ? 'Cambia el sujeto y el verbo: la tabla se rearma con el mismo motor que genera las oraciones. Fíjate en que la marca no desaparece, se muda al auxiliar.'
+            : 'Change the subject and the verb: the table is rebuilt with the same engine that generates the sentences. Notice the mark does not vanish — it moves to the auxiliary.'}
+      </p>
+
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 mb-3">
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs font-medium text-slate-600">{es ? 'Sujeto' : 'Subject'}</span>
+          <div className="flex bg-slate-100 border border-slate-200 rounded-lg p-0.5">
+            {SUJETOS.map(s => (
+              <button key={s} onClick={() => setSujeto(s)} aria-pressed={sujeto === s}
+                className={`px-2 py-0.5 rounded text-xs font-bold transition-all ${
+                  sujeto === s ? 'bg-white shadow-sm text-indigo-600' : 'text-slate-600 hover:text-slate-800'}`}>
+                {s}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <label className="flex items-center gap-1.5">
+          <span className="text-xs font-medium text-slate-600">{es ? 'Verbo' : 'Verb'}</span>
+          <input
+            type="text" value={verbo} onChange={(e) => setVerbo(e.target.value)}
+            autoCapitalize="none" autoCorrect="off" spellCheck="false" placeholder="work"
+            className="w-24 px-2 py-1 border border-gray-300 rounded-lg text-xs focus:ring-2 focus:ring-indigo-500 outline-none" />
+        </label>
+
+        <label className="flex items-center gap-1.5 text-xs text-slate-600 cursor-pointer">
+          <input type="checkbox" checked={soloCurso} onChange={(e) => setSoloCurso(e.target.checked)} />
+          {es ? `solo lo visto hasta ${cursoLabel(cefrLevel, language)}` : `only what ${cursoLabel(cefrLevel, language)} has covered`}
+        </label>
+      </div>
+
+      {/* La tabla se desborda a lo ancho en teléfono: scroll propio, para que la
+          página no lo haga. */}
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs border-collapse">
+          <thead>
+            <tr className="text-left text-slate-600">
+              <th className="font-semibold pb-1.5 pr-3">{es ? 'Tiempo' : 'Tense'}</th>
+              {COLUMNAS.map(([k, signo, nombre]) => (
+                <th key={k} className="font-semibold pb-1.5 pr-3 whitespace-nowrap">
+                  <span className="font-mono">{signo}</span> {nombre}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {filas.map(f => (
+              <tr key={f.id} className="align-top border-t border-gray-200">
+                <td className="py-2 pr-3 min-w-[10rem]">
+                  <div className="font-semibold text-gray-800">{es ? f.nameEs : f.nameEn}</div>
+                  <div className="text-muted">{es ? f.descEs : f.descEn}</div>
+                  <div className="text-muted mt-0.5">
+                    {cursoLabel(f.cefr, language)} · {f.unidad}
+                  </div>
+                </td>
+                {MODOS.map(m => {
+                  const c = f.celdas[m];
+                  const larga = SENTENCE_PART_EXPLANATIONS.verbChanges[c.cambio];
+                  return (
+                    <td key={m} className="py-2 pr-3 min-w-[11rem]">
+                      <div className="text-gray-800">{c.frase}</div>
+                      {/* Las piezas van en CHIP con el tinte de su rol, no en texto
+                          suelto: a 12px el rose-600 del auxiliar da 4,35:1 sobre el
+                          fondo de la página y no pasa AA —lo cazó la sonda de
+                          contraste renderizado—. Sobre su propio tinte -100 va con
+                          la tinta que los tokens llaman `onTint` (rose-700), que es
+                          para lo que existe. Y los tintes -100 se quedan claros a
+                          propósito en oscuro, con su tinta oscura: la capa oscura ya
+                          lo documenta. */}
+                      <div className="mt-1 flex flex-wrap items-baseline gap-1">
+                        {c.auxiliar && (
+                          <span className="px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 font-semibold">{c.auxiliar}</span>
+                        )}
+                        <span className="px-1.5 py-0.5 rounded bg-red-100 text-red-700 font-semibold">{c.verbo}</span>
+                        <span className="text-muted" title={larga ? (es ? larga.es : larga.en) : undefined}>
+                          {(CAMBIO_CORTO[c.cambio] || {})[es ? 'es' : 'en'] || c.cambio}
+                        </span>
+                      </div>
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <p className="text-muted text-[11px] mt-2">
+        {es ? 'Los marcadores de cada tiempo (already, since, every day…) están junto al campo Complemento al construir.'
+            : 'Each tense’s markers (already, since, every day…) sit next to the Complement field while building.'}
+      </p>
+    </div>
+  );
+}
+
 /**
  * Guía de uso de la app. Reemplaza a la antigua "Guía de Marcadores Temporales":
  * esos marcadores ya viven junto al campo Complemento (chips por tiempo), que es
  * un lugar más contextual, y la sección prometía ayuda de la app pero entregaba
  * una lista de expresiones.
  */
-function UsageGuide({ language }) {
+function UsageGuide({ language, cefrLevel }) {
   const es = language === 'es';
   const v = themeVariant();
 
@@ -455,6 +599,10 @@ function UsageGuide({ language }) {
             </li>
           ))}
         </ol>
+      </Section>
+
+      <Section title={es ? 'Tabla de tiempos' : 'Tense table'}>
+        <TablaTiempos language={language} cefrLevel={cefrLevel} />
       </Section>
 
       <Section title={es ? 'Los colores del análisis' : 'The analysis colours'}>
@@ -630,6 +778,18 @@ const SENTENCE_PART_EXPLANATIONS = {
    arrancar siempre en 'es'/'basico1'. Se valida lo leído por si quedó un valor
    de otra versión. */
 const GH_LEVELS = ['basico1', 'basico2', 'elemental1', 'elemental2', 'intermedio1', 'intermedio2', 'avanzado'];
+/* El rótulo corto de cada curso. Estaba escrito a mano en las siete <option> del
+   selector; ahora lo comparten el selector y la tabla de tiempos. */
+const CURSO_LABEL = {
+  basico1:     { es: 'Bás. I',      en: 'Bas. I' },
+  basico2:     { es: 'Bás. II',     en: 'Bas. II' },
+  elemental1:  { es: 'Elem. I',     en: 'Elem. I' },
+  elemental2:  { es: 'Elem. II',    en: 'Elem. II' },
+  intermedio1: { es: 'Inter. I',    en: 'Int. I' },
+  intermedio2: { es: 'Inter. II',   en: 'Int. II' },
+  avanzado:    { es: 'Inter. Alto', en: 'Upper' },
+};
+const cursoLabel = (id, lang) => (CURSO_LABEL[id] || {})[lang] || id;
 const readShared = (key, valid, fallback) => {
   try {
     const v = localStorage.getItem(key);
@@ -3356,7 +3516,7 @@ const EnglishSentenceBuilder = () => {
                   hizo la app. */}
               {activePanel === 'guide' && (
                 <>
-                  <UsageGuide language={language} />
+                  <UsageGuide language={language} cefrLevel={cefrLevel} />
                   <p className="mt-6 text-[11px] text-muted text-center">
                     Grammaster · © 2025-2026 Víctor Manuel Morales Muñoz · {t.derechos}
                   </p>
@@ -3562,13 +3722,9 @@ const EnglishSentenceBuilder = () => {
                 className="px-1.5 py-1 border border-slate-200 rounded-lg text-xs font-medium text-gray-600 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-300 cursor-pointer"
                 title={language === 'es' ? 'Nivel' : 'Level'}
               >
-                <option value="basico1">{language === 'es' ? 'Bás. I' : 'Bas. I'}</option>
-                <option value="basico2">{language === 'es' ? 'Bás. II' : 'Bas. II'}</option>
-                <option value="elemental1">{language === 'es' ? 'Elem. I' : 'Elem. I'}</option>
-                <option value="elemental2">{language === 'es' ? 'Elem. II' : 'Elem. II'}</option>
-                <option value="intermedio1">{language === 'es' ? 'Inter. I' : 'Int. I'}</option>
-                <option value="intermedio2">{language === 'es' ? 'Inter. II' : 'Int. II'}</option>
-                <option value="avanzado">{language === 'es' ? 'Inter. Alto' : 'Upper'}</option>
+                {GH_LEVELS.map(id => (
+                  <option key={id} value={id}>{cursoLabel(id, language)}</option>
+                ))}
               </select>
 
               {/* IDIOMA toggle */}
