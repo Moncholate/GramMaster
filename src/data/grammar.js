@@ -666,6 +666,48 @@ export const timeMarkers = {
   }
 };
 
+/* ¿QUÉ MARCADOR TRAE ESTE COMPLEMENTO, Y CUADRA CON EL TIEMPO ELEGIDO?
+   ----------------------------------------------------------------------------
+   La app avisa cuando el complemento trae un marcador de otro tiempo («I work
+   yesterday»). La regla vivía dentro del componente y comparaba a secas el
+   `timeType` del marcador con el del tiempo, y ahí había un aviso FALSO que
+   contradecía la clase:
+
+     El profesor enseña que el Presente Continuo y el «be going to» son
+     INTERCAMBIABLES para planes futuros. Con eso, «I am meeting Ana tomorrow»
+     es correcto — y la app lo marcaba como incoherente, porque «tomorrow» es un
+     marcador de futuro y el Presente Continuo es de presente.
+
+   Por eso la compatibilidad se declara por TIEMPO y no se deduce del tipo. Sale
+   aquí, junto a los marcadores, y es pura para poder probarla. */
+export const TIPOS_DE_MARCADOR_COMPATIBLES = {
+  /* El plan ya acordado: «I'm meeting Ana tomorrow» = «I'm going to meet Ana
+     tomorrow». Solo en esta dirección: «going to» con marcador de presente
+     («now») sí es raro y se sigue avisando. */
+  'present-continuous': ['present', 'future'],
+};
+
+/** El primer marcador que aparece en el texto, con su tipo (past/present/future). */
+export const detectarMarcador = (texto) => {
+  const t = String(texto || '').toLowerCase();
+  if (!t) return null;
+  for (const [tipo, categorias] of Object.entries(timeMarkers)) {
+    for (const marcadores of Object.values(categorias)) {
+      for (const m of marcadores) {
+        if (t.includes(m.text)) return { texto: m.text, tipo };
+      }
+    }
+  }
+  return null;
+};
+
+/** ¿Ese tipo de marcador cabe en ese tiempo? Por defecto, solo el suyo. */
+export const marcadorCuadra = (tense, tipoMarcador) => {
+  if (!tense || !tipoMarcador) return true;
+  const permitidos = TIPOS_DE_MARCADOR_COMPATIBLES[tense.id] || [tense.timeType];
+  return permitidos.includes(tipoMarcador);
+};
+
 // Helper para aplanar los marcadores de tiempo por categoría
 export const getFlattenedMarkers = (category) => {
   const categoryMarkers = timeMarkers[category];

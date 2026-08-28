@@ -35,6 +35,8 @@ import {
   VERBOS_IRREGULARES_AVANZADO,
   frequencyAdverbs,
   timeMarkers,
+  detectarMarcador,
+  marcadorCuadra,
   uncountableNouns,
   countableNouns,
   validateSubject,
@@ -2370,30 +2372,17 @@ const EnglishSentenceBuilder = () => {
     const currentTense = tenses.find(t => t.id === tenseId);
     if (!currentTense) return;
 
-    let detectedMarker = null;
-    let detectedType = null;
-
-    // Buscar en la estructura anidada
-    for (const [type, categories] of Object.entries(timeMarkers)) {
-      for (const [category, markers] of Object.entries(categories)) {
-        for (const markerObj of markers) {
-          if (lowerComp.includes(markerObj.text)) {
-            detectedMarker = markerObj.text;
-            detectedType = type;
-            break;
-          }
-        }
-        if (detectedMarker) break;
-      }
-      if (detectedMarker) break;
-    }
-
-    if (!detectedMarker) {
+    /* La detección y la compatibilidad viven en `grammar.js`, con sus pruebas:
+       aquí solo se pintan. */
+    const encontrado = detectarMarcador(lowerComp);
+    if (!encontrado) {
       setSemanticWarning(null);
       return;
     }
+    const detectedMarker = encontrado.texto;
+    const detectedType = encontrado.tipo;
 
-    if (detectedType !== currentTense.timeType) {
+    if (!marcadorCuadra(currentTense, detectedType)) {
       const suggestedTense = tenses.find(t => t.timeType === detectedType && t.id.includes('simple'));
       
       // Recolectar todos los marcadores del timeType actual
