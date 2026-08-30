@@ -1062,6 +1062,16 @@ const EnglishSentenceBuilder = () => {
      con el que falló: eso se pega tal cual en un test, una foto no. */
   const [reporte, setReporte] = useState(null);
   const [reporteCopiado, setReporteCopiado] = useState(false);
+  /* ¿HAY ALGO QUE REPORTAR? El botón salía en las cinco pestañas, también en la
+     Guía o en Progreso sin haber generado nada, y ahí el informe era el
+     encabezado y poco más: versión, curso, idioma y una lista de campos vacíos.
+     Un botón que no hace nada enseña a no tocarlo, y el día que sí haga falta
+     ya nadie lo usa.
+     Se reporta lo que la app PRODUJO: una oración generada o un ejercicio de
+     práctica en curso. El panel no importa —con una oración en pantalla, el
+     informe sigue siendo cierto desde la Guía o el Historial—; importa que haya
+     algo que contar. */
+  const hayQueReportar = !!practiceQuestion || !!generatedSentence;
   const construirReporte = () => {
     const linea = (k, v) => (v == null || v === '' ? null : `${k}: ${v}`);
     const p = practiceQuestion;
@@ -3767,7 +3777,7 @@ const EnglishSentenceBuilder = () => {
                 escritorio hay sitio de sobra y esconderlo no ahorra nada.
                 El ícono es el del aviso a propósito: es el mismo que el alumno
                 acaba de ver en pantalla cuando algo salió mal. */}
-            <button
+            {hayQueReportar && <button
               onClick={() => { setReporte(construirReporte()); setReporteCopiado(false); }}
               title={t.reportar}
               aria-label={t.reportar}
@@ -3788,7 +3798,7 @@ const EnglishSentenceBuilder = () => {
             >
               <AlertTriangle className="w-[1.15rem] h-[1.15rem] shrink-0" />
               <span className="hidden sm:inline whitespace-nowrap">{t.reportarCorto}</span>
-            </button>
+            </button>}
 
           </div>
         </header>
