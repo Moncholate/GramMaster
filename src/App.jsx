@@ -541,8 +541,11 @@ function TablaTiempos({ language, cefrLevel }) {
  * un lugar más contextual, y la sección prometía ayuda de la app pero entregaba
  * una lista de expresiones.
  */
-function UsageGuide({ language, cefrLevel }) {
+function UsageGuide({ language, cefrLevel, onAbrirTabla }) {
   const es = language === 'es';
+  /* La guía escribe sus textos en línea, pero los de la tabla viven en
+     translations porque su título lo usa también la cabecera del panel. */
+  const t = translations[language];
   const v = themeVariant();
 
   const Section = ({ title, children }) => (
@@ -550,24 +553,6 @@ function UsageGuide({ language, cefrLevel }) {
       <h3 className="text-sm font-bold text-gray-800 mb-2">{title}</h3>
       {children}
     </section>
-  );
-
-  /* Igual que `Section`, pero plegada. Es para lo que ocupa mucho y no se lee de
-     corrido: la tabla de tiempos medía 734px en PC —la mitad de la guía— y 818
-     en teléfono, o sea más de una pantalla antes de llegar a la sección
-     siguiente. Una guía que hay que barrer para encontrar lo demás deja de ser
-     una guía. Plegada, la tabla queda a un toque y el resto vuelve a verse.
-     `<details>` nativo: teclado y lector de pantalla salen gratis, y el cursor
-     ya lo pone la regla base de `index.css`. */
-  const SectionPlegable = ({ title, hint, children }) => (
-    <details className="mb-5 group">
-      <summary className="flex items-center gap-1.5 list-none">
-        <span className="text-muted text-xs transition-transform group-open:rotate-90" aria-hidden="true">▶</span>
-        <h3 className="text-sm font-bold text-gray-800">{title}</h3>
-        {hint && <span className="text-muted text-xs font-normal">· {hint}</span>}
-      </summary>
-      <div className="mt-2">{children}</div>
-    </details>
   );
 
   const steps = es
@@ -621,12 +606,19 @@ function UsageGuide({ language, cefrLevel }) {
         </ol>
       </Section>
 
-      <SectionPlegable
-        title={es ? 'Tabla de tiempos' : 'Tense table'}
-        hint={es ? 'auxiliar y forma del verbo en + − ?' : 'auxiliary and verb form in + − ?'}
-      >
-        <TablaTiempos language={language} cefrLevel={cefrLevel} />
-      </SectionPlegable>
+{/* La tabla ya no vive aquí. Plegada seguía siendo un cuerpo extraño: la guía
+          explica CÓMO SE USA la app y la tabla es material de consulta, que se
+          abre a propósito y se mira entero. Tiene su propia sección; esto es la
+          puerta. */}
+      <Section title={es ? 'Tabla de tiempos' : 'Tense table'}>
+        <p className="text-gray-600 mb-2">{t.tenseTableTeaser}</p>
+        <button
+          onClick={onAbrirTabla}
+          className="px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition-colors"
+        >
+          {t.tenseTableOpen} →
+        </button>
+      </Section>
 
       <Section title={es ? 'Los colores del análisis' : 'The analysis colours'}>
         <p className="text-gray-600 mb-2">
@@ -1028,7 +1020,12 @@ const EnglishSentenceBuilder = () => {
   const [reviewUpToDate, setReviewUpToDate] = useState(false);
 
   // UI simplificada
-  const [activePanel, setActivePanel] = useState(null); // 'history', 'practice', 'guide', 'settings', 'progress'
+  /* `tiempos` no está en la barra de abajo: se entra desde la guía o con
+     `#tiempos` en la URL, que es como la abren las herramientas de clase del
+     hub. */
+  const [activePanel, setActivePanel] = useState(
+    () => (typeof window !== 'undefined' && window.location.hash === '#tiempos') ? 'tiempos' : null
+  ); // 'history', 'practice', 'guide', 'settings', 'progress', 'tiempos'
 
   // Análisis gramatical visual
   const [sentenceAnalysis, setSentenceAnalysis] = useState(null);
@@ -2905,7 +2902,10 @@ const EnglishSentenceBuilder = () => {
       {/* Sección activa — vista inline (modelo de pestañas), no overlay */}
       {activePanel && (
         <div className="flex-1 overflow-y-auto py-4 px-4 sm:px-8 pb-24 sm:pb-6" style={{ order: 1 }}>
-          <div className="max-w-2xl mx-auto">
+          {/* La tabla pide más ancho que el resto de los paneles: con `max-w-2xl`
+              las tres columnas de formas se apretaban y en PC sobraba pantalla
+              a los lados. */}
+          <div className={`${activePanel === 'tiempos' ? 'max-w-5xl' : 'max-w-2xl'} mx-auto`}>
             {/* Salir de la sección al constructor. Antes solo se podía por la
                 barra de abajo, así que el único «atrás» a la vista era el del
                 Hub —arriba a la izquierda, donde uno mira— y se llevaba los
@@ -2924,6 +2924,7 @@ const EnglishSentenceBuilder = () => {
                 {activePanel === 'guide' && t.timeGuideTitle}
                 {activePanel === 'settings' && t.themes}
                 {activePanel === 'progress' && t.progressTitle}
+                {activePanel === 'tiempos' && t.tenseTableTitle}
               </h2>
             </div>
 
@@ -3524,9 +3525,19 @@ const EnglishSentenceBuilder = () => {
                   teléfono. El aviso que pesa a efectos legales es el del código
                   y el LICENSE del repositorio; esto es para quien mire quién
                   hizo la app. */}
+              {/* LA TABLA DE TIEMPOS. Sección propia y fuera de la barra de
+                  abajo: no es una quinta pestaña que el alumno visite a diario,
+                  es material de consulta al que se entra desde la guía —o desde
+                  las herramientas de clase del hub, con `#tiempos`—. Meterla en
+                  la barra habría sido un sexto control en 360px, que es
+                  exactamente lo que ya rompió esa barra una vez. */}
+              {activePanel === 'tiempos' && (
+                <TablaTiempos language={language} cefrLevel={cefrLevel} />
+              )}
+
               {activePanel === 'guide' && (
                 <>
-                  <UsageGuide language={language} cefrLevel={cefrLevel} />
+                  <UsageGuide language={language} cefrLevel={cefrLevel} onAbrirTabla={() => setActivePanel('tiempos')} />
                   <p className="mt-6 text-[11px] text-muted text-center">
                     Grammaster · © 2025-2026 Víctor Manuel Morales Muñoz · {t.derechos}
                   </p>

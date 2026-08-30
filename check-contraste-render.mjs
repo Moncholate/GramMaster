@@ -56,14 +56,15 @@ correr({
      medir. */
   pantallas: [
     { nombre: 'Construye', ir: (page) => page.locator('nav button, footer button').filter({ hasText: 'Construye' }).first().click().then(() => page.waitForTimeout(500)) },
-    /* La guía trae secciones plegadas —la tabla de tiempos, que sola medía la
-       mitad de la pantalla— y lo plegado no está en el DOM visible: sin abrirlo,
-       la sonda dejaría de mirar justo lo que se añadió. Se abren todas. */
-    { nombre: 'Guía', ir: async (page) => {
+    { nombre: 'Guía',      ir: (page) => page.locator('nav button, footer button').filter({ hasText: 'Guía' }).first().click().then(() => page.waitForTimeout(500)) },
+    /* La tabla de tiempos tiene sección propia y NO está en la barra de abajo:
+       se entra desde la guía. Sin este paso la sonda dejaría de mirarla — que es
+       exactamente lo que pasa con todo lo que hay que abrir para ver. */
+    { nombre: 'Tabla de tiempos', ir: async (page) => {
       await page.locator('nav button, footer button').filter({ hasText: 'Guía' }).first().click();
-      await page.waitForTimeout(500);
-      await page.evaluate(() => document.querySelectorAll('details').forEach(d => { d.open = true; }));
       await page.waitForTimeout(400);
+      const abrir = page.locator('button:has-text("Abrir la tabla"), button:has-text("Open the tense")').first();
+      if (await abrir.count()) { await abrir.click(); await page.waitForTimeout(600); }
     } },
     { nombre: 'Práctica',  ir: (page) => page.locator('nav button, footer button').filter({ hasText: 'Práctica' }).first().click().then(() => page.waitForTimeout(500)) },
     { nombre: 'Progreso',  ir: (page) => page.locator('nav button, footer button').filter({ hasText: 'Progreso' }).first().click().then(() => page.waitForTimeout(500)) },
