@@ -552,6 +552,24 @@ function UsageGuide({ language, cefrLevel }) {
     </section>
   );
 
+  /* Igual que `Section`, pero plegada. Es para lo que ocupa mucho y no se lee de
+     corrido: la tabla de tiempos medía 734px en PC —la mitad de la guía— y 818
+     en teléfono, o sea más de una pantalla antes de llegar a la sección
+     siguiente. Una guía que hay que barrer para encontrar lo demás deja de ser
+     una guía. Plegada, la tabla queda a un toque y el resto vuelve a verse.
+     `<details>` nativo: teclado y lector de pantalla salen gratis, y el cursor
+     ya lo pone la regla base de `index.css`. */
+  const SectionPlegable = ({ title, hint, children }) => (
+    <details className="mb-5 group">
+      <summary className="flex items-center gap-1.5 list-none">
+        <span className="text-muted text-xs transition-transform group-open:rotate-90" aria-hidden="true">▶</span>
+        <h3 className="text-sm font-bold text-gray-800">{title}</h3>
+        {hint && <span className="text-muted text-xs font-normal">· {hint}</span>}
+      </summary>
+      <div className="mt-2">{children}</div>
+    </details>
+  );
+
   const steps = es
     ? [['Elige el tiempo verbal y el modo', 'Arriba del todo. El tiempo define la forma del verbo; el modo, si la oración afirma, niega o pregunta.'],
        ['Completa las piezas', 'Sujeto y verbo son obligatorios; el complemento es opcional. El verbo va en forma base (work, no worked): la app lo conjuga.'],
@@ -603,9 +621,12 @@ function UsageGuide({ language, cefrLevel }) {
         </ol>
       </Section>
 
-      <Section title={es ? 'Tabla de tiempos' : 'Tense table'}>
+      <SectionPlegable
+        title={es ? 'Tabla de tiempos' : 'Tense table'}
+        hint={es ? 'auxiliar y forma del verbo en + − ?' : 'auxiliary and verb form in + − ?'}
+      >
         <TablaTiempos language={language} cefrLevel={cefrLevel} />
-      </Section>
+      </SectionPlegable>
 
       <Section title={es ? 'Los colores del análisis' : 'The analysis colours'}>
         <p className="text-gray-600 mb-2">
