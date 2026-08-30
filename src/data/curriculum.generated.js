@@ -146,56 +146,104 @@ export const DIAS_REVISION = 7;
 export const CURRICULO = {
   "to-be-pres": {
     "cefr": "basico1",
-    "unidad": "2B"
+    "unidad": "2B",
+    "label": {
+      "es": "Verbo be (presente)",
+      "en": "Verb be (present)"
+    }
   },
   "simple-present": {
     "cefr": "basico1",
     "unidad": "5A",
     "unidadBe": "2B",
     "unidadInterrogativa": "5B",
-    "unidadTerceraPersona": "6A"
+    "unidadTerceraPersona": "6A",
+    "label": {
+      "es": "Presente Simple",
+      "en": "Simple Present"
+    }
   },
   "present-continuous": {
     "cefr": "basico2",
-    "unidad": "9A"
+    "unidad": "9A",
+    "label": {
+      "es": "Presente Continuo",
+      "en": "Present Continuous"
+    }
   },
   "to-be-past": {
     "cefr": "basico2",
-    "unidad": "10B"
+    "unidad": "10B",
+    "label": {
+      "es": "Verbo be (pasado)",
+      "en": "Verb be (past)"
+    }
   },
   "simple-past": {
     "cefr": "basico2",
     "unidad": "11A",
     "unidadBe": "10B",
-    "unidadIrregulares": "11B"
+    "unidadIrregulares": "11B",
+    "label": {
+      "es": "Pasado Simple",
+      "en": "Simple Past"
+    }
   },
   "future-going-to": {
     "cefr": "elemental2",
-    "unidad": "10B"
+    "unidad": "10B",
+    "label": {
+      "es": "Futuro (going to)",
+      "en": "Future (going to)"
+    }
   },
   "present-perfect": {
     "cefr": "elemental2",
-    "unidad": "12A"
+    "unidad": "12A",
+    "label": {
+      "es": "Presente Perfecto",
+      "en": "Present Perfect"
+    }
   },
   "past-continuous": {
     "cefr": "intermedio1",
-    "unidad": "2B"
+    "unidad": "2B",
+    "label": {
+      "es": "Pasado Continuo",
+      "en": "Past Continuous"
+    }
   },
   "simple-future": {
     "cefr": "intermedio1",
-    "unidad": "6A"
+    "unidad": "6A",
+    "label": {
+      "es": "Futuro Simple (will)",
+      "en": "Simple Future (will)"
+    }
   },
   "past-perfect": {
     "cefr": "intermedio2",
-    "unidad": "12A"
+    "unidad": "12A",
+    "label": {
+      "es": "Pasado Perfecto",
+      "en": "Past Perfect"
+    }
   },
   "used-to": {
     "cefr": "intermedio2",
-    "unidad": "11A"
+    "unidad": "11A",
+    "label": {
+      "es": "Used to",
+      "en": "Used to"
+    }
   },
   "present-perfect-continuous": {
     "cefr": "avanzado",
-    "unidad": "2B"
+    "unidad": "2B",
+    "label": {
+      "es": "Presente Perfecto Continuo",
+      "en": "Present Perfect Continuous"
+    }
   },
   "subject-question": {
     "cefr": "intermedio2",

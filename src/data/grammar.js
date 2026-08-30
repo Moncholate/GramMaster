@@ -381,18 +381,25 @@ export const COURSE_ORDER = NIVELES;
 /* Tiempos verbales. `cefr` y las unidades NO se escriben aquí: salen de
    `delCurriculo(id)`, que las lee del generado. Aquí quedan solo los nombres,
    los ejemplos y las descripciones, que son de esta app. */
+/* LOS NOMBRES DE LOS TIEMPOS YA NO SE ESCRIBEN AQUÍ. Vienen de `label` en
+   curriculum.json —la lista canónica de contenidos— porque desde que el dado de
+   las herramientas de clase sortea tiempos, el hub también los necesita. Dos
+   listas con los mismos nombres se desincronizan; ya pasó con el nivel de
+   `would`. Aquí se sigue decidiendo lo que ES de esta app: el ejemplo, el tipo
+   de tiempo y la descripción.
+   ------------------------------------------------------------------------- */
 export const tenses = [
-  { id: 'simple-present',   ...delCurriculo('simple-present'),   nameEn: 'Simple Present',             nameEs: 'Presente Simple',             example: 'I work',              timeType: 'present', descEn: 'Habits, facts, routines',                       descEs: 'Hábitos, hechos, rutinas' },
-  { id: 'present-continuous', ...delCurriculo('present-continuous'), nameEn: 'Present Continuous',     nameEs: 'Presente Continuo',           example: 'I am working',        timeType: 'present', descEn: 'Actions happening now',                         descEs: 'Acciones ocurriendo ahora' },
-  { id: 'simple-past',      ...delCurriculo('simple-past'),      nameEn: 'Simple Past',                nameEs: 'Pasado Simple',               example: 'I worked',            timeType: 'past',    descEn: 'Completed actions in the past',                 descEs: 'Acciones completadas en el pasado' },
-  { id: 'future-going-to',  ...delCurriculo('future-going-to'),  nameEn: 'Future (going to)',          nameEs: 'Futuro (going to)',           example: 'I am going to work',  timeType: 'future',  descEn: 'Plans and intentions',                          descEs: 'Planes e intenciones' },
-  { id: 'present-perfect',  ...delCurriculo('present-perfect'),  nameEn: 'Present Perfect',            nameEs: 'Presente Perfecto',           example: 'I have worked',       timeType: 'present', descEn: 'Past actions with present relevance',           descEs: 'Acciones pasadas con relevancia presente' },
-  { id: 'past-continuous',  ...delCurriculo('past-continuous'),  nameEn: 'Past Continuous',            nameEs: 'Pasado Continuo',             example: 'I was working',       timeType: 'past',    descEn: 'Actions in progress in the past',               descEs: 'Acciones en progreso en el pasado' },
-  { id: 'simple-future',    ...delCurriculo('simple-future'),    nameEn: 'Simple Future (will)',       nameEs: 'Futuro Simple (will)',        example: 'I will work',         timeType: 'future',  descEn: 'Predictions, spontaneous decisions',            descEs: 'Predicciones, decisiones espontáneas' },
-  { id: 'past-perfect',     ...delCurriculo('past-perfect'),     nameEn: 'Past Perfect',               nameEs: 'Pasado Perfecto',             example: 'I had worked',        timeType: 'past',    descEn: 'Actions before another past action',            descEs: 'Acciones antes de otra acción pasada' },
-  { id: 'used-to',          ...delCurriculo('used-to'),          nameEn: 'Used to',                    nameEs: 'Used to',                     example: 'I used to work',      timeType: 'past',    descEn: 'Past habits that no longer exist',              descEs: 'Hábitos pasados que ya no existen' },
-  { id: 'present-perfect-continuous', ...delCurriculo('present-perfect-continuous'), nameEn: 'Present Perfect Continuous', nameEs: 'Presente Perfecto Continuo', example: 'I have been working', timeType: 'present', descEn: 'Actions that started in the past and continue', descEs: 'Acciones que empezaron en el pasado y continúan' },
-];
+  { id: 'simple-present',   ...delCurriculo('simple-present'),             example: 'I work',              timeType: 'present', descEn: 'Habits, facts, routines',                       descEs: 'Hábitos, hechos, rutinas' },
+  { id: 'present-continuous', ...delCurriculo('present-continuous'),           example: 'I am working',        timeType: 'present', descEn: 'Actions happening now',                         descEs: 'Acciones ocurriendo ahora' },
+  { id: 'simple-past',      ...delCurriculo('simple-past'),               example: 'I worked',            timeType: 'past',    descEn: 'Completed actions in the past',                 descEs: 'Acciones completadas en el pasado' },
+  { id: 'future-going-to',  ...delCurriculo('future-going-to'),           example: 'I am going to work',  timeType: 'future',  descEn: 'Plans and intentions',                          descEs: 'Planes e intenciones' },
+  { id: 'present-perfect',  ...delCurriculo('present-perfect'),           example: 'I have worked',       timeType: 'present', descEn: 'Past actions with present relevance',           descEs: 'Acciones pasadas con relevancia presente' },
+  { id: 'past-continuous',  ...delCurriculo('past-continuous'),             example: 'I was working',       timeType: 'past',    descEn: 'Actions in progress in the past',               descEs: 'Acciones en progreso en el pasado' },
+  { id: 'simple-future',    ...delCurriculo('simple-future'),        example: 'I will work',         timeType: 'future',  descEn: 'Predictions, spontaneous decisions',            descEs: 'Predicciones, decisiones espontáneas' },
+  { id: 'past-perfect',     ...delCurriculo('past-perfect'),             example: 'I had worked',        timeType: 'past',    descEn: 'Actions before another past action',            descEs: 'Acciones antes de otra acción pasada' },
+  { id: 'used-to',          ...delCurriculo('used-to'),                     example: 'I used to work',      timeType: 'past',    descEn: 'Past habits that no longer exist',              descEs: 'Hábitos pasados que ya no existen' },
+  { id: 'present-perfect-continuous', ...delCurriculo('present-perfect-continuous'), example: 'I have been working', timeType: 'present', descEn: 'Actions that started in the past and continue', descEs: 'Acciones que empezaron en el pasado y continúan' },
+].map(t => ({ ...t, nameEs: t.label.es, nameEn: t.label.en }));
 // Contrastados contra syllabus-aef.md (temario real de los cursos). Se quitaron:
 //   would-past  → no es un tiempo (would + base = misma forma que un modal), el
 //                 temario solo nombra `would` para la 2ª condicional y el hábito
