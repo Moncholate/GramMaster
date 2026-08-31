@@ -500,10 +500,13 @@ function TablaTiempos({ language, cefrLevel }) {
               <tr key={f.id} className="align-top border-t border-gray-200">
                 <td className="py-2 pr-3 min-w-[10rem]">
                   <div className="font-semibold text-gray-800">{es ? f.nameEs : f.nameEn}</div>
+                  {/* Aquí iban el curso y la unidad de cada tiempo («Bás. I · 5A»).
+                      Fuera: la casilla de arriba ya recorta la tabla a lo que el
+                      curso vio, así que en el caso normal las diez filas repetían
+                      un dato que no distingue ninguna de otra, y el que de verdad
+                      se busca —para qué sirve el tiempo— quedaba compitiendo con
+                      una referencia de planificación que es del profesor. */}
                   <div className="text-muted">{es ? f.descEs : f.descEn}</div>
-                  <div className="text-muted mt-0.5">
-                    {cursoLabel(f.cefr, language)} · {f.unidad}
-                  </div>
                 </td>
                 {MODOS.map(m => {
                   const c = f.celdas[m];
@@ -564,10 +567,11 @@ function TablaTiempos({ language, cefrLevel }) {
         </table>
       </div>
 
-      <p className="text-muted text-[11px] mt-2">
-        {es ? 'Los marcadores de cada tiempo (already, since, every day…) están junto al campo Complemento al construir.'
-            : 'Each tense’s markers (already, since, every day…) sit next to the Complement field while building.'}
-      </p>
+      {/* Aquí iba una nota diciendo que los marcadores de cada tiempo viven
+          junto al campo Complemento. Fuera: cerraba una tabla de consulta
+          mandando a otra pantalla, y la única forma de comprobarlo es irse de
+          esta. Quien esté construyendo los tiene delante sin que nadie se lo
+          diga. */}
     </div>
   );
 }
