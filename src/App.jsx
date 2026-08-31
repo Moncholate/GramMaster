@@ -1020,9 +1020,10 @@ const EnglishSentenceBuilder = () => {
   const [reviewUpToDate, setReviewUpToDate] = useState(false);
 
   // UI simplificada
-  /* `tiempos` no está en la barra de abajo: se entra desde la guía o con
-     `#tiempos` en la URL, que es como la abren las herramientas de clase del
-     hub. */
+  /* `tiempos` SÍ está en la barra de abajo, entre Guía y Práctica. El hash
+     `#tiempos` sigue vivo porque es como entra el hub desde las herramientas de
+     clase; la diferencia es que ahora, una vez dentro, la pestaña está a la
+     vista y se sale de ella como de cualquier otra. */
   const [activePanel, setActivePanel] = useState(
     () => (typeof window !== 'undefined' && window.location.hash === '#tiempos') ? 'tiempos' : null
   ); // 'history', 'practice', 'guide', 'settings', 'progress', 'tiempos'
@@ -3539,12 +3540,11 @@ const EnglishSentenceBuilder = () => {
                   teléfono. El aviso que pesa a efectos legales es el del código
                   y el LICENSE del repositorio; esto es para quien mire quién
                   hizo la app. */}
-              {/* LA TABLA DE TIEMPOS. Sección propia y fuera de la barra de
-                  abajo: no es una quinta pestaña que el alumno visite a diario,
-                  es material de consulta al que se entra desde la guía —o desde
-                  las herramientas de clase del hub, con `#tiempos`—. Meterla en
-                  la barra habría sido un sexto control en 360px, que es
-                  exactamente lo que ya rompió esa barra una vez. */}
+              {/* LA TABLA DE TIEMPOS. Material de consulta, no una actividad, y
+                  aun así en la barra: estar fuera no la hacía menos visitada,
+                  la hacía inalcanzable sin pasar por la Guía. Se sigue llegando
+                  desde la Guía y con `#tiempos` (así entra el hub), pero ahora
+                  también con un toque. Ver la barra para el ancho. */}
               {activePanel === 'tiempos' && (
                 <TablaTiempos language={language} cefrLevel={cefrLevel} />
               )}
@@ -4712,6 +4712,25 @@ const EnglishSentenceBuilder = () => {
                 </svg>
               ) },
             { panel: 'guide',    icon: '📖', label: language === 'es' ? 'Guía' : 'Guide' },
+            /* La tabla de tiempos, sexta pestaña y AQUÍ, entre la Guía y la
+               Práctica: es lo que se consulta entre entender una forma y usarla,
+               y ese es su lugar en la barra igual que en el orden de la clase.
+               Estuvo fuera por miedo al ancho —seis controles en 360px— y el
+               precio fue peor: solo se llegaba desde dentro de la Guía o con
+               , así que desde el hub había que SALIR a otra pestaña
+               del navegador para verla. El ancho se resuelve con el rótulo
+               (9px por debajo de sm); lo otro no se resolvía.
+               Icono dibujado y no emoji, como el de Construye: el reloj —lo
+               obvio para «tiempos»— ya es el del Historial, y dos relojes en la
+               misma barra no distinguen nada. Esto es lo que la pestaña
+               contiene: una tabla de tres columnas. */
+            { panel: 'tiempos',  label: language === 'es' ? 'Tiempos' : 'Tenses',
+              icon: (
+                <svg viewBox="0 0 24 24" className="w-[1.15em] h-[1.15em]" aria-hidden="true">
+                  <rect x="3" y="5" width="18" height="14" rx="2" fill="none" stroke="currentColor" strokeWidth="1.8" />
+                  <path d="M3 9.6h18M9 9.6V19M15 9.6V19" stroke="currentColor" strokeWidth="1.6" fill="none" />
+                </svg>
+              ) },
             { panel: 'practice', icon: '✏️', label: language === 'es' ? 'Práctica' : 'Practice' },
             { panel: 'progress', icon: '📊', label: language === 'es' ? 'Progreso' : 'Progress' },
             /* El contador va sobre `sentenceHistory.length`, NO sobre
@@ -4736,7 +4755,7 @@ const EnglishSentenceBuilder = () => {
               }`}
             >
               <span className="text-xl leading-none" aria-hidden="true">{icon}</span>
-              <span className="text-[10px] font-bold leading-tight">{label}</span>
+              <span className="text-[9px] sm:text-[10px] font-bold leading-tight px-0.5">{label}</span>
               {badge && (
                 <span aria-hidden="true" className="absolute top-1.5 right-1/2 translate-x-3 bg-indigo-600 text-white font-bold rounded-full flex items-center justify-center" style={{fontSize:'9px', minWidth:'16px', height:'16px', padding:'0 3px'}}>
                   {badge}
