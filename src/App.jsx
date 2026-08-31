@@ -1067,11 +1067,15 @@ const EnglishSentenceBuilder = () => {
      encabezado y poco más: versión, curso, idioma y una lista de campos vacíos.
      Un botón que no hace nada enseña a no tocarlo, y el día que sí haga falta
      ya nadie lo usa.
-     Se reporta lo que la app PRODUJO: una oración generada o un ejercicio de
-     práctica en curso. El panel no importa —con una oración en pantalla, el
-     informe sigue siendo cierto desde la Guía o el Historial—; importa que haya
-     algo que contar. */
-  const hayQueReportar = !!practiceQuestion || !!generatedSentence;
+     Se reporta lo que la app PRODUJO **y donde está**: la oración generada en
+     el constructor, el ejercicio en Práctica. El panel SÍ importa —lo dijo el
+     profesor al probarlo: cambiar de pestaña y seguir viendo el botón—, porque
+     en la Guía, el Progreso o el Historial no hay nada delante de lo que
+     quejarse aunque el constructor tenga algo guardado. Es el mismo criterio
+     que Question Lab, donde el informe es por panel. */
+  const hayQueReportar =
+    (activePanel === null && !!generatedSentence) ||
+    (activePanel === 'practice' && !!practiceQuestion);
   const construirReporte = () => {
     const linea = (k, v) => (v == null || v === '' ? null : `${k}: ${v}`);
     const p = practiceQuestion;
