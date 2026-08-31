@@ -57,15 +57,12 @@ correr({
   pantallas: [
     { nombre: 'Construye', ir: (page) => page.locator('nav button, footer button').filter({ hasText: 'Construye' }).first().click().then(() => page.waitForTimeout(500)) },
     { nombre: 'Guía',      ir: (page) => page.locator('nav button, footer button').filter({ hasText: 'Guía' }).first().click().then(() => page.waitForTimeout(500)) },
-    /* La tabla de tiempos tiene sección propia y NO está en la barra de abajo:
-       se entra desde la guía. Sin este paso la sonda dejaría de mirarla — que es
-       exactamente lo que pasa con todo lo que hay que abrir para ver. */
-    { nombre: 'Tabla de tiempos', ir: async (page) => {
-      await page.locator('nav button, footer button').filter({ hasText: 'Guía' }).first().click();
-      await page.waitForTimeout(400);
-      const abrir = page.locator('button:has-text("Abrir la tabla"), button:has-text("Open the tense")').first();
-      if (await abrir.count()) { await abrir.click(); await page.waitForTimeout(600); }
-    } },
+    /* La tabla de tiempos ya tiene pestaña propia en la barra, entre Guía y
+       Práctica; antes se entraba por un botón dentro de la Guía y este paso era
+       dos clics. Sigue listada aparte porque es una PANTALLA distinta: sus
+       cápsulas de auxiliar y verbo no salen en ninguna otra, y lo que no se
+       visita no se mide. */
+    { nombre: 'Tabla de tiempos', ir: (page) => page.locator('nav button, footer button').filter({ hasText: 'Tiempos' }).first().click().then(() => page.waitForTimeout(600)) },
     { nombre: 'Práctica',  ir: (page) => page.locator('nav button, footer button').filter({ hasText: 'Práctica' }).first().click().then(() => page.waitForTimeout(500)) },
     { nombre: 'Progreso',  ir: (page) => page.locator('nav button, footer button').filter({ hasText: 'Progreso' }).first().click().then(() => page.waitForTimeout(500)) },
     { nombre: 'Historial', ir: (page) => page.locator('nav button, footer button').filter({ hasText: 'Historial' }).first().click().then(() => page.waitForTimeout(500)) },

@@ -428,8 +428,16 @@ function TablaTiempos({ language, cefrLevel }) {
     () => tablaDeTiempos({ sujeto, verbo, nivel: soloCurso ? cefrLevel : null }),
     [sujeto, verbo, soloCurso, cefrLevel]);
 
-  /* «I» aparte de «she» y «they» porque es el único que lleva `am`. */
-  const SUJETOS = ['I', 'she', 'they'];
+  /* LOS SIETE, no una muestra. Estaban «I», «she» y «they» como representantes
+     de los tres comportamientos (am / -s / base), y el razonamiento era bueno
+     para un ejemplo y malo para una tabla de consulta: el alumno que duda no
+     duda de la clase de sujeto, duda de SU sujeto. Con «you» y «we» fuera, la
+     pregunta más repetida de la clase —«¿y con you cuál va?»— no tenía respuesta
+     aquí, y la que sí estaba («they») exigía saber de antemano que you se
+     comporta igual, que es justo lo que no se sabe todavía.
+     En el orden del paradigma, que es como se recitan y como vienen en cualquier
+     libro; no agrupados por auxiliar. */
+  const SUJETOS = ['I', 'you', 'he', 'she', 'it', 'we', 'they'];
   const COLUMNAS = [
     ['affirmative', '+', es ? 'Afirmativa' : 'Affirmative'],
     ['negative', '−', es ? 'Negativa' : 'Negative'],
@@ -439,14 +447,16 @@ function TablaTiempos({ language, cefrLevel }) {
   return (
     <div>
       <p className="text-gray-600 mb-2">
-        {es ? 'Cambia el sujeto y el verbo: la tabla se rearma con el mismo motor que genera las oraciones. Fíjate en que la marca no desaparece, se muda al auxiliar.'
-            : 'Change the subject and the verb: the table is rebuilt with the same engine that generates the sentences. Notice the mark does not vanish — it moves to the auxiliary.'}
+        {es ? 'Cambia el sujeto y el verbo: la tabla se rearma con el mismo motor que genera las oraciones. Debajo de cada frase van sus dos piezas — el auxiliar en cápsula clara y el verbo en rojo pleno. Fíjate en que la marca no desaparece, se muda al auxiliar.'
+            : 'Change the subject and the verb: the table is rebuilt with the same engine that generates the sentences. Under each sentence are its two pieces — the auxiliary in a pale pill, the verb in solid red. Notice the mark does not vanish — it moves to the auxiliary.'}
       </p>
 
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 mb-3">
         <div className="flex items-center gap-1.5">
           <span className="text-xs font-medium text-slate-600">{es ? 'Sujeto' : 'Subject'}</span>
-          <div className="flex bg-slate-100 border border-slate-200 rounded-lg p-0.5">
+          {/* `flex-wrap`: con siete la fila puede no caber en 360px, y lo que
+              no puede pasar es que la cápsula empuje la página a lo ancho. */}
+          <div className="flex flex-wrap bg-slate-100 border border-slate-200 rounded-lg p-0.5">
             {SUJETOS.map(s => (
               <button key={s} onClick={() => setSujeto(s)} aria-pressed={sujeto === s}
                 className={`px-2 py-0.5 rounded text-xs font-bold transition-all ${
@@ -508,12 +518,39 @@ function TablaTiempos({ language, cefrLevel }) {
                           la tinta que los tokens llaman `onTint` (rose-700), que es
                           para lo que existe. Y los tintes -100 se quedan claros a
                           propósito en oscuro, con su tinta oscura: la capa oscura ya
-                          lo documenta. */}
+                          lo documenta.
+
+                          AUXILIAR Y VERBO NO PUEDEN PARECERSE, y aquí se parecían.
+                          Los roles son familia a propósito —rose y red, vecinos— y
+                          en la oración generada eso funciona: son dos palabras
+                          sueltas y separadas. Aquí van pegadas, treinta veces, y
+                          rose-100 (#ffe4e6) contra red-100 (#fee2e2) es una
+                          diferencia que no existe a 12px. Encima los tokens los
+                          dejan casi iguales también en tinta: #be123c y #b91c1c.
+                          O sea que el matiz NO iba a resolver esto.
+                          Se separan por lo que no es matiz:
+                            · FORMA — el auxiliar en cápsula redonda con anillo, el
+                              verbo en rectángulo; se distinguen incluso en gris.
+                            · PESO — el verbo va en su rol PLENO (red-700, tinta
+                              blanca) y el auxiliar en tinte claro. Además de
+                              distinguirlos dice cuál es el protagonista: la tabla
+                              trata de qué le pasa al VERBO.
+                            · RÓTULO — «aux» y «verbo» dentro de la propia cápsula.
+                              Es lo único que no hay que deducir, y en material de
+                              consulta eso vale más que la elegancia de no ponerlo.
+                          El rótulo va con la misma tinta que su cápsula, así que
+                          no estrena ningún par de contraste que auditar. */}
                       <div className="mt-1 flex flex-wrap items-baseline gap-1">
                         {c.auxiliar && (
-                          <span className="px-1.5 py-0.5 rounded bg-rose-100 text-rose-700 font-semibold">{c.auxiliar}</span>
+                          <span className="inline-flex items-baseline gap-1 px-1.5 py-0.5 rounded-full bg-rose-100 ring-1 ring-rose-300 text-rose-700">
+                            <span className="text-[9px] font-bold uppercase tracking-wide">aux</span>
+                            <span className="font-semibold">{c.auxiliar}</span>
+                          </span>
                         )}
-                        <span className="px-1.5 py-0.5 rounded bg-red-100 text-red-700 font-semibold">{c.verbo}</span>
+                        <span className="inline-flex items-baseline gap-1 px-1.5 py-0.5 rounded bg-red-700 text-white">
+                          <span className="text-[9px] font-bold uppercase tracking-wide">{es ? 'verbo' : 'verb'}</span>
+                          <span className="font-semibold">{c.verbo}</span>
+                        </span>
                         <span className="text-muted" title={larga ? (es ? larga.es : larga.en) : undefined}>
                           {(CAMBIO_CORTO[c.cambio] || {})[es ? 'es' : 'en'] || c.cambio}
                         </span>
@@ -541,7 +578,7 @@ function TablaTiempos({ language, cefrLevel }) {
  * un lugar más contextual, y la sección prometía ayuda de la app pero entregaba
  * una lista de expresiones.
  */
-function UsageGuide({ language, cefrLevel, onAbrirTabla }) {
+function UsageGuide({ language, cefrLevel }) {
   const es = language === 'es';
   /* La guía escribe sus textos en línea, pero los de la tabla viven en
      translations porque su título lo usa también la cabecera del panel. */
@@ -606,19 +643,10 @@ function UsageGuide({ language, cefrLevel, onAbrirTabla }) {
         </ol>
       </Section>
 
-{/* La tabla ya no vive aquí. Plegada seguía siendo un cuerpo extraño: la guía
-          explica CÓMO SE USA la app y la tabla es material de consulta, que se
-          abre a propósito y se mira entero. Tiene su propia sección; esto es la
-          puerta. */}
-      <Section title={es ? 'Tabla de tiempos' : 'Tense table'}>
-        <p className="text-gray-600 mb-2">{t.tenseTableTeaser}</p>
-        <button
-          onClick={onAbrirTabla}
-          className="px-3 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold transition-colors"
-        >
-          {t.tenseTableOpen} →
-        </button>
-      </Section>
+{/* Aquí hubo una puerta a la tabla de tiempos, de cuando la tabla no estaba en
+          la barra de abajo y había que entrar por algún lado. Ahora tiene su
+          propia pestaña, a la vista, y un botón que lleva a una pestaña vecina
+          solo enseña que hay dos caminos para lo mismo. */}
 
       <Section title={es ? 'Los colores del análisis' : 'The analysis colours'}>
         <p className="text-gray-600 mb-2">
@@ -1020,13 +1048,14 @@ const EnglishSentenceBuilder = () => {
   const [reviewUpToDate, setReviewUpToDate] = useState(false);
 
   // UI simplificada
-  /* `tiempos` SÍ está en la barra de abajo, entre Guía y Práctica. El hash
-     `#tiempos` sigue vivo porque es como entra el hub desde las herramientas de
-     clase; la diferencia es que ahora, una vez dentro, la pestaña está a la
-     vista y se sale de ella como de cualquier otra. */
-  const [activePanel, setActivePanel] = useState(
-    () => (typeof window !== 'undefined' && window.location.hash === '#tiempos') ? 'tiempos' : null
-  ); // 'history', 'practice', 'guide', 'settings', 'progress', 'tiempos'
+  /* A la tabla de tiempos se entra por SU pestaña, entre Guía y Práctica, y por
+     ningún otro sitio. Tuvo dos puertas más —un botón dentro de la Guía y un
+     `#tiempos` que abría el hub desde las herramientas de clase— y las dos eran
+     de cuando no estaba en la barra: una cosa que se ve no necesita que la
+     abran desde fuera, y tres caminos al mismo panel son tres sitios donde
+     buscarla. */
+  const [activePanel, setActivePanel] = useState(null);
+  // 'history', 'practice', 'guide', 'settings', 'progress', 'tiempos'
 
   // Análisis gramatical visual
   const [sentenceAnalysis, setSentenceAnalysis] = useState(null);
@@ -3542,16 +3571,16 @@ const EnglishSentenceBuilder = () => {
                   hizo la app. */}
               {/* LA TABLA DE TIEMPOS. Material de consulta, no una actividad, y
                   aun así en la barra: estar fuera no la hacía menos visitada,
-                  la hacía inalcanzable sin pasar por la Guía. Se sigue llegando
-                  desde la Guía y con `#tiempos` (así entra el hub), pero ahora
-                  también con un toque. Ver la barra para el ancho. */}
+                  la hacía inalcanzable sin pasar por la Guía. Ahora la pestaña
+                  es la única puerta; ver `activePanel` para las dos que había
+                  antes, y la barra para el ancho. */}
               {activePanel === 'tiempos' && (
                 <TablaTiempos language={language} cefrLevel={cefrLevel} />
               )}
 
               {activePanel === 'guide' && (
                 <>
-                  <UsageGuide language={language} cefrLevel={cefrLevel} onAbrirTabla={() => setActivePanel('tiempos')} />
+                  <UsageGuide language={language} cefrLevel={cefrLevel} />
                   <p className="mt-6 text-[11px] text-muted text-center">
                     Grammaster · © 2025-2026 Víctor Manuel Morales Muñoz · {t.derechos}
                   </p>
@@ -4723,12 +4752,24 @@ const EnglishSentenceBuilder = () => {
                Icono dibujado y no emoji, como el de Construye: el reloj —lo
                obvio para «tiempos»— ya es el del Historial, y dos relojes en la
                misma barra no distinguen nada. Esto es lo que la pestaña
-               contiene: una tabla de tres columnas. */
+               contiene: una tabla de tres columnas.
+               Y dibujado con la MISMA gramática que la pieza de Construye
+               —rectángulos redondeados rellenos, `fill="currentColor"`, nada de
+               contornos—: al lado de cuatro emoji, que son manchas sólidas, un
+               icono de línea se ve descolorido y de otra familia.
+               Cabecera y CUATRO celdas, no seis: con tres columnas —que sería lo
+               fiel, una por forma— a 20px las celdas quedan del tamaño de un
+               punto y el icono se lee como una trama de puntitos, más liviano
+               que el ladrillo de al lado. Nadie cuenta las columnas de un icono;
+               lo que sí se nota es que pese lo mismo que sus vecinos. */
             { panel: 'tiempos',  label: language === 'es' ? 'Tiempos' : 'Tenses',
               icon: (
                 <svg viewBox="0 0 24 24" className="w-[1.15em] h-[1.15em]" aria-hidden="true">
-                  <rect x="3" y="5" width="18" height="14" rx="2" fill="none" stroke="currentColor" strokeWidth="1.8" />
-                  <path d="M3 9.6h18M9 9.6V19M15 9.6V19" stroke="currentColor" strokeWidth="1.6" fill="none" />
+                  <rect x="3" y="4.5" width="18" height="4.4" rx="1.5" fill="currentColor" />
+                  <rect x="3" y="10.4" width="8.3" height="4.3" rx="1.4" fill="currentColor" />
+                  <rect x="12.7" y="10.4" width="8.3" height="4.3" rx="1.4" fill="currentColor" />
+                  <rect x="3" y="16.2" width="8.3" height="4.3" rx="1.4" fill="currentColor" />
+                  <rect x="12.7" y="16.2" width="8.3" height="4.3" rx="1.4" fill="currentColor" />
                 </svg>
               ) },
             { panel: 'practice', icon: '✏️', label: language === 'es' ? 'Práctica' : 'Practice' },
