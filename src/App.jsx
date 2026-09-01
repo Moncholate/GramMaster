@@ -74,6 +74,7 @@ import {
 import { useClipboard, useSpeechSynthesis, useLocalStorage, useSessionStats } from './hooks';
 import { ROLE_TW, ROLE_FILL } from './tokens.generated.js';
 import { tablaDeTiempos, MODOS } from './tablaTiempos';
+import { formasDe, FILAS_DE_FORMAS, conEjemplo } from './conjugador';
 import { TENSE_FAMILIES, ASPECTS } from './tenseFamilies.generated.js';
 import { loadProgress, saveProgress, recordAttempt, recordRound, evaluateBadges, BADGES, todayISO } from './gamification.generated.js';
 
@@ -428,6 +429,34 @@ function TablaTiempos({ language, cefrLevel }) {
     () => tablaDeTiempos({ sujeto, verbo, nivel: soloCurso ? cefrLevel : null }),
     [sujeto, verbo, soloCurso, cefrLevel]);
 
+  /* EL CONJUGADOR. Delante de un verbo nuevo, lo primero que se pregunta un
+     alumno no es en qué tiempo va: es «¿cómo era el pasado de este?». Las formas
+     principales van ARRIBA por eso, y la tabla de abajo contesta la otra mitad
+     —qué le pasa a cada forma en los diez tiempos— sin cambiar de pantalla.
+     El mismo `verbo` alimenta las dos, así que no pueden decir cosas distintas.
+     `|| 'work'` es el mismo respaldo que usa `tablaDeTiempos`: con la casilla
+     vacía las dos siguen mostrando lo mismo, y no una la muestra y otra no. */
+  const formas = useMemo(() => formasDe(verbo) || formasDe('work'), [verbo]);
+
+  /* El PATRÓN dicho con palabras, que es lo que se memoriza. «Irregular» a secas
+     mete en el mismo saco a `cut`, que no cambia nunca, y a `go`, que cambia dos
+     veces. Y como es texto y no un color, se lee igual proyectado y en gris. */
+  const PATRON = {
+    regular: { es: 'regular · la regla del -ed', en: 'regular · the -ed rule' },
+    'tres-iguales': { es: 'irregular · las tres formas iguales', en: 'irregular · all three the same' },
+    'dos-iguales': { es: 'irregular · pasado y participio iguales', en: 'irregular · past and participle the same' },
+    'tres-distintas': { es: 'irregular · las tres distintas', en: 'irregular · all three different' },
+  };
+
+  /* En un verbo de dos palabras la que cambia es la CABEZA. Se separa para poder
+     apagar la partícula: así se ve de un vistazo que «up» está igual en las seis
+     y que todo el trabajo lo hace «get». */
+  const partirForma = (texto) => {
+    if (!formas.particula) return [texto, ''];
+    const cola = ' ' + formas.particula;
+    return texto.endsWith(cola) ? [texto.slice(0, -cola.length), cola] : [texto, ''];
+  };
+
   /* LOS SIETE, no una muestra. Estaban «I», «she» y «they» como representantes
      de los tres comportamientos (am / -s / base), y el razonamiento era bueno
      para un ejemplo y malo para una tabla de consulta: el alumno que duda no
@@ -447,8 +476,8 @@ function TablaTiempos({ language, cefrLevel }) {
   return (
     <div>
       <p className="text-gray-600 mb-2">
-        {es ? 'Cambia el sujeto y el verbo: la tabla se rearma con el mismo motor que genera las oraciones. Debajo de cada frase van sus dos piezas — el auxiliar en cápsula clara y el verbo en rojo pleno. Fíjate en que la marca no desaparece, se muda al auxiliar.'
-            : 'Change the subject and the verb: the table is rebuilt with the same engine that generates the sentences. Under each sentence are its two pieces — the auxiliary in a pale pill, the verb in solid red. Notice the mark does not vanish — it moves to the auxiliary.'}
+        {es ? 'Escribe un verbo: arriba salen sus formas —infinitivo, base, tercera persona, pasado, gerundio y participio— y abajo qué le pasa a cada una en los diez tiempos. Cambia también el sujeto y la tabla se rearma con el mismo motor que genera las oraciones. Debajo de cada frase van sus dos piezas — el auxiliar en cápsula clara y el verbo en rojo pleno. Fíjate en que la marca no desaparece, se muda al auxiliar.'
+            : 'Type a verb: its forms appear above — infinitive, base, third person, past, -ing and participle — and below, what happens to each one across the ten tenses. Change the subject too and the table is rebuilt with the same engine that generates the sentences. Under each sentence are its two pieces — the auxiliary in a pale pill, the verb in solid red. Notice the mark does not vanish — it moves to the auxiliary.'}
       </p>
 
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 mb-3">
@@ -479,6 +508,57 @@ function TablaTiempos({ language, cefrLevel }) {
           <input type="checkbox" checked={soloCurso} onChange={(e) => setSoloCurso(e.target.checked)} />
           {es ? `solo lo visto hasta ${cursoLabel(cefrLevel, language)}` : `only what ${cursoLabel(cefrLevel, language)} has covered`}
         </label>
+      </div>
+
+      {/* LAS FORMAS DEL VERBO. Ni una escrita a mano: las seis salen de
+          `conjugador.js`, que llama al mismo motor que construye las oraciones
+          de abajo. Si mañana se corrige una regla de escritura, se corrigen las
+          dos cosas a la vez y no puede quedar una diciendo «studys». */}
+      <div className="mb-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
+        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1 mb-2">
+          <h3 className="text-sm font-bold text-slate-900">
+            {es ? 'Las formas de' : 'The forms of'}{' '}
+            <span style={{ color: 'var(--rol-verb)' }}>{formas.base}</span>
+          </h3>
+          <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-white border border-slate-300 text-slate-700">
+            {es ? PATRON[formas.patron].es : PATRON[formas.patron].en}
+          </span>
+        </div>
+
+        <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-3 gap-y-2.5">
+          {FILAS_DE_FORMAS.map(fila => {
+            const [cabeza, cola] = partirForma(formas[fila.id]);
+            return (
+              <div key={fila.id}>
+                <dt className="text-[10px] font-bold uppercase tracking-wide text-slate-500">
+                  {es ? fila.es : fila.en}
+                </dt>
+                <dd className="text-sm font-bold leading-tight" style={{ color: 'var(--rol-verb)' }}>
+                  {cabeza}
+                  {cola && <span className="font-normal text-slate-500">{cola}</span>}
+                </dd>
+                {/* El PARA QUÉ, no solo el nombre. «Participio» no le dice nada a
+                    quien todavía no sabe qué es; «el que acompaña a have» sí. */}
+                <dd className="text-[11px] text-slate-500 leading-snug">
+                  {conEjemplo(es ? fila.ayudaEs : fila.ayudaEn, formas)}
+                </dd>
+              </div>
+            );
+          })}
+        </dl>
+
+        {formas.pasadoDoble && (
+          <p className="mt-2 text-[11px] text-slate-600">
+            {es ? 'El pasado de «be» se reparte según el sujeto: I/he/she/it → was · you/we/they → were. La barra no es una errata.'
+                : 'The past of “be” splits by subject: I/he/she/it → was · you/we/they → were. The slash is not a typo.'}
+          </p>
+        )}
+        {formas.particula && (
+          <p className="mt-2 text-[11px] text-slate-600">
+            {es ? `Solo cambia «${formas.nucleo}»: la partícula «${formas.particula}» va igual en las seis.`
+                : `Only “${formas.nucleo}” changes: the particle “${formas.particula}” is the same in all six.`}
+          </p>
+        )}
       </div>
 
       {/* La tabla se desborda a lo ancho en teléfono: scroll propio, para que la
