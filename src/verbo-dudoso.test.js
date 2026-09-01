@@ -14,11 +14,11 @@
    Un aviso que salta de más se aprende a ignorar en dos clases, y entonces
    volvemos al problema del principio pero peor.
    ========================================================================== */
-import { readFileSync } from 'node:fs';
 import { describe, it, expect } from 'vitest';
 import { revisarVerboAntesDeGenerar, validateVerb, validPronouns } from './data/validation';
 import { detectConjugatedVerbBase } from './conjugation';
 import { commonVerbs, irregularVerbs, BASE_VERBS } from './data/verbs';
+import { VOCAB_CATEGORIA_DE } from './data/vocabulary.generated.js';
 
 // Lo mismo que hace la app: validar y mirar si es una forma conjugada.
 const revisar = (palabra, idioma = 'es') =>
@@ -104,8 +104,9 @@ describe('la contraparte: no molestar a quien escribió bien', () => {
        temario se aprende a ignorar en dos clases.
        Los de VARIAS palabras no se miran aquí: no son formas base, y de esos se
        encarga la lista de frasales. */
-    const vocab = JSON.parse(readFileSync(new URL('../../Grammar HUB/vocabulary.json', import.meta.url), 'utf8'));
-    const sueltos = (vocab.verbo || []).filter(v => !String(v).includes(' '));
+    /* Del vocabulario que ESTA app lleva, no del repo de al lado: en el CI de
+       Grammaster solo está Grammaster. */
+    const sueltos = Object.keys(VOCAB_CATEGORIA_DE).filter(p => VOCAB_CATEGORIA_DE[p].includes('verbo'));
     const molestados = sueltos.filter(v => revisar(v).confirmar);
     expect(molestados, `verbos del temario que piden confirmación: ${molestados.join(', ')}`).toEqual([]);
   });

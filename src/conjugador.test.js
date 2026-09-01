@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
 import { formasDe, FILAS_DE_FORMAS, PATRONES, revisarVerbo } from './conjugador';
 import { ALL_BASE_VERBS } from './conjugation';
+import { VOCAB_CATEGORIA_DE } from './data/vocabulary.generated.js';
+import { PHRASAL_VERB_LIST } from './data/phrasal.generated.js';
 import { irregularVerbs } from './data/verbs';
 import { VERBOS_IRREGULARES_AVANZADO } from './data/grammar';
 
@@ -214,28 +215,42 @@ describe('el pozo de verbos sale del temario, no de una lista paralela', () => {
      que se había quedado atrás. Un aviso que salta en uno de cada seis verbos
      del propio temario se aprende a ignorar en dos clases, y entonces no queda
      ni el aviso ni la calma de no tenerlo. */
-  const vocab = JSON.parse(readFileSync(new URL('../../Grammar HUB/vocabulary.json', import.meta.url), 'utf8'));
+  /* SE MIRA EL VOCABULARIO QUE ESTA APP LLEVA, no el del repo de al lado. La
+     primera versión leía `../../Grammar HUB/vocabulary.json` y tumbó el
+     despliegue: en el CI de Grammaster solo está Grammaster, y la vecina no
+     existe. Es la trampa que ya tenían los oráculos, y por eso ellos viven en
+     otro sitio. Además así se prueba lo que de verdad se publica: si el sync no
+     hubiera corrido, esto lo diría. */
+  const verbosDelTemario = Object.keys(VOCAB_CATEGORIA_DE)
+    .filter(p => VOCAB_CATEGORIA_DE[p].includes('verbo'));
 
-  it('ningún verbo suelto del temario dispara aviso', () => {
-    const sueltos = (vocab.verbo || []).filter(v => !String(v).includes(' '));
-    const molestados = sueltos.filter(v => revisarVerbo(v).tipo);
+  it('ningún verbo del temario dispara aviso', () => {
+    const molestados = verbosDelTemario.filter(v => revisarVerbo(v).tipo);
     expect(molestados, `verbos del temario con aviso: ${molestados.join(', ')}`).toEqual([]);
-    expect(sueltos.length).toBeGreaterThan(50);   // que la lista no se haya vaciado
+    expect(verbosDelTemario.length).toBeGreaterThan(50);   // que la lista no se haya vaciado
   });
 
-  it('los verbos de varias palabras del curso tampoco, salvo los que no son verbos', () => {
-    /* «turn right», «turn left» y «go straight ahead» están en la lista de
-       verbos del vocabulario pero son ÓRDENES, no verbos que conjugar: ahí el
-       aviso es correcto y quitarlo sería mentir. Los demás —los frasales— tienen
-       que pasar en silencio. */
-    /* «wait for» tampoco: el validador dice que «for» va al complemento, que es
-       exactamente lo que enseña Desgramatizador al pintar «They wait for the
-       bus» — el verbo es «wait». Ver $porQueWaitForNO en phrasal-verbs.json. */
-    const ordenes = ['turn right', 'turn left', 'go straight ahead', 'wait for'];
-    const frasales = (vocab.verbo || []).filter(v => String(v).includes(' ') && !ordenes.includes(v));
-    const molestados = frasales.filter(v => revisarVerbo(v).tipo);
-    expect(molestados, `frasales del curso con aviso: ${molestados.join(', ')}`).toEqual([]);
-    expect(frasales.length).toBeGreaterThan(5);
+  it('ningún frasal del curso dispara aviso', () => {
+    /* Los de varias palabras no son formas base: de ellos se encarga la lista de
+       frasales, que es la del libro. Si uno de ellos avisara, la app estaría
+       diciendo que «get up» está mal, que es falso. */
+    const molestados = PHRASAL_VERB_LIST
+      .map(p => p.join(' '))
+      .filter(v => revisarVerbo(v).tipo);
+    expect(molestados, `frasales con aviso: ${molestados.join(', ')}`).toEqual([]);
+    expect(PHRASAL_VERB_LIST.length).toBeGreaterThan(30);
+  });
+
+  it('y lo que es verbo + complemento sigue avisándolo, con esas palabras', () => {
+    /* «turn right» y «wait for» NO son falsos positivos: son un verbo y su
+       complemento, y el aviso lo dice así — el mismo análisis que enseña
+       Desgramatizador al pintar la oración. Ver $porQueWaitForNO en
+       phrasal-verbs.json. */
+    for (const v of ['turn right', 'wait for', 'go straight ahead']) {
+      const r = revisarVerbo(v);
+      expect(r.tipo, v).toBeTruthy();
+      expect(r.aviso, v).toMatch(/complemento|complement/);
+    }
   });
 
   it('el pozo incluye de verdad los que faltaban', () => {
