@@ -74,7 +74,7 @@ import {
 import { useClipboard, useSpeechSynthesis, useLocalStorage, useSessionStats } from './hooks';
 import { ROLE_TW, ROLE_FILL } from './tokens.generated.js';
 import { tablaDeTiempos, MODOS } from './tablaTiempos';
-import { formasDe, FILAS_DE_FORMAS, conEjemplo } from './conjugador';
+import { formasDe, FILAS_DE_FORMAS } from './conjugador';
 import { TENSE_FAMILIES, ASPECTS } from './tenseFamilies.generated.js';
 import { loadProgress, saveProgress, recordAttempt, recordRound, evaluateBadges, BADGES, todayISO } from './gamification.generated.js';
 
@@ -393,17 +393,40 @@ function TensePicker({ value, modalValue, condValue, onSelectTense, onSelectModa
   );
 }
 
-/* ── Qué le pasa al verbo, en dos palabras ───────────────────────────────────
+/* ── En qué FORMA va el verbo ────────────────────────────────────────────────
    La explicación larga ya existe (`SENTENCE_PART_EXPLANATIONS.verbChanges`) y se
    usa en el desglose de la oración, pero dentro de una celda no cabe: aquí va la
-   etiqueta corta y la larga queda en el `title`. */
+   etiqueta corta y la larga queda en el `title`.
+
+   ANTES DECÍA EL SUFIJO Y ERA REDUNDANTE (lo vio el profesor en la tabla):
+   junto a un chip que ya pone «works» sobraba un «+ -s», y junto a «working»
+   sobraba un «+ -ing». El sufijo está a la vista; lo que no está a la vista es
+   CÓMO SE LLAMA esa forma, que es lo que hay que poder nombrar en clase y lo que
+   se busca en la tabla de irregulares.
+
+   SON LOS NOMBRES DEL CONJUGADOR, los mismos cinco, y eso es deliberado: la
+   tarjeta de arriba dice «pasado participio» y la celda de abajo tiene que decir
+   lo mismo, o el alumno cree que son dos cosas.
+
+   `irregular` NO es una forma sino un aviso, y el motor lo devuelve en lugar de
+   la forma: se traduce mirando el tiempo, porque en el Pasado Simple es el
+   pasado y en los perfectos es el participio.
+
+   La 3.ª persona no lleva etiqueta A PROPÓSITO. No es ninguna de las cinco
+   formas —es el presente con su -s— y ponerle el sufijo era justo la redundancia
+   que había que quitar. Que la casilla quede vacía dice algo por sí solo: el
+   verbo está en su forma corriente. */
 const CAMBIO_CORTO = {
-  base:              { es: 'forma base',  en: 'base form' },
-  'third-person-s':  { es: '+ -s',        en: '+ -s' },
-  ing:               { es: '+ -ing',      en: '+ -ing' },
-  past:              { es: 'pasado',      en: 'past' },
-  participle:        { es: 'participio',  en: 'participle' },
-  irregular:         { es: 'irregular',   en: 'irregular' },
+  base:       { es: 'base',              en: 'base' },
+  ing:        { es: 'gerundio',          en: '-ing form' },
+  past:       { es: 'pasado simple',     en: 'simple past' },
+  participle: { es: 'pasado participio', en: 'past participle' },
+};
+const FORMA_DE_CELDA = (cambio, tenseId) => {
+  if (cambio === 'irregular') {
+    return tenseId === 'simple-past' ? CAMBIO_CORTO.past : CAMBIO_CORTO.participle;
+  }
+  return CAMBIO_CORTO[cambio] || null;
 };
 
 /**
@@ -476,8 +499,8 @@ function TablaTiempos({ language, cefrLevel }) {
   return (
     <div>
       <p className="text-gray-600 mb-2">
-        {es ? 'Escribe un verbo: arriba salen sus formas —infinitivo, base, tercera persona, pasado, gerundio y participio— y abajo qué le pasa a cada una en los diez tiempos. Cambia también el sujeto y la tabla se rearma con el mismo motor que genera las oraciones. Debajo de cada frase van sus dos piezas — el auxiliar en cápsula clara y el verbo en rojo pleno. Fíjate en que la marca no desaparece, se muda al auxiliar.'
-            : 'Type a verb: its forms appear above — infinitive, base, third person, past, -ing and participle — and below, what happens to each one across the ten tenses. Change the subject too and the table is rebuilt with the same engine that generates the sentences. Under each sentence are its two pieces — the auxiliary in a pale pill, the verb in solid red. Notice the mark does not vanish — it moves to the auxiliary.'}
+        {es ? 'Escribe un verbo: arriba salen sus cinco formas —base, infinitivo, gerundio, pasado simple y pasado participio— y abajo en cuál de ellas va en cada uno de los diez tiempos. Cambia también el sujeto y la tabla se rearma con el mismo motor que genera las oraciones. Debajo de cada frase van sus dos piezas — el auxiliar en cápsula clara y el verbo en rojo pleno. Fíjate en que la marca no desaparece, se muda al auxiliar.'
+            : 'Type a verb: its five forms appear above — base, infinitive, -ing, simple past and past participle — and below, which one it takes in each of the ten tenses. Change the subject too and the table is rebuilt with the same engine that generates the sentences. Under each sentence are its two pieces — the auxiliary in a pale pill, the verb in solid red. Notice the mark does not vanish — it moves to the auxiliary.'}
       </p>
 
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 mb-3">
@@ -510,10 +533,13 @@ function TablaTiempos({ language, cefrLevel }) {
         </label>
       </div>
 
-      {/* LAS FORMAS DEL VERBO. Ni una escrita a mano: las seis salen de
+      {/* LAS FORMAS DEL VERBO. Ni una escrita a mano: las cinco salen de
           `conjugador.js`, que llama al mismo motor que construye las oraciones
           de abajo. Si mañana se corrige una regla de escritura, se corrigen las
-          dos cosas a la vez y no puede quedar una diciendo «studys». */}
+          dos cosas a la vez y no puede quedar una diciendo «studys».
+          Sin explicación debajo de cada forma —se probó y el profesor la quitó—:
+          esto es material de consulta, se mira para resolver una duda concreta.
+          Lo que explica cada forma es la tabla de abajo, viéndola funcionar. */}
       <div className="mb-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
         <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1 mb-2">
           <h3 className="text-sm font-bold text-slate-900">
@@ -525,7 +551,9 @@ function TablaTiempos({ language, cefrLevel }) {
           </span>
         </div>
 
-        <dl className="grid grid-cols-2 sm:grid-cols-3 gap-x-3 gap-y-2.5">
+        {/* Las cinco caben en una fila en pantalla ancha y se parten de dos en
+            dos en el teléfono. */}
+        <dl className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-x-3 gap-y-2.5">
           {FILAS_DE_FORMAS.map(fila => {
             const [cabeza, cola] = partirForma(formas[fila.id]);
             return (
@@ -536,11 +564,6 @@ function TablaTiempos({ language, cefrLevel }) {
                 <dd className="text-sm font-bold leading-tight" style={{ color: 'var(--rol-verb)' }}>
                   {cabeza}
                   {cola && <span className="font-normal text-slate-500">{cola}</span>}
-                </dd>
-                {/* El PARA QUÉ, no solo el nombre. «Participio» no le dice nada a
-                    quien todavía no sabe qué es; «el que acompaña a have» sí. */}
-                <dd className="text-[11px] text-slate-500 leading-snug">
-                  {conEjemplo(es ? fila.ayudaEs : fila.ayudaEn, formas)}
                 </dd>
               </div>
             );
@@ -634,9 +657,11 @@ function TablaTiempos({ language, cefrLevel }) {
                           <span className="text-[9px] font-bold uppercase tracking-wide">{es ? 'verbo' : 'verb'}</span>
                           <span className="font-semibold">{c.verbo}</span>
                         </span>
-                        <span className="text-muted" title={larga ? (es ? larga.es : larga.en) : undefined}>
-                          {(CAMBIO_CORTO[c.cambio] || {})[es ? 'es' : 'en'] || c.cambio}
-                        </span>
+                        {FORMA_DE_CELDA(c.cambio, f.id) && (
+                          <span className="text-muted" title={larga ? (es ? larga.es : larga.en) : undefined}>
+                            {FORMA_DE_CELDA(c.cambio, f.id)[es ? 'es' : 'en']}
+                          </span>
+                        )}
                       </div>
                     </td>
                   );

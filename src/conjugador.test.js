@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formasDe, FILAS_DE_FORMAS, PATRONES, conEjemplo } from './conjugador';
+import { formasDe, FILAS_DE_FORMAS, PATRONES } from './conjugador';
 import { irregularVerbs } from './data/verbs';
 import { VERBOS_IRREGULARES_AVANZADO } from './data/grammar';
 
@@ -97,14 +97,21 @@ describe('las formas no se desvían del motor, en TODO el temario', () => {
   });
 });
 
-describe('el orden de las formas es contenido, no decoración', () => {
-  it('están las seis, y cada una lleva su nombre y su para qué en los dos idiomas', () => {
+describe('las cinco formas que se muestran, y su nombre', () => {
+  it('son las CINCO que pidió el profesor, en su orden', () => {
+    /* Ni más ni menos. La 3.ª persona se quitó a propósito —no es una de las
+       formas principales y la fila del Presente Simple ya la muestra— y volver a
+       meterla sin que él lo pida es deshacer una decisión suya. */
     expect(FILAS_DE_FORMAS.map(f => f.id)).toEqual(
-      ['infinitivo', 'base', 'tercera', 'pasado', 'gerundio', 'participio']);
+      ['base', 'infinitivo', 'gerundio', 'pasado', 'participio']);
+  });
+
+  it('cada una lleva nombre en los dos idiomas y NADA más', () => {
+    /* El «nada más» es la prueba de verdad: las explicaciones debajo de cada
+       forma se probaron y el profesor las quitó. Si alguien las repone, esto lo
+       dice antes de que llegue a una clase. */
     for (const fila of FILAS_DE_FORMAS) {
-      for (const campo of ['es', 'en', 'ayudaEs', 'ayudaEn']) {
-        expect(fila[campo], `${fila.id}.${campo}`).toBeTruthy();
-      }
+      expect(Object.keys(fila).sort(), fila.id).toEqual(['en', 'es', 'id']);
     }
   });
 
@@ -112,49 +119,14 @@ describe('el orden de las formas es contenido, no decoración', () => {
     const f = formasDe('work');
     for (const fila of FILAS_DE_FORMAS) expect(f[fila.id], fila.id).toBeTruthy();
   });
-});
 
-describe('el ejemplo es del verbo que se escribió', () => {
-  /* Estaba fijo con «work» y quedaba absurdo: arriba «to go» y debajo «I want to
-     work», el ejemplo contradiciendo a la forma que pretendía explicar. */
-  it('los huecos se rellenan con las formas de ESE verbo', () => {
-    const go = formasDe('go');
-    expect(conEjemplo('I want {infinitivo}', go)).toBe('I want to go');
-    expect(conEjemplo('She has {participio}', go)).toBe('She has gone');
-    expect(conEjemplo('She is {gerundio}', go)).toBe('She is going');
-  });
-
-  it('de un pasado repartido se toma la primera: «She was», no «She was/were»', () => {
-    expect(conEjemplo('She {pasado}', formasDe('be'))).toBe('She was');
-  });
-
-  it('NINGUNA ayuda deja un hueco sin rellenar, con ningún verbo del temario', () => {
-    /* Un hueco mal escrito no da error: imprime «{particpio}» en clase. */
-    const malos = [];
-    for (const verbo of [...VERBOS_IRREGULARES_AVANZADO, 'work', 'study', 'be', 'get up']) {
-      const f = formasDe(verbo);
-      for (const fila of FILAS_DE_FORMAS) {
-        for (const campo of ['ayudaEs', 'ayudaEn']) {
-          const salida = conEjemplo(fila[campo], f);
-          if (salida.includes('{') || salida.includes('}')) malos.push(`${verbo} · ${fila.id}.${campo}: ${salida}`);
-        }
-      }
-    }
-    expect(malos).toEqual([]);
-  });
-
-  it('el marco del ejemplo vale para «be», que es el que rompe todo', () => {
-    /* «She will be» sí; «She doesn't be» no. Si alguien cambia el auxiliar del
-       ejemplo de la base por «doesn't», esta prueba lo dice. */
-    const be = formasDe('be');
-    const base = FILAS_DE_FORMAS.find(f => f.id === 'base');
-    expect(conEjemplo(base.ayudaEs, be)).toContain('will be');
-  });
-
-  it('lo que no lleva huecos sale igual, y lo vacío no revienta', () => {
-    expect(conEjemplo('sin huecos', formasDe('work'))).toBe('sin huecos');
-    expect(conEjemplo('', formasDe('work'))).toBe('');
-    expect(conEjemplo(null, formasDe('work'))).toBe('');
-    expect(conEjemplo('{noexiste}', formasDe('work'))).toBe('{noexiste}');
+  it('los nombres son los que se usan también en la tabla de abajo', () => {
+    /* Un solo vocabulario para toda la pantalla: si la tarjeta dice «pasado
+       participio» y la celda dice otra cosa, el alumno cree que son dos. */
+    const nombres = FILAS_DE_FORMAS.map(f => f.es);
+    expect(nombres).toContain('Pasado simple');
+    expect(nombres).toContain('Pasado participio');
+    expect(nombres).toContain('Gerundio');
+    expect(nombres).toContain('Base');
   });
 });

@@ -103,49 +103,30 @@ export const formasDe = (verbo) => {
 };
 
 /**
- * Las formas, en el orden en que se recitan y se preguntan.
- * La vista las pinta sin decidir el orden: el orden es contenido.
+ * LAS CINCO FORMAS QUE SE MUESTRAN, en el orden que pidió el profesor. El orden
+ * y los nombres son contenido, no decoración: la vista los pinta sin decidir
+ * nada.
  *
- * EL EJEMPLO ES DEL VERBO QUE SE ESCRIBIÓ, no de uno fijo. Estaba puesto con
- * «work» y quedaba absurdo: arriba «to go» y debajo «I want to work», o sea el
- * ejemplo contradiciendo a la forma que pretendía explicar. Las ayudas llevan
- * huecos `{campo}` y los rellena `conEjemplo`.
+ * SON LOS MISMOS CINCO NOMBRES QUE USA LA TABLA DE ABAJO, y eso es el punto. Si
+ * la tarjeta dijera «participio» y la celda «+ -ed», el alumno creería que son
+ * dos cosas distintas. Un solo vocabulario para toda la pantalla.
  *
- * LOS MARCOS ESTÁN ELEGIDOS PARA QUE VALGAN CON CUALQUIER VERBO, `be` incluido,
- * que es el que rompe todo: «She will be» sí, «She doesn’t be» no — por eso el
- * auxiliar del ejemplo de la base es `will` y no `doesn’t`.
+ * NO LLEVAN EXPLICACIÓN DEBAJO, y se probó al revés. Cada forma tenía su para
+ * qué con un ejemplo («el que acompaña a have: She has gone»); el profesor lo
+ * quitó. Es material de CONSULTA —se mira para resolver una duda concreta, no
+ * para aprender de cero— y seis explicaciones simultáneas convierten un vistazo
+ * en una lectura. Lo que explica cada forma es la tabla de abajo, donde se la ve
+ * funcionando en su tiempo. No reponerlo sin que él lo pida.
+ *
+ * LA 3.ª PERSONA NO ESTÁ, tampoco por olvido: no es una de las cinco formas
+ * principales, y la fila del Presente Simple de la tabla ya la muestra
+ * conjugada. `formasDe` la sigue devolviendo porque es una forma real del verbo
+ * y este módulo es el conjugador; lo que se decidió es no ponerla en la tarjeta.
  */
 export const FILAS_DE_FORMAS = [
-  { id: 'infinitivo', es: 'Infinitivo', en: 'Infinitive',
-    ayudaEs: 'lo que sigue a otro verbo: I want {infinitivo}',
-    ayudaEn: 'after another verb: I want {infinitivo}' },
-  { id: 'base', es: 'Base', en: 'Base form',
-    ayudaEs: 'lo que va detrás de un auxiliar: She will {base}',
-    ayudaEn: 'after an auxiliary: She will {base}' },
-  { id: 'tercera', es: '3.ª persona', en: 'Third person',
-    ayudaEs: 'he · she · it, en presente simple: She {tercera}',
-    ayudaEn: 'he · she · it, simple present: She {tercera}' },
-  { id: 'pasado', es: 'Pasado simple', en: 'Simple past',
-    ayudaEs: 'la segunda columna de la tabla de irregulares: She {pasado}',
-    ayudaEn: 'the second column of the irregular table: She {pasado}' },
-  { id: 'gerundio', es: 'Gerundio', en: '-ing form',
-    ayudaEs: 'el que acompaña a be: She is {gerundio}',
-    ayudaEn: 'the one that goes with be: She is {gerundio}' },
-  { id: 'participio', es: 'Participio', en: 'Past participle',
-    ayudaEs: 'el que acompaña a have: She has {participio}',
-    ayudaEn: 'the one that goes with have: She has {participio}' },
+  { id: 'base', es: 'Base', en: 'Base' },
+  { id: 'infinitivo', es: 'Infinitivo', en: 'Infinitive' },
+  { id: 'gerundio', es: 'Gerundio', en: '-ing form' },
+  { id: 'pasado', es: 'Pasado simple', en: 'Simple past' },
+  { id: 'participio', es: 'Pasado participio', en: 'Past participle' },
 ];
-
-/**
- * Rellena los huecos de una ayuda con las formas del verbo.
- *
- * De un pasado repartido —«was/were»— se toma la PRIMERA: el ejemplo dice «She
- * was» y no «She was/were», que no es inglés. Que se reparte ya lo explica la
- * nota de `pasadoDoble`; el ejemplo está para enseñar dónde va la forma, no para
- * repetir la excepción.
- */
-export const conEjemplo = (texto, formas) =>
-  String(texto == null ? '' : texto).replace(/\{(\w+)\}/g, (hueco, campo) => {
-    const valor = formas && formas[campo];
-    return valor == null ? hueco : String(valor).split('/')[0];
-  });
