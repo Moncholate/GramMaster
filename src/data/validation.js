@@ -1,4 +1,4 @@
-import { commonVerbs, irregularVerbs } from './verbs';
+import { commonVerbs, irregularVerbs, BASE_VERBS } from './verbs';
 import { englishDictionary } from './dictionary';
 import { PHRASAL_VERB_LIST } from './phrasal.generated.js';
 
@@ -107,11 +107,11 @@ export const validDeterminers = [
   'many', 'much', 'few', 'little', 'several', 'all', 'both', 'most'
 ];
 
-// Todos los verbos válidos (comunes + irregulares)
-export const allValidVerbs = [
-  ...commonVerbs,
-  ...Object.keys(irregularVerbs)
-];
+/* Todos los verbos válidos. Vive en `verbs.js` porque es DATO, y porque esto y
+   `ALL_BASE_VERBS` de conjugation.js eran dos definiciones de la misma lista en
+   dos archivos: la clase de duplicado que un día se separa sin que nadie lo vea.
+   Se conserva el nombre para no tocar a los diez sitios que lo llaman. */
+export const allValidVerbs = BASE_VERBS;
 
 // Función para verificar si parece una palabra válida (inglés o nombre propio)
 export const looksLikeValidWord = (word) => {

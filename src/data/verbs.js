@@ -1,3 +1,5 @@
+import { VOCAB_CATEGORIA_DE } from './vocabulary.generated.js';
+
 // Verbos comunes para autocompletar
 export const commonVerbs = [
   'be', 'have', 'do', 'say', 'go', 'get', 'make', 'know', 'think', 'take',
@@ -162,3 +164,43 @@ export const irregularVerbs = {
      dos como si fuera el único. Es el mismo criterio de ambigüedad léxica que
      usan Question Lab y Desgramatizador. */
 };
+
+/* ============================================================================
+   EL POZO DE VERBOS — UNO SOLO, Y ALIMENTADO POR EL TEMARIO
+   ----------------------------------------------------------------------------
+   `commonVerbs` es una lista escrita a mano, y por eso se quedó atrás. Medido
+   contra el vocabulario del curso (1-sep-2026): de los 80 verbos que el profesor
+   tiene marcados como `verbo` en `vocabulary.json`, CATORCE disparaban el aviso
+   de «no reconocemos esto como verbo» — hike, book, pack, rent, arrive, close,
+   repeat, shave, check y cinco más. Uno de cada seis.
+
+   Y eso no es un defecto pequeño en un sitio pequeño: el aviso del constructor y
+   el del conjugador valen exactamente lo que valga su puntería. Uno que salta en
+   uno de cada seis verbos del propio temario se aprende a ignorar en dos clases,
+   y entonces no queda ni el aviso ni la calma de no tenerlo.
+
+   LA CORRECCIÓN NO ES AÑADIR NUEVE PALABRAS A MANO. Es que este pozo deje de ser
+   una lista paralela. `vocabulary.json` YA dice qué palabras son verbos —lo
+   clasificó el profesor— y esa clasificación ya llega generada a esta app en
+   `VOCAB_CATEGORIA_DE`. Aquí solo se lee. A partir de ahora, un verbo nuevo en
+   el vocabulario del curso entra en el pozo solo, sin que nadie se acuerde.
+
+   Es la tercera vez que aparece este patrón en el proyecto —el diccionario vivía
+   a mano dentro de Grammaster y Question Lab no tenía ninguno; los frasales
+   igual— y siempre con la misma forma: una implementación y un hueco.
+
+   SOLO PALABRAS SUELTAS. Las de varias («get up», «wait for») no son formas base
+   que conjugar por sí solas: de esas se encarga `PHRASAL_VERB_LIST`, que es
+   donde vive esa pregunta, y meterlas aquí haría que `detectConjugatedVerbBase`
+   se pusiera a buscarles conjugaciones.
+   ========================================================================== */
+const VERBOS_DEL_TEMARIO = Object.keys(VOCAB_CATEGORIA_DE)
+  .filter(p => !p.includes(' ') && VOCAB_CATEGORIA_DE[p].includes('verbo'));
+
+/** El pozo, sin repetidos. Es el ÚNICO: `allValidVerbs` y `ALL_BASE_VERBS`
+    eran dos definiciones de esto mismo, cada una en su archivo. */
+export const BASE_VERBS = [...new Set([
+  ...commonVerbs,
+  ...Object.keys(irregularVerbs),
+  ...VERBOS_DEL_TEMARIO,
+])];

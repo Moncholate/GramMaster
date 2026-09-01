@@ -184,7 +184,7 @@ const formaQueEs = (escrito, base) => {
  */
 export const revisarVerbo = (verbo) => {
   const limpio = String(verbo == null ? '' : verbo).trim().toLowerCase().replace(/\s+/g, ' ');
-  const nada = { tipo: null, base: null, forma: null, sugerencias: [] };
+  const nada = { tipo: null, base: null, forma: null, sugerencias: [], aviso: null };
   if (!limpio) return nada;
 
   const base = detectConjugatedVerbBase(limpio);
@@ -193,7 +193,7 @@ export const revisarVerbo = (verbo) => {
   if (!confirmar) return nada;
 
   if (tipo === 'conjugado') {
-    return { tipo, base, forma: formaQueEs(limpio, base), sugerencias: [] };
+    return { tipo, base, forma: formaQueEs(limpio, base), sugerencias: [], aviso: null };
   }
 
   /* Solo se sugiere ortografía cuando NO se reconoce nada. Para un «dudoso»
@@ -204,5 +204,11 @@ export const revisarVerbo = (verbo) => {
     base: null,
     forma: null,
     sugerencias: tipo === 'noEsVerbo' ? getSpellingSuggestions(limpio).slice(0, 3) : [],
+    /* EL AVISO PRECISO, cuando el validador tiene uno. A veces sabe bastante más
+       que «no lo reconocemos»: ante «wait for» dice que «for» va en el
+       complemento, y ante dos verbos seguidos dice cuál sobra. Tirar eso y
+       poner una frase genérica en su lugar sería cambiar una respuesta útil por
+       una educada. */
+    aviso: validacion.warning || null,
   };
 };

@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { formasDe, FILAS_DE_FORMAS, PATRONES, revisarVerbo } from './conjugador';
 import { ALL_BASE_VERBS } from './conjugation';
 import { irregularVerbs } from './data/verbs';
@@ -203,6 +204,52 @@ describe('el conjugador duda cuando hay que dudar', () => {
     for (const v of ['wrok', 'somebody', 'xyzzy', 'table']) {
       expect(formasDe(v), v).toBeTruthy();
       expect(formasDe(v).pasado, v).toBeTruthy();
+    }
+  });
+});
+
+describe('el pozo de verbos sale del temario, no de una lista paralela', () => {
+  /* Medido el 1-sep-2026: catorce de los ochenta verbos del vocabulario del
+     curso disparaban el aviso, porque `commonVerbs` era una lista escrita a mano
+     que se había quedado atrás. Un aviso que salta en uno de cada seis verbos
+     del propio temario se aprende a ignorar en dos clases, y entonces no queda
+     ni el aviso ni la calma de no tenerlo. */
+  const vocab = JSON.parse(readFileSync(new URL('../../Grammar HUB/vocabulary.json', import.meta.url), 'utf8'));
+
+  it('ningún verbo suelto del temario dispara aviso', () => {
+    const sueltos = (vocab.verbo || []).filter(v => !String(v).includes(' '));
+    const molestados = sueltos.filter(v => revisarVerbo(v).tipo);
+    expect(molestados, `verbos del temario con aviso: ${molestados.join(', ')}`).toEqual([]);
+    expect(sueltos.length).toBeGreaterThan(50);   // que la lista no se haya vaciado
+  });
+
+  it('los verbos de varias palabras del curso tampoco, salvo los que no son verbos', () => {
+    /* «turn right», «turn left» y «go straight ahead» están en la lista de
+       verbos del vocabulario pero son ÓRDENES, no verbos que conjugar: ahí el
+       aviso es correcto y quitarlo sería mentir. Los demás —los frasales— tienen
+       que pasar en silencio. */
+    /* «wait for» tampoco: el validador dice que «for» va al complemento, que es
+       exactamente lo que enseña Desgramatizador al pintar «They wait for the
+       bus» — el verbo es «wait». Ver $porQueWaitForNO en phrasal-verbs.json. */
+    const ordenes = ['turn right', 'turn left', 'go straight ahead', 'wait for'];
+    const frasales = (vocab.verbo || []).filter(v => String(v).includes(' ') && !ordenes.includes(v));
+    const molestados = frasales.filter(v => revisarVerbo(v).tipo);
+    expect(molestados, `frasales del curso con aviso: ${molestados.join(', ')}`).toEqual([]);
+    expect(frasales.length).toBeGreaterThan(5);
+  });
+
+  it('el pozo incluye de verdad los que faltaban', () => {
+    /* Los nueve que se midieron. Si alguien deshace la unión con el vocabulario,
+       esto lo dice con nombres y no con un número. */
+    for (const v of ['hike', 'pack', 'rent', 'arrive', 'close', 'repeat', 'shave', 'check', 'book']) {
+      expect(revisarVerbo(v).tipo, v).toBe(null);
+    }
+  });
+
+  it('y sigue diciendo que no a lo que no es un verbo', () => {
+    /* La contraparte de agrandar el pozo: agrandarlo de más lo vuelve inútil. */
+    for (const v of ['somebody', 'xyzzy', 'wrok']) {
+      expect(revisarVerbo(v).tipo, v).toBe('noEsVerbo');
     }
   });
 });

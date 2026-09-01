@@ -14,10 +14,11 @@
    Un aviso que salta de más se aprende a ignorar en dos clases, y entonces
    volvemos al problema del principio pero peor.
    ========================================================================== */
+import { readFileSync } from 'node:fs';
 import { describe, it, expect } from 'vitest';
 import { revisarVerboAntesDeGenerar, validateVerb, validPronouns } from './data/validation';
 import { detectConjugatedVerbBase } from './conjugation';
-import { commonVerbs, irregularVerbs } from './data/verbs';
+import { commonVerbs, irregularVerbs, BASE_VERBS } from './data/verbs';
 
 // Lo mismo que hace la app: validar y mirar si es una forma conjugada.
 const revisar = (palabra, idioma = 'es') =>
@@ -81,11 +82,32 @@ describe('la contraparte: no molestar a quien escribió bien', () => {
   /* La prueba que de verdad importa. Si esto se pone en rojo, el aviso empezó a
      saltar sobre verbos legítimos y hay que arreglar la validación, NO relajar
      el aviso. */
-  it('los 234 verbos del propio pozo generan sin pedir confirmación', () => {
-    const pozo = [...new Set([...commonVerbs, ...Object.keys(irregularVerbs)])];
-    const molestados = pozo.filter(v => revisar(v).confirmar);
+  it('ningún verbo del pozo pide confirmación', () => {
+    /* SE MIDE EL POZO DE VERDAD, no uno armado aquí. Esta prueba se rearmaba la
+       lista a mano —commonVerbs + irregulares— y el día que el pozo pasó a
+       alimentarse también del vocabulario del curso siguió en verde sin mirar
+       ninguna de las palabras nuevas. Una prueba que se construye su propia
+       versión del sujeto deja de vigilarlo en cuanto el sujeto cambia. */
+    const molestados = BASE_VERBS.filter(v => revisar(v).confirmar);
     expect(molestados, `piden confirmación sin motivo: ${molestados.join(', ')}`).toEqual([]);
-    expect(pozo.length).toBe(234);
+    /* Sin número exacto a propósito: el pozo crece solo cuando el profesor añade
+       un verbo al vocabulario, y una cifra clavada aquí convertiría eso en un
+       fallo. Lo que no puede es encoger. */
+    expect(BASE_VERBS.length).toBeGreaterThanOrEqual(243);
+  });
+
+  it('los verbos que el profesor marcó en el temario NO piden confirmación', () => {
+    /* Aquí estaba el agujero, y era grande: catorce de los ochenta verbos del
+       vocabulario del curso disparaban el aviso —hike, pack, rent, arrive,
+       close, repeat, shave, check…— porque el pozo era una lista paralela
+       escrita a mano. Un aviso que salta en uno de cada seis verbos del propio
+       temario se aprende a ignorar en dos clases.
+       Los de VARIAS palabras no se miran aquí: no son formas base, y de esos se
+       encarga la lista de frasales. */
+    const vocab = JSON.parse(readFileSync(new URL('../../Grammar HUB/vocabulary.json', import.meta.url), 'utf8'));
+    const sueltos = (vocab.verbo || []).filter(v => !String(v).includes(' '));
+    const molestados = sueltos.filter(v => revisar(v).confirmar);
+    expect(molestados, `verbos del temario que piden confirmación: ${molestados.join(', ')}`).toEqual([]);
   });
 
   it('en inglés se comporta igual: el idioma cambia el texto, no la decisión', () => {

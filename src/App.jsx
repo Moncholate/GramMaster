@@ -599,11 +599,18 @@ function TablaTiempos({ language, cefrLevel }) {
         {(revision.tipo === 'noEsVerbo' || revision.tipo === 'dudoso') && (
           <div className="mb-2 rounded-lg border border-amber-400 bg-amber-50 px-2.5 py-2 text-[11px] text-amber-700">
             <p>
-              {revision.tipo === 'dudoso'
-                ? (es ? <><b>{verbo.trim().toLowerCase()}</b> existe en inglés, pero no lo tenemos como verbo.</>
-                      : <><b>{verbo.trim().toLowerCase()}</b> is an English word, but not one we have as a verb.</>)
-                : (es ? <>No reconocemos <b>{verbo.trim().toLowerCase()}</b> como verbo.</>
-                      : <>We don’t recognise <b>{verbo.trim().toLowerCase()}</b> as a verb.</>)}
+              {/* SI EL VALIDADOR TIENE ALGO PRECISO QUE DECIR, MANDA LO SUYO.
+                  Ante «wait for» sabe que «for» va en el complemento —que es lo
+                  mismo que enseña Desgramatizador al pintar la oración— y ante
+                  dos verbos seguidos sabe cuál sobra. Sustituir eso por «no lo
+                  reconocemos» sería cambiar una respuesta útil por una educada. */}
+              {revision.aviso
+                ? revision.aviso
+                : revision.tipo === 'dudoso'
+                  ? (es ? <><b>{verbo.trim().toLowerCase()}</b> existe en inglés, pero no lo tenemos como verbo.</>
+                        : <><b>{verbo.trim().toLowerCase()}</b> is an English word, but not one we have as a verb.</>)
+                  : (es ? <>No reconocemos <b>{verbo.trim().toLowerCase()}</b> como verbo.</>
+                        : <>We don’t recognise <b>{verbo.trim().toLowerCase()}</b> as a verb.</>)}
               {' '}
               {es ? 'Las formas de abajo son la regla aplicada tal cual: si el verbo existe, estarán bien salvo que sea irregular; si hay una errata, estarán mal.'
                   : 'The forms below are the rule applied as is: if the verb exists they will be right unless it is irregular; if there is a typo they will be wrong.'}

@@ -1,6 +1,6 @@
 // Motor de conjugación — única fuente de verdad para construir oraciones.
 // Todo es puro (sin estado de React) para poder testearse de forma aislada.
-import { commonVerbs, irregularVerbs } from './data/verbs';
+import { commonVerbs, irregularVerbs, BASE_VERBS } from './data/verbs';
 import { englishDictionary } from './data/dictionary';
 import { validPronouns, validDeterminers, hispanicNames, englishNames } from './data/validation';
 import { CAPS_CANONICO, CAPS_AMBIGUAS, revisarMayusculas, corregirMayusculas } from './data/capitals.generated.js';
@@ -577,7 +577,9 @@ export const buildSentenceText = ({ mode, subject: subjRaw, verb: vRaw, compleme
 
 // Todos los verbos base conocidos, para detectar cuando el estudiante escribió
 // una forma ya conjugada (worked, working, works…) en vez de la forma base.
-export const ALL_BASE_VERBS = [...commonVerbs, ...Object.keys(irregularVerbs)];
+/* El mismo pozo que usa la validación, no una copia: ver `BASE_VERBS` en
+   data/verbs.js, donde está el porqué de que salga del vocabulario del curso. */
+export const ALL_BASE_VERBS = BASE_VERBS;
 
 // Si `word` coincide con alguna forma conjugada de un verbo base conocido,
 // retorna ese verbo base (p. ej. "worked" → "work"); si no, null.
