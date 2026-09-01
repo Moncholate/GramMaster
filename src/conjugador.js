@@ -43,8 +43,10 @@
    Este archivo es PURO: ni React ni DOM, para poder probarlo
    (`conjugador.test.js`). La vista vive en App.jsx.
    ========================================================================== */
-import { presentParticiple, simplePast, pastParticiple, conjugate3p } from './conjugation';
+import { presentParticiple, simplePast, pastParticiple, conjugate3p, detectConjugatedVerbBase } from './conjugation';
 import { irregularVerbs } from './data/verbs';
+import { validateVerb, revisarVerboAntesDeGenerar } from './data/validation';
+import { getSpellingSuggestions } from './spelling';
 
 /** Los cuatro patrones, en el orden en que conviene entenderlos. */
 export const PATRONES = ['regular', 'tres-iguales', 'dos-iguales', 'tres-distintas'];
@@ -130,3 +132,77 @@ export const FILAS_DE_FORMAS = [
   { id: 'pasado', es: 'Pasado simple', en: 'Simple past' },
   { id: 'participio', es: 'Pasado participio', en: 'Past participle' },
 ];
+
+/* ============================================================================
+   ¿ES ESTO UN VERBO?
+   ----------------------------------------------------------------------------
+   El conjugador conjugaba cualquier cosa. Escribías «wrok» y salía «wroked»,
+   con la misma cara de certeza que «worked»; escribías «went» y salía «wented»,
+   que es justo la forma que el alumno estaba intentando NO escribir. Lo vio el
+   profesor. Un conjugador que nunca duda enseña con la misma cara lo cierto y
+   lo falso, y el segundo se aprende igual de bien.
+
+   NO SE INVENTA UN CRITERIO NUEVO. Quién decide si algo es un verbo ya está
+   decidido en la app —`validateVerb` y `revisarVerboAntesDeGenerar`, con su
+   pozo de 234 formas base— y es el mismo que avisa en el constructor. Dos
+   criterios distintos para la misma pregunta acabarían contradiciéndose delante
+   del curso: la misma palabra aceptada en una pantalla y rechazada en la otra.
+
+   TRES RESPUESTAS, y cada una pide una cosa distinta:
+
+     · `conjugado` — lo escrito YA es una forma conjugada: «went» es el pasado
+       de «go». Aquí no hay ninguna duda que confirmar, así que no se pregunta:
+       se conjuga la BASE y se dice de dónde salió. Es lo que hace cualquier
+       diccionario cuando buscas una forma conjugada, y es la única manera de no
+       llegar nunca a enseñar «wented».
+     · `dudoso` — es palabra inglesa conocida, pero puede no ser un verbo.
+     · `noEsVerbo` — no está en ninguna lista. Se ofrecen correcciones del
+       corrector ortográfico, que es el mismo que corrige el complemento.
+
+   LOS DOS ÚLTIMOS AVISAN Y NO BLOQUEAN, y eso es una regla del profesor y no una
+   comodidad: el pozo es finito y un verbo legítimo que no esté en él no puede
+   dejar a nadie sin poder trabajar (está razonado en `revisarVerboAntesDeGenerar`).
+   Lo que cambia es que las formas dejan de presentarse como un hecho.
+   ========================================================================== */
+
+/** Cuál de las cinco formas es lo escrito, respecto de su base. */
+const formaQueEs = (escrito, base) => {
+  const f = formasDe(base);
+  if (!f) return null;
+  if (escrito === f.gerundio) return 'gerundio';
+  if (escrito === f.pasado) return 'pasado';
+  if (escrito === f.participio) return 'participio';
+  if (escrito === f.tercera) return 'tercera';
+  return null;
+};
+
+/**
+ * Qué hay que decir sobre lo que se escribió.
+ *
+ * Devuelve el TIPO y los datos, nunca el texto: el texto es de la vista, que es
+ * donde vive el idioma. Mismo reparto de tipos que en el constructor.
+ */
+export const revisarVerbo = (verbo) => {
+  const limpio = String(verbo == null ? '' : verbo).trim().toLowerCase().replace(/\s+/g, ' ');
+  const nada = { tipo: null, base: null, forma: null, sugerencias: [] };
+  if (!limpio) return nada;
+
+  const base = detectConjugatedVerbBase(limpio);
+  const validacion = validateVerb(limpio);
+  const { confirmar, tipo } = revisarVerboAntesDeGenerar(validacion, base);
+  if (!confirmar) return nada;
+
+  if (tipo === 'conjugado') {
+    return { tipo, base, forma: formaQueEs(limpio, base), sugerencias: [] };
+  }
+
+  /* Solo se sugiere ortografía cuando NO se reconoce nada. Para un «dudoso»
+     —palabra inglesa que quizá no sea verbo— una lista de parecidas sería ruido:
+     la palabra está bien escrita, el problema es otro. */
+  return {
+    tipo,
+    base: null,
+    forma: null,
+    sugerencias: tipo === 'noEsVerbo' ? getSpellingSuggestions(limpio).slice(0, 3) : [],
+  };
+};

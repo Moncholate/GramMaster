@@ -74,7 +74,7 @@ import {
 import { useClipboard, useSpeechSynthesis, useLocalStorage, useSessionStats } from './hooks';
 import { ROLE_TW, ROLE_FILL } from './tokens.generated.js';
 import { tablaDeTiempos, MODOS } from './tablaTiempos';
-import { formasDe, FILAS_DE_FORMAS } from './conjugador';
+import { formasDe, FILAS_DE_FORMAS, revisarVerbo } from './conjugador';
 import { TENSE_FAMILIES, ASPECTS } from './tenseFamilies.generated.js';
 import { loadProgress, saveProgress, recordAttempt, recordRound, evaluateBadges, BADGES, todayISO } from './gamification.generated.js';
 
@@ -416,6 +416,16 @@ function TensePicker({ value, modalValue, condValue, onSelectTense, onSelectModa
    formas —es el presente con su -s— y ponerle el sufijo era justo la redundancia
    que había que quitar. Que la casilla quede vacía dice algo por sí solo: el
    verbo está en su forma corriente. */
+/* Los nombres de las formas, en frase. Son los MISMOS cinco de la tarjeta y de
+   la celda: si aquí se dijera «el participio» y allí «pasado participio», el
+   alumno tendría que adivinar que hablan de lo mismo. */
+const NOMBRE_DE_FORMA = {
+  gerundio:   { es: 'el gerundio',          en: 'the -ing form' },
+  pasado:     { es: 'el pasado simple',     en: 'the simple past' },
+  participio: { es: 'el pasado participio', en: 'the past participle' },
+  tercera:    { es: 'la tercera persona',   en: 'the third person' },
+};
+
 const CAMBIO_CORTO = {
   base:       { es: 'base',              en: 'base' },
   ing:        { es: 'gerundio',          en: '-ing form' },
@@ -448,9 +458,20 @@ function TablaTiempos({ language, cefrLevel }) {
   const [verbo, setVerbo] = useState('work');
   const [soloCurso, setSoloCurso] = useState(true);
 
+  /* ¿ES ESTO UN VERBO? La respuesta sale de `revisarVerbo`, que por dentro usa
+     el MISMO criterio que avisa en el constructor: dos criterios distintos para
+     la misma pregunta acabarían contradiciéndose delante del curso. */
+  const revision = useMemo(() => revisarVerbo(verbo), [verbo]);
+
+  /* SI LO ESCRITO YA VENÍA CONJUGADO, SE TRABAJA CON LA BASE — la tarjeta y la
+     tabla, las dos. Con «went» en la casilla, conjugar lo escrito daba «wented»
+     y «She wented», o sea treinta celdas enseñando justo lo que el alumno estaba
+     intentando no escribir. */
+  const verboEfectivo = revision.tipo === 'conjugado' ? revision.base : verbo;
+
   const filas = useMemo(
-    () => tablaDeTiempos({ sujeto, verbo, nivel: soloCurso ? cefrLevel : null }),
-    [sujeto, verbo, soloCurso, cefrLevel]);
+    () => tablaDeTiempos({ sujeto, verbo: verboEfectivo, nivel: soloCurso ? cefrLevel : null }),
+    [sujeto, verboEfectivo, soloCurso, cefrLevel]);
 
   /* EL CONJUGADOR. Delante de un verbo nuevo, lo primero que se pregunta un
      alumno no es en qué tiempo va: es «¿cómo era el pasado de este?». Las formas
@@ -459,7 +480,7 @@ function TablaTiempos({ language, cefrLevel }) {
      El mismo `verbo` alimenta las dos, así que no pueden decir cosas distintas.
      `|| 'work'` es el mismo respaldo que usa `tablaDeTiempos`: con la casilla
      vacía las dos siguen mostrando lo mismo, y no una la muestra y otra no. */
-  const formas = useMemo(() => formasDe(verbo) || formasDe('work'), [verbo]);
+  const formas = useMemo(() => formasDe(verboEfectivo) || formasDe('work'), [verboEfectivo]);
 
   /* El PATRÓN dicho con palabras, que es lo que se memoriza. «Irregular» a secas
      mete en el mismo saco a `cut`, que no cambia nunca, y a `go`, que cambia dos
@@ -546,10 +567,61 @@ function TablaTiempos({ language, cefrLevel }) {
             {es ? 'Las formas de' : 'The forms of'}{' '}
             <span style={{ color: 'var(--rol-verb)' }}>{formas.base}</span>
           </h3>
-          <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-white border border-slate-300 text-slate-700">
-            {es ? PATRON[formas.patron].es : PATRON[formas.patron].en}
-          </span>
+          {/* EL PATRÓN SOLO SE AFIRMA DE UN VERBO QUE CONOCEMOS. Con «wrok» la
+              insignia decía «regular · la regla del -ed», que es exactamente la
+              falsa certeza que había que quitar: de una palabra que no está en
+              ninguna lista no sabemos si es regular — solo sabemos que la regla
+              regular es lo único que podemos aplicarle. Callar aquí es la mitad
+              del aviso de abajo. */}
+          {(revision.tipo === null || revision.tipo === 'conjugado') && (
+            <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-white border border-slate-300 text-slate-700">
+              {es ? PATRON[formas.patron].es : PATRON[formas.patron].en}
+            </span>
+          )}
         </div>
+
+        {/* LO QUE SE ESCRIBIÓ YA ESTABA CONJUGADO. No se pregunta nada: aquí no
+            hay duda que confirmar, «went» es el pasado de «go» y punto. Se
+            conjuga la base y se dice de dónde salió, que es lo que hace un
+            diccionario cuando buscas una forma conjugada. La alternativa era
+            conjugar lo escrito y enseñar «wented». */}
+        {revision.tipo === 'conjugado' && (
+          <p className="mb-2 text-[11px] text-slate-600">
+            {es ? <>Escribiste <b>{verbo.trim().toLowerCase()}</b>, que es {(NOMBRE_DE_FORMA[revision.forma] || {}).es || 'una forma'} de <b>{revision.base}</b>. Estas son las formas de <b>{revision.base}</b>.</>
+                : <>You typed <b>{verbo.trim().toLowerCase()}</b>, which is {(NOMBRE_DE_FORMA[revision.forma] || {}).en || 'a form'} of <b>{revision.base}</b>. These are the forms of <b>{revision.base}</b>.</>}
+          </p>
+        )}
+
+        {/* NO LO RECONOCEMOS. Avisa y NO bloquea, que es la regla del profesor:
+            el pozo son 234 formas base y un verbo legítimo que no esté en él no
+            puede dejar a nadie sin poder trabajar. Lo que cambia es que las
+            formas de abajo dejan de presentarse como un hecho. */}
+        {(revision.tipo === 'noEsVerbo' || revision.tipo === 'dudoso') && (
+          <div className="mb-2 rounded-lg border border-amber-400 bg-amber-50 px-2.5 py-2 text-[11px] text-amber-700">
+            <p>
+              {revision.tipo === 'dudoso'
+                ? (es ? <><b>{verbo.trim().toLowerCase()}</b> existe en inglés, pero no lo tenemos como verbo.</>
+                      : <><b>{verbo.trim().toLowerCase()}</b> is an English word, but not one we have as a verb.</>)
+                : (es ? <>No reconocemos <b>{verbo.trim().toLowerCase()}</b> como verbo.</>
+                      : <>We don’t recognise <b>{verbo.trim().toLowerCase()}</b> as a verb.</>)}
+              {' '}
+              {es ? 'Las formas de abajo son la regla aplicada tal cual: si el verbo existe, estarán bien salvo que sea irregular; si hay una errata, estarán mal.'
+                  : 'The forms below are the rule applied as is: if the verb exists they will be right unless it is irregular; if there is a typo they will be wrong.'}
+            </p>
+            {revision.sugerencias.length > 0 && (
+              <p className="mt-1.5 flex flex-wrap items-center gap-1">
+                <span>{es ? '¿Querías decir' : 'Did you mean'}</span>
+                {revision.sugerencias.map(s => (
+                  <button key={s} onClick={() => setVerbo(s)}
+                    className="px-1.5 py-0.5 rounded bg-white border border-amber-400 font-semibold hover:border-amber-600">
+                    {s}
+                  </button>
+                ))}
+                <span>?</span>
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Las cinco caben en una fila en pantalla ancha y se parten de dos en
             dos en el teléfono. */}

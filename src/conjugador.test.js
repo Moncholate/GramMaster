@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { formasDe, FILAS_DE_FORMAS, PATRONES } from './conjugador';
+import { formasDe, FILAS_DE_FORMAS, PATRONES, revisarVerbo } from './conjugador';
+import { ALL_BASE_VERBS } from './conjugation';
 import { irregularVerbs } from './data/verbs';
 import { VERBOS_IRREGULARES_AVANZADO } from './data/grammar';
 
@@ -128,5 +129,80 @@ describe('las cinco formas que se muestran, y su nombre', () => {
     expect(nombres).toContain('Pasado participio');
     expect(nombres).toContain('Gerundio');
     expect(nombres).toContain('Base');
+  });
+});
+
+describe('el conjugador duda cuando hay que dudar', () => {
+  /* Antes conjugaba cualquier cosa con la misma cara de certeza: «wrok» daba
+     «wroked» y «went» daba «wented», que es justo la forma que el alumno estaba
+     intentando no escribir. Lo vio el profesor. */
+
+  it('un verbo del temario no dispara nada', () => {
+    for (const v of ['work', 'go', 'be', 'study', 'cut', 'get up']) {
+      expect(revisarVerbo(v), v).toMatchObject({ tipo: null, base: null });
+    }
+  });
+
+  it('los 234 del pozo pasan en silencio', () => {
+    /* La contraparte de todo aviso, y la que de verdad importa: un aviso que
+       salta de más se aprende a ignorar en dos clases. Es la misma prueba que
+       protege el aviso del constructor, aplicada a esta pantalla. */
+    const ruidosos = ALL_BASE_VERBS.filter(v => revisarVerbo(v).tipo !== null);
+    expect(ruidosos).toEqual([]);
+  });
+
+  it('una forma conjugada se reconoce y se dice de quién es', () => {
+    expect(revisarVerbo('went')).toMatchObject({ tipo: 'conjugado', base: 'go', forma: 'pasado' });
+    expect(revisarVerbo('studied')).toMatchObject({ tipo: 'conjugado', base: 'study', forma: 'pasado' });
+    expect(revisarVerbo('working')).toMatchObject({ tipo: 'conjugado', base: 'work', forma: 'gerundio' });
+    expect(revisarVerbo('sung')).toMatchObject({ tipo: 'conjugado', base: 'sing', forma: 'participio' });
+    expect(revisarVerbo('goes')).toMatchObject({ tipo: 'conjugado', base: 'go', forma: 'tercera' });
+  });
+
+  it('CADA forma de CADA verbo del temario apunta a su base', () => {
+    /* Lo que esto vigila es el caso «wented»: si una forma conjugada deja de
+       reconocerse, el conjugador la trata como base y produce inglés inventado
+       en la tarjeta y en las treinta celdas de la tabla. */
+    const malos = [];
+    for (const verbo of VERBOS_IRREGULARES_AVANZADO) {
+      const f = formasDe(verbo);
+      for (const campo of ['pasado', 'participio', 'gerundio', 'tercera']) {
+        const escrito = f[campo].split('/')[0];
+        if (escrito === verbo) continue;          // cut → cut: es la base, no hay nada que decir
+        const r = revisarVerbo(escrito);
+        if (r.tipo !== 'conjugado') malos.push(`${escrito} (${campo} de ${verbo}): tipo ${r.tipo}`);
+      }
+    }
+    expect(malos).toEqual([]);
+  });
+
+  it('una errata se reconoce y se propone la palabra buena', () => {
+    const wrok = revisarVerbo('wrok');
+    expect(wrok.tipo).toBe('noEsVerbo');
+    expect(wrok.sugerencias[0]).toBe('work');
+    expect(revisarVerbo('writen').sugerencias[0]).toBe('write');
+  });
+
+  it('lo que no es un verbo se dice, aunque no haya nada que sugerir', () => {
+    /* «somebody» en la casilla del verbo es un caso real de clase, no inventado:
+       está en el porqué de `revisarVerboAntesDeGenerar`. */
+    expect(revisarVerbo('somebody').tipo).toBe('noEsVerbo');
+    expect(revisarVerbo('xyzzy').tipo).toBe('noEsVerbo');
+  });
+
+  it('lo vacío no dice nada, que es lo correcto', () => {
+    for (const v of ['', '   ', null, undefined]) {
+      expect(revisarVerbo(v), String(v)).toMatchObject({ tipo: null, sugerencias: [] });
+    }
+  });
+
+  it('NUNCA bloquea: haya el aviso que haya, las formas siguen saliendo', () => {
+    /* La regla del profesor, y es de las que se deshacen sin querer: el pozo es
+       finito y un verbo legítimo que no esté en él no puede dejar a nadie sin
+       poder trabajar. */
+    for (const v of ['wrok', 'somebody', 'xyzzy', 'table']) {
+      expect(formasDe(v), v).toBeTruthy();
+      expect(formasDe(v).pasado, v).toBeTruthy();
+    }
   });
 });
