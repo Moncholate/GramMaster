@@ -3951,7 +3951,15 @@ const EnglishSentenceBuilder = () => {
           el nivel y el idioma los lleva el Hub y el botón de tema no se pinta,
           así que solo queda Reportar y la fila entra de sobra. Lo que decide es
           cuántos controles hay, no el ancho. */}
-      <header className={`flex-shrink-0 bg-white border-b border-gray-200 shadow-sm z-10 px-4 py-3 flex items-center justify-between gap-y-2 ${fromHub ? '' : 'flex-wrap sm:flex-nowrap'}`}>
+      {/* DENTRO DEL HUB NO HAY CABECERA, y es la decisión, no un descuido.
+          Estaban las dos apiladas —la barra del hub y esta— repitiendo el
+          logo, el nombre y el botón de tema, y entre ambas se llevaban más de
+          cien píxeles de alto en todas las pantallas. Ahora la barra del hub
+          lleva la identidad y el tema; aquí no queda nada que no esté allá.
+          Lo único que se queda de este lado es Reportar, más abajo: depende de
+          si HAY algo que reportar, y eso solo lo sabe esta app. */}
+      {!fromHub && (
+      <header className={`flex-shrink-0 bg-white border-b border-gray-200 shadow-sm z-10 px-4 py-3 flex items-center justify-between gap-y-2 flex-wrap sm:flex-nowrap`}>
           {/* `min-w-0` en los dos niveles y `truncate` en el nombre: sin eso la
               marca no puede encogerse y toda la falta de sitio se la come el
               lado de los controles, que acaba saliéndose de la pantalla. Antes
@@ -4023,6 +4031,30 @@ const EnglishSentenceBuilder = () => {
 
           </div>
         </header>
+      )}
+
+      {/* REPORTAR, EMBEBIDO. La cabecera se fue, pero este botón no podía irse
+          con ella: sale solo cuando hay algo delante que reportar, y eso lo
+          sabe esta app y no el hub. Para subirlo a la barra de allá habría que
+          avisarle por `postMessage` cada vez que ese estado cambia y devolverle
+          el clic para abrir el diálogo de acá — mensajería en los dos sentidos,
+          y por triplicado, para un botón.
+          Así que se queda de este lado, pero FUERA de una cabecera: sin borde,
+          sin fondo y sin barra. Cuando no hay nada que reportar no ocupa ni un
+          píxel, que es casi siempre; y cuando lo hay, aparece donde estaba. */}
+      {fromHub && hayQueReportar && (
+        <div className="flex-shrink-0 px-4 pt-3 flex justify-end">
+          <button
+            onClick={() => { setReporte(construirReporte()); setReporteCopiado(false); }}
+            title={t.reportar}
+            aria-label={t.reportar}
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-sm font-bold bg-amber-50 border border-amber-400 text-amber-700 hover:bg-amber-100 transition-all"
+          >
+            <AlertTriangle className="w-[1.15rem] h-[1.15rem] shrink-0" />
+            <span className="hidden sm:inline whitespace-nowrap">{t.reportarCorto}</span>
+          </button>
+        </div>
+      )}
 
         {/* Constructor (modo por defecto) — solo cuando no hay sección activa */}
         {!activePanel && (
