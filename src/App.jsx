@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { BookOpen, Volume2, VolumeX, AlertTriangle, CheckCircle, XCircle, X, History, Copy, Check, Trash2, Play, Info, BarChart2, ChevronDown, UserCircle } from 'lucide-react';
+import { BookOpen, Volume2, VolumeX, AlertTriangle, CheckCircle, XCircle, X, History, Copy, Check, Trash2, Play, Info, BarChart2, ChevronDown, UserCircle, Blocks, Table2, PenLine, Sun, Moon } from 'lucide-react';
 /* El chip de los dos ejes (forma + − ? y tipo abierta/cerrada) va generado
    desde design-tokens: tiene que ser el MISMO objeto en las cuatro apps. */
 import { FormChip, FormSign } from './forms.generated.jsx';
@@ -112,7 +112,12 @@ function ThemeToggle({ lang = 'es' }) {
       title={`${lang === 'es' ? 'Cambiar a modo' : 'Switch to'} ${name.toLowerCase()}`}
       aria-label={`${lang === 'es' ? 'Cambiar a modo' : 'Switch to'} ${name.toLowerCase()}`}
     >
-      <span className="text-base leading-none">{target === 'dark' ? '🌙' : '☀️'}</span>
+      {/* Icono de línea y no emoji, como toda la barra de abajo y como el mismo
+          botón en las otras dos apps y en el hub: el emoji lo dibuja el sistema
+          y no se tiñe con el botón. */}
+      {target === 'dark'
+        ? <Moon className="w-4 h-4 shrink-0" strokeWidth={2} aria-hidden="true" />
+        : <Sun className="w-4 h-4 shrink-0" strokeWidth={2} aria-hidden="true" />}
       {/* El rótulo se va en pantalla de teléfono, como ya hace el de Reportar.
           Era el control más ancho de la cabecera y empujaba a «Reportar» fuera
           de la pantalla: acababa en x=501 sobre un viewport de 375. El `title` y
@@ -4953,14 +4958,8 @@ const EnglishSentenceBuilder = () => {
               era. Misma geometría que la pieza de la Guía de Question Lab. */}
           {[
             { panel: null, label: language === 'es' ? 'Construye' : 'Build',
-              icon: (
-                <svg viewBox="0 0 24 24" className="w-[1.15em] h-[1.15em]" aria-hidden="true">
-                  <rect x="3" y="8.5" width="18" height="11" rx="1.8" fill="currentColor" />
-                  <rect x="6.6" y="6.5" width="4.3" height="4.1" rx="1.2" fill="currentColor" />
-                  <rect x="13.2" y="6.5" width="4.3" height="4.1" rx="1.2" fill="currentColor" />
-                </svg>
-              ) },
-            { panel: 'guide',    icon: '📖', label: language === 'es' ? 'Guía' : 'Guide' },
+              icon: <Blocks className="w-[1.15em] h-[1.15em]" strokeWidth={2} aria-hidden="true" /> },
+            { panel: 'guide',    icon: <BookOpen className="w-[1.15em] h-[1.15em]" strokeWidth={2} aria-hidden="true" />, label: language === 'es' ? 'Guía' : 'Guide' },
             /* La tabla de tiempos, sexta pestaña y AQUÍ, entre la Guía y la
                Práctica: es lo que se consulta entre entender una forma y usarla,
                y ese es su lugar en la barra igual que en el orden de la clase.
@@ -4983,17 +4982,9 @@ const EnglishSentenceBuilder = () => {
                que el ladrillo de al lado. Nadie cuenta las columnas de un icono;
                lo que sí se nota es que pese lo mismo que sus vecinos. */
             { panel: 'tiempos',  label: language === 'es' ? 'Tiempos' : 'Tenses',
-              icon: (
-                <svg viewBox="0 0 24 24" className="w-[1.15em] h-[1.15em]" aria-hidden="true">
-                  <rect x="3" y="4.5" width="18" height="4.4" rx="1.5" fill="currentColor" />
-                  <rect x="3" y="10.4" width="8.3" height="4.3" rx="1.4" fill="currentColor" />
-                  <rect x="12.7" y="10.4" width="8.3" height="4.3" rx="1.4" fill="currentColor" />
-                  <rect x="3" y="16.2" width="8.3" height="4.3" rx="1.4" fill="currentColor" />
-                  <rect x="12.7" y="16.2" width="8.3" height="4.3" rx="1.4" fill="currentColor" />
-                </svg>
-              ) },
-            { panel: 'practice', icon: '✏️', label: language === 'es' ? 'Práctica' : 'Practice' },
-            { panel: 'progress', icon: '📊', label: language === 'es' ? 'Progreso' : 'Progress' },
+              icon: <Table2 className="w-[1.15em] h-[1.15em]" strokeWidth={2} aria-hidden="true" /> },
+            { panel: 'practice', icon: <PenLine className="w-[1.15em] h-[1.15em]" strokeWidth={2} aria-hidden="true" />, label: language === 'es' ? 'Práctica' : 'Practice' },
+            { panel: 'progress', icon: <BarChart2 className="w-[1.15em] h-[1.15em]" strokeWidth={2} aria-hidden="true" />, label: language === 'es' ? 'Progreso' : 'Progress' },
             /* El contador va sobre `sentenceHistory.length`, NO sobre
                `totalAllTime`. Un número sobre un icono promete cuántas cosas hay
                ahí adentro, y totalAllTime es el total histórico de oraciones
@@ -5002,7 +4993,7 @@ const EnglishSentenceBuilder = () => {
                panel con 20 elementos, o sobre uno vacío después de limpiar.
                El total histórico no se pierde: sigue en el panel de Progreso,
                que es donde un acumulado tiene sentido. */
-            { panel: 'history',  icon: '🕘', label: language === 'es' ? 'Historial' : 'History', badge: sentenceHistory.length || null },
+            { panel: 'history',  icon: <History className="w-[1.15em] h-[1.15em]" strokeWidth={2} aria-hidden="true" />, label: language === 'es' ? 'Historial' : 'History', badge: sentenceHistory.length || null },
           ].map(({ panel, icon, label, badge }) => (
             <button
               key={panel || 'home'}
