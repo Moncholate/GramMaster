@@ -110,11 +110,16 @@ const DESLICES = {
    marcan como errata. El top-3 apenas se movió, que es lo que se nota en
    pantalla.
 
+   Segundo ajuste, al cargar Intermedio I y II (887 → 1002 palabras): la
+   transposición bajó del 90% al 88% a la primera (tunr → tuna antes que turn,
+   liek → lie antes que like). Son palabras correctas que compiten a distancia
+   1; el top-3 no se movió. Suelo a 87% por decisión del profesor.
+
    El de transposición sigue siendo el centinela de Damerau: con Levenshtein cae
    al 52% y esta prueba lo dice en voz alta en vez de degradarse en silencio. */
 const SUELO = {
   'tecla vecina':  { top1: 85, top3: 95 },
-  'transposición': { top1: 90, top3: 95 },
+  'transposición': { top1: 87, top3: 95 },
   'omisión':       { top1: 60, top3: 90 },
   'letra doble':   { top1: 95, top3: 95 },
 };
